@@ -1,0 +1,17 @@
+# format options
+--lineaftermarks true
+--typeblanklines remove
+--indentcase true
+--someAny false
+--self init-only
+--maxwidth 180
+--wrapcollections before-first
+--wrapparameters after-first
+--xcodeindentation enabled
+--tabwidth 4
+--indent 4
+--self insert
+--closingparen same-line
+ 
+# rules
+--disable andOperator,anyObjectProtocol,genericExtensions,initCoderUnavailable,opaqueGenericParameters,trailingCommas,wrapSwitchCases,wrapMultilineStatementBraces,wrapArguments,fileHeader,hoistPatternLet
