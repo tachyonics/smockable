@@ -28,7 +28,7 @@ final class SmockableTests: XCTestCase {
         // indicate that the first time `initialize(name: String, secondName: String?) async -> String` is called,
         // `expectedReturnValue1` should be returned
         // Note that setting an expectation with `.value(_ value:)/.error(_ error:)/.using(_ closure:)` without following
-        // it with a `.times(_ times:)/.unboundedTimes()` modifier treats it as if there is an implicit `.times(1)` modifer
+        // it with a `.times(_ times:)/.unboundedTimes()` modifier treats it as if there is an implicit `.times(1)` modifier
         expectations.initialize_name_secondName.value(expectedReturnValue1)
         // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
         // `expectedReturnValue2` should be returned
