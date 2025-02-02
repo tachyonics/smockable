@@ -24,18 +24,18 @@ enum CallsCountGenerator {
     static func variableDeclaration(variablePrefix: String) throws -> VariableDeclSyntax {
         try VariableDeclSyntax(
             """
-            var \(self.variableIdentifier(variablePrefix: variablePrefix)) = 0
+            var \(raw: variablePrefix) = 0
             """)
     }
 
     static func incrementVariableExpression(variablePrefix: String) -> ExprSyntax {
         ExprSyntax(
             """
-            \(self.variableIdentifier(variablePrefix: variablePrefix)) += 1
+            self.\(self.variableIdentifier()).\(raw: variablePrefix) += 1
             """)
     }
 
-    private static func variableIdentifier(variablePrefix: String) -> TokenSyntax {
-        TokenSyntax.identifier(variablePrefix + "_CallsCount")
+    private static func variableIdentifier() -> TokenSyntax {
+        TokenSyntax.identifier("callCounts")
     }
 }

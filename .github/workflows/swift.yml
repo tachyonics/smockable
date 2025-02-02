@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+      
+jobs:
+  LatestVersionBuild:
+    name: Image ${{ matrix.image }}
+    strategy:
+      matrix:
+        image: ["swift:6.0.0-noble", "swift:6.0.0-jammy"]
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Install libssl-dev
+        run: apt-get update && apt-get install -y libssl-dev
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Run tests
+        run: swift test
+  SwiftLint:
+    name: SwiftLint version 3.2.1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: GitHub Action for SwiftLint
+        uses: norio-nomura/action-swiftlint@3.2.1

@@ -13,7 +13,7 @@ enum ClosureGenerator {
                     },
                     effectSpecifiers: TypeEffectSpecifiersSyntax(
                         asyncSpecifier: functionSignature.effectSpecifiers?.asyncSpecifier,
-                        throwsSpecifier: functionSignature.effectSpecifiers?.throwsSpecifier),
+                        throwsClause: functionSignature.effectSpecifiers?.throwsClause),
                     returnClause: functionSignature.returnClause
                         ?? ReturnClauseSyntax(
                             type: IdentifierTypeSyntax(
@@ -56,7 +56,7 @@ enum ClosureGenerator {
             expression = AwaitExprSyntax(expression: expression)
         }
 
-        if functionSignature.effectSpecifiers?.throwsSpecifier != nil {
+        if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
             expression = TryExprSyntax(expression: expression)
         }
 

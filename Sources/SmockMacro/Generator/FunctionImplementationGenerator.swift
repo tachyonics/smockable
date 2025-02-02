@@ -45,7 +45,7 @@ enum FunctionImplementationGenerator {
                     ConditionElementSyntax(
                         condition: .expression(
                             ExprSyntax("""
-                            let first = self.\(raw: variablePrefix)_ExpectedResponses.first
+                            let first = self.expectedResponses.\(raw: variablePrefix).first 
                             """)))
                 },
                 elseKeyword: .keyword(.else),
@@ -58,9 +58,9 @@ enum FunctionImplementationGenerator {
                 bodyBuilder: {
                     ExprSyntax("""
                     if first.0 == 1 {
-                      self.\(raw: variablePrefix)_ExpectedResponses = Array(self.\(raw: variablePrefix)_ExpectedResponses.dropFirst())
+                      self.expectedResponses.\(raw: variablePrefix) = Array(self.expectedResponses.\(raw: variablePrefix).dropFirst())
                     } else if let currentCount = first.0 {
-                      self.\(raw: variablePrefix)_ExpectedResponses = [(currentCount - 1, first.1)] + Array(self.\(raw: variablePrefix)_ExpectedResponses.dropFirst())
+                      self.expectedResponses.\(raw: variablePrefix) = [(currentCount - 1, first.1)] + Array(self.expectedResponses.\(raw: variablePrefix).dropFirst())
                     }
                     """)
                     self.switchExpression(variablePrefix: variablePrefix, protocolFunctionDeclaration: protocolFunctionDeclaration)
@@ -80,7 +80,7 @@ enum FunctionImplementationGenerator {
                                                                      needsLabels: false, functionSignature: protocolFunctionDeclaration.signature))
                              })
 
-                             if protocolFunctionDeclaration.signature.effectSpecifiers?.throwsSpecifier != nil {
+                             if protocolFunctionDeclaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                                  SwitchCaseSyntax("""
                                  case .error(let error):
                                      throw error

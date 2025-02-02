@@ -43,7 +43,6 @@ import SwiftSyntaxBuilder
 /// - Important: The variable declaration must have exactly one binding. Any deviation from this will result in
 ///              an error diagnostic produced by the macro.
 enum VariablesImplementationGenerator {
-    private static let accessorRemovalVisitor = AccessorRemovalVisitor()
 
     @MemberBlockItemListBuilder
     static func variablesDeclarations(protocolVariableDeclaration: VariableDeclSyntax) throws -> MemberBlockItemListSyntax {
@@ -52,7 +51,9 @@ enum VariablesImplementationGenerator {
             let binding = protocolVariableDeclaration.bindings.first!
 
             if binding.typeAnnotation?.type.is(OptionalTypeSyntax.self) == true {
-                self.accessorRemovalVisitor.visit(protocolVariableDeclaration)
+                let accessorRemovalVisitor = AccessorRemovalVisitor()
+
+                accessorRemovalVisitor.visit(protocolVariableDeclaration)
             } else {
                 try self.protocolVariableDeclarationWithGetterAndSetter(binding: binding)
 
