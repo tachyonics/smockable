@@ -43,12 +43,11 @@ import SwiftSyntaxBuilder
 enum ReceivedInvocationsGenerator {
     static func variableDeclaration(variablePrefix: String,
                                     parameterList: FunctionParameterListSyntax) throws -> VariableDeclSyntax {
-        let identifier = self.variableIdentifier(variablePrefix: variablePrefix)
         let elementType = self.arrayElementType(parameterList: parameterList)
 
         return try VariableDeclSyntax(
             """
-            var \(identifier): [\(elementType)] = []
+            var \(raw: variablePrefix): [\(elementType)] = []
             """)
     }
 
@@ -83,12 +82,12 @@ enum ReceivedInvocationsGenerator {
 
     static func appendValueToVariableExpression(variablePrefix: String,
                                                 parameterList: FunctionParameterListSyntax) -> ExprSyntax {
-        let identifier = self.variableIdentifier(variablePrefix: variablePrefix)
+        let identifier = self.variableIdentifier()
         let argument = self.appendArgumentExpression(parameterList: parameterList)
 
         return ExprSyntax(
             """
-            \(identifier).append(\(argument))
+            \(identifier).\(raw: variablePrefix).append(\(argument))
             """)
     }
 
@@ -108,7 +107,7 @@ enum ReceivedInvocationsGenerator {
         }
     }
 
-    private static func variableIdentifier(variablePrefix: String) -> TokenSyntax {
-        TokenSyntax.identifier(variablePrefix + "_ReceivedInvocations")
+    private static func variableIdentifier() -> TokenSyntax {
+        TokenSyntax.identifier("receivedInvocations")
     }
 }

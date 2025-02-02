@@ -7,12 +7,13 @@ enum FunctionPropertiesGenerator {
         return try EnumDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "fileprivate")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse",
+            genericParameterClause: ": Sendable",
             memberBlockBuilder: {
                 try EnumCaseDeclSyntax("""
-                case closure(\(ClosureGenerator.closureElements(functionSignature: functionSignature)))
+                case closure(@Sendable \(ClosureGenerator.closureElements(functionSignature: functionSignature)))
                 """)
 
-                if functionSignature.effectSpecifiers?.throwsSpecifier != nil {
+                if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                     try EnumCaseDeclSyntax("""
                     case error(Swift.Error)
                     """)
@@ -27,10 +28,11 @@ enum FunctionPropertiesGenerator {
     }
 
     static func expectedResponseVariableDeclaration(variablePrefix: String,
-                                                    accessModifier: String) throws -> VariableDeclSyntax {
+                                                    accessModifier: String,
+                                                    staticName: Bool) throws -> VariableDeclSyntax {
         try VariableDeclSyntax(
             """
-            \(raw: accessModifier)var \(raw: variablePrefix)_ExpectedResponses: [(Int?,\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse)] = []
+            \(raw: accessModifier)var \(raw: staticName ? "expectedResponses" : variablePrefix): [(Int?,\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse)] = []
             """)
     }
 
@@ -40,19 +42,19 @@ enum FunctionPropertiesGenerator {
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Expectations",
             memberBlockBuilder: {
-                try self.expectedResponseVariableDeclaration(variablePrefix: variablePrefix, accessModifier: "fileprivate ")
+                try self.expectedResponseVariableDeclaration(variablePrefix: variablePrefix, accessModifier: "fileprivate ", staticName: true)
 
                 try FunctionDeclSyntax("""
                 private func add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(_ expected: \(
                     raw: variablePrefix
                         .capitalizingComponentsFirstLetter())ExpectedResponse) {
-                    self.\(raw: variablePrefix)_ExpectedResponses.append((1, expected))
+                    self.expectedResponses.append((1, expected))
                 }
                 """)
 
                 try FunctionDeclSyntax("""
                 private func updateLast\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(count: Int) {
-                    guard let last = self.\(raw: variablePrefix)_ExpectedResponses.last else {
+                    guard let last = self.expectedResponses.last else {
                         fatalError("Must have added expectation to update its count.")
                     }
 
@@ -60,20 +62,20 @@ enum FunctionPropertiesGenerator {
                         fatalError("Cannot add expectations after a previous unbounded expectation.")
                     }
 
-                    self.\(raw: variablePrefix)_ExpectedResponses.removeLast()
-                    self.\(raw: variablePrefix)_ExpectedResponses.append((currentCount + count, last.1))
+                    self.expectedResponses.removeLast()
+                    self.expectedResponses.append((currentCount + count, last.1))
                 }
                 """)
 
                 try FunctionDeclSyntax("""
                 @discardableResult
                 public func unboundedTimes() -> Self {
-                    guard let last = self.\(raw: variablePrefix)_ExpectedResponses.last else {
+                    guard let last = self.expectedResponses.last else {
                         fatalError("Must have added expectation to update its count.")
                     }
 
-                    self.\(raw: variablePrefix)_ExpectedResponses.removeLast()
-                    self.\(raw: variablePrefix)_ExpectedResponses.append((nil, last.1))
+                    self.expectedResponses.removeLast()
+                    self.expectedResponses.append((nil, last.1))
 
                     return self
                 }
@@ -82,12 +84,12 @@ enum FunctionPropertiesGenerator {
                 try FunctionDeclSyntax("""
                 @discardableResult
                 public func times(_ count: Int) -> Self {
-                    guard let last = self.\(raw: variablePrefix)_ExpectedResponses.last else {
+                    guard let last = self.expectedResponses.last else {
                         fatalError("Must have added expectation to update its count.")
                     }
 
-                    self.\(raw: variablePrefix)_ExpectedResponses.removeLast()
-                    self.\(raw: variablePrefix)_ExpectedResponses.append((count, last.1))
+                    self.expectedResponses.removeLast()
+                    self.expectedResponses.append((count, last.1))
 
                     return self
                 }
@@ -95,14 +97,14 @@ enum FunctionPropertiesGenerator {
 
                 try FunctionDeclSyntax("""
                 @discardableResult
-                public func using(_ closure: @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) -> Self {
+                public func using(_ closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) -> Self {
                   add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(.closure(closure))
 
                   return self
                 }
                 """)
 
-                if functionSignature.effectSpecifiers?.throwsSpecifier != nil {
+                if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                     try FunctionDeclSyntax("""
                     @discardableResult
                     public func error(_ error: Swift.Error) -> Self {
@@ -141,7 +143,7 @@ enum FunctionPropertiesGenerator {
                 DeclSyntax("""
                 public var wasCalled: Bool {
                     get async {
-                        return await self.storage.\(raw: variablePrefix)_CallsCount > 0
+                        return await self.storage.callCounts.\(raw: variablePrefix) > 0
                     }
                 }
                 """)
@@ -149,7 +151,7 @@ enum FunctionPropertiesGenerator {
                 DeclSyntax("""
                 public var callCount: Int {
                     get async {
-                        return await self.storage.\(raw: variablePrefix)_CallsCount
+                        return await self.storage.callCounts.\(raw: variablePrefix)
                     }
                 }
                 """)
@@ -158,7 +160,7 @@ enum FunctionPropertiesGenerator {
                     DeclSyntax("""
                     public var receivedInputs: [\(elementType)] {
                         get async {
-                            return await self.storage.\(raw: variablePrefix)_ReceivedInvocations
+                            return await self.storage.receivedInvocations.\(raw: variablePrefix)
                         }
                     }
                     """)

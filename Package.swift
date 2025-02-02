@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version:6.0
 
 import CompilerPluginSupport
 import PackageDescription
@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
   name: "smockable",
   platforms: [
-    .macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6),
+    .macOS(.v10_15), .iOS(.v13), .watchOS(.v6), .tvOS(.v13)
   ],
   products: [
     .library(
@@ -15,7 +15,7 @@ let package = Package(
     )
   ],
   dependencies: [
-    .package(url: "https://github.com/apple/swift-syntax", from: "509.0.0"),
+    .package(url: "https://github.com/apple/swift-syntax", from: "600.0.0"),
   ],
   targets: [
     .macro(name: "SmockMacro", dependencies: [
@@ -26,7 +26,7 @@ let package = Package(
         .target(name: "SmockMacro")
     ]),
     .testTarget(name: "SmockMacroTests", dependencies: [
-        .target(name: "SmockMacro"),
+        .target(name: "Smockable"),
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
     ]),
   ]

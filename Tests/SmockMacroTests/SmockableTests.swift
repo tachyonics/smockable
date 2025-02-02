@@ -4,13 +4,12 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 import Smockable
-@testable import SmockMacro
 
 @Smock
 public protocol Service1Protocol {
-    mutating func logout() async
+    //mutating func logout() async
     func initialize(name: String, secondName: String?) async -> String
-    func fetchConfig() async throws -> [String: String]
+    //func fetchConfig() async throws -> [String: String]
 }
 
 struct CompariableInput: Equatable {

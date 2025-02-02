@@ -38,9 +38,9 @@ enum MockGenerator {
                     type: IdentifierTypeSyntax(name: protocolDeclaration.name))
             },
             memberBlockBuilder: {
-                try InitializerDeclSyntax("public init(expectations: borrowing Expectations = .init()) {") {
+                try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {                    
                     ExprSyntax("""
-                    self.storage = .init(expectations: expectations)
+                    self.storage = .init(expectedResponses: .init(expectations: expectations))
                     """)
 
                     ExprSyntax("""
@@ -54,6 +54,9 @@ enum MockGenerator {
                 }
 
                 try StorageGenerator.expectationsDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.expectedResponsesDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.callCountDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.receivedInvocationsDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.actorDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.variableDeclaration()
 
