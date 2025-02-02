@@ -30,6 +30,11 @@ final class SmockableTests: XCTestCase {
         // it with a `.times(_ times:)/.unboundedTimes()` modifier treats it as if there is an implicit `.times(1)` modifier
         expectations.initialize_name_secondName.value(expectedReturnValue1)
         // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
+        // the returned value should be determined by calling this closure.
+            .using { name, secondName in
+                "\(name)_\(secondName ?? "empty")"
+            }.times(2)
+        // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
         // `expectedReturnValue2` should be returned
             .value(expectedReturnValue2).times(2)
         // create the mock; no more expectations can be added to the mock
@@ -40,6 +45,8 @@ final class SmockableTests: XCTestCase {
         let returnValue1 = await mock.initialize(name: "Name1", secondName: "SecondName1")
         let returnValue2 = await mock.initialize(name: "Name2", secondName: "SecondName2")
         let returnValue3 = await mock.initialize(name: "Name3", secondName: "SecondName3")
+        let returnValue4 = await mock.initialize(name: "Name3", secondName: "SecondName3")
+        let returnValue5 = await mock.initialize(name: "Name3", secondName: "SecondName3")
         
         // query the current state of the mock
         let callCount = await mock.__verify.initialize_name_secondName.callCount
@@ -47,12 +54,16 @@ final class SmockableTests: XCTestCase {
 
         // verify that the current state of the mock is as expected
         XCTAssertEqual(expectedReturnValue1, returnValue1)
-        XCTAssertEqual(expectedReturnValue2, returnValue2)
-        XCTAssertEqual(expectedReturnValue2, returnValue3)
-        XCTAssertEqual(3, callCount)
+        XCTAssertEqual("Name2_SecondName2", returnValue2)
+        XCTAssertEqual("Name3_SecondName3", returnValue3)
+        XCTAssertEqual(expectedReturnValue2, returnValue4)
+        XCTAssertEqual(expectedReturnValue2, returnValue5)
+        XCTAssertEqual(5, callCount)
         XCTAssertEqual(inputs, [
             .init(name: "Name1", secondName: "SecondName1"),
             .init(name: "Name2", secondName: "SecondName2"),
+            .init(name: "Name3", secondName: "SecondName3"),
+            .init(name: "Name3", secondName: "SecondName3"),
             .init(name: "Name3", secondName: "SecondName3")
         ])
     }
