@@ -7,11 +7,11 @@ on:
     branches: [ main ]
       
 jobs:
-  LatestVersionBuild:
+  BuildAndTest:
     name: Image ${{ matrix.image }}
     strategy:
       matrix:
-        image: ["swift:6.0.0-noble", "swift:6.0.0-jammy"]
+        image: ["swift:6.1.0-noble", "swift:6.1.0-jammy", "swift:6.0.0-noble"]
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
