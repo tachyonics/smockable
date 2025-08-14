@@ -18,9 +18,9 @@ enum MockGenerator {
         if !associatedTypes.isEmpty {
             let rawGenericParameterClause = associatedTypes.map { associatedType in
                 if let inheritanceClause = associatedType.inheritanceClause {
-                    return "\(associatedType.name) \(inheritanceClause)"
+                    "\(associatedType.name) \(inheritanceClause)"
                 } else {
-                    return "\(associatedType.name)"
+                    "\(associatedType.name)"
                 }
             }.joined(separator: ", ")
 
@@ -38,7 +38,7 @@ enum MockGenerator {
                     type: IdentifierTypeSyntax(name: protocolDeclaration.name))
             },
             memberBlockBuilder: {
-                try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {                    
+                try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {
                     ExprSyntax("""
                     self.storage = .init(expectedResponses: .init(expectations: expectations))
                     """)
@@ -47,49 +47,8 @@ enum MockGenerator {
                     self.__verify = .init(storage: self.storage)
                     """)
                 }
-                
-                try ClassDeclSyntax("""
-                public class FieldExpectations<ExpectedResponseType> {
-                    var expectedResponses: [(Int?, ExpectedResponseType)] = []
-                    private func add(_ expected: ExpectedResponseType) {
-                        self.expectedResponses.append((1, expected))
-                    }
-                    private func updateLastExpectation(count: Int) {
-                        guard let last = self.expectedResponses.last else {
-                            fatalError("Must have added expectation to update its count.")
-                        }
 
-                        guard let currentCount = last.0 else {
-                            fatalError("Cannot add expectations after a previous unbounded expectation.")
-                        }
-
-                        self.expectedResponses.removeLast()
-                        self.expectedResponses.append((currentCount + count, last.1))
-                    }
-                    @discardableResult
-                    public func unboundedTimes() -> Self {
-                        guard let last = self.expectedResponses.last else {
-                            fatalError("Must have added expectation to update its count.")
-                        }
-
-                        self.expectedResponses.removeLast()
-                        self.expectedResponses.append((nil, last.1))
-
-                        return self
-                    }
-                    @discardableResult
-                    public func times(_ count: Int) -> Self {
-                        guard let last = self.expectedResponses.last else {
-                            fatalError("Must have added expectation to update its count.")
-                        }
-
-                        self.expectedResponses.removeLast()
-                        self.expectedResponses.append((count, last.1))
-
-                        return self
-                    }
-                }
-                """)
+                try fieldExpectations()
 
                 for variableDeclaration in variableDeclarations {
                     try VariablesImplementationGenerator.variablesDeclarations(
@@ -121,5 +80,50 @@ enum MockGenerator {
                         protocolFunctionDeclaration: functionDeclaration)
                 }
             })
+    }
+    
+    static func fieldExpectations() throws -> ClassDeclSyntax {
+        try ClassDeclSyntax("""
+        public class FieldExpectations<ExpectedResponseType> {
+            var expectedResponses: [(Int?, ExpectedResponseType)] = []
+            private func add(_ expected: ExpectedResponseType) {
+                self.expectedResponses.append((1, expected))
+            }
+            private func updateLastExpectation(count: Int) {
+                guard let last = self.expectedResponses.last else {
+                    fatalError("Must have added expectation to update its count.")
+                }
+
+                guard let currentCount = last.0 else {
+                    fatalError("Cannot add expectations after a previous unbounded expectation.")
+                }
+
+                self.expectedResponses.removeLast()
+                self.expectedResponses.append((currentCount + count, last.1))
+            }
+            @discardableResult
+            public func unboundedTimes() -> Self {
+                guard let last = self.expectedResponses.last else {
+                    fatalError("Must have added expectation to update its count.")
+                }
+
+                self.expectedResponses.removeLast()
+                self.expectedResponses.append((nil, last.1))
+
+                return self
+            }
+            @discardableResult
+            public func times(_ count: Int) -> Self {
+                guard let last = self.expectedResponses.last else {
+                    fatalError("Must have added expectation to update its count.")
+                }
+
+                self.expectedResponses.removeLast()
+                self.expectedResponses.append((count, last.1))
+
+                return self
+            }
+        }
+        """)
     }
 }

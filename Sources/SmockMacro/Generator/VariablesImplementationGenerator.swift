@@ -43,7 +43,6 @@ import SwiftSyntaxBuilder
 /// - Important: The variable declaration must have exactly one binding. Any deviation from this will result in
 ///              an error diagnostic produced by the macro.
 enum VariablesImplementationGenerator {
-
     @MemberBlockItemListBuilder
     static func variablesDeclarations(protocolVariableDeclaration: VariableDeclSyntax) throws -> MemberBlockItemListSyntax {
         if protocolVariableDeclaration.bindings.count == 1 {

@@ -42,7 +42,8 @@ import SwiftSyntaxBuilder
 ///         about the arguments in the last invocation, use `ReceivedArgumentsGenerator`.
 enum ReceivedInvocationsGenerator {
     static func variableDeclaration(variablePrefix: String,
-                                    parameterList: FunctionParameterListSyntax) throws -> VariableDeclSyntax {
+                                    parameterList: FunctionParameterListSyntax) throws -> VariableDeclSyntax
+    {
         let elementType = self.arrayElementType(parameterList: parameterList)
 
         return try VariableDeclSyntax(
@@ -67,9 +68,9 @@ enum ReceivedInvocationsGenerator {
                         colon: .colonToken(),
                         type: {
                             if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                                return attributedType.baseType
+                                attributedType.baseType
                             } else {
-                                return parameter.type
+                                parameter.type
                             }
                         }())
                 }
@@ -81,7 +82,8 @@ enum ReceivedInvocationsGenerator {
     }
 
     static func appendValueToVariableExpression(variablePrefix: String,
-                                                parameterList: FunctionParameterListSyntax) -> ExprSyntax {
+                                                parameterList: FunctionParameterListSyntax) -> ExprSyntax
+    {
         let identifier = self.variableIdentifier()
         let argument = self.appendArgumentExpression(parameterList: parameterList)
 

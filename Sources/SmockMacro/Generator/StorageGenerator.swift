@@ -3,7 +3,7 @@ import SwiftSyntaxBuilder
 
 enum StorageGenerator {
     static func expectationsDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
-        return try StructDeclSyntax(
+        try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "Expectations",
             memberBlockBuilder: {
@@ -21,9 +21,9 @@ enum StorageGenerator {
                 }
             })
     }
-    
+
     static func expectedResponsesDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
-        return try StructDeclSyntax(
+        try StructDeclSyntax(
             name: "ExpectedResponses",
             memberBlockBuilder: {
                 for functionDeclaration in functionDeclarations {
@@ -32,7 +32,7 @@ enum StorageGenerator {
                     try FunctionPropertiesGenerator.expectedResponseVariableDeclaration(variablePrefix: variablePrefix,
                                                                                         accessModifier: "", staticName: false)
                 }
-                
+
                 try InitializerDeclSyntax("init(expectations: borrowing Expectations) {") {
                     for functionDeclaration in functionDeclarations {
                         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
@@ -44,9 +44,9 @@ enum StorageGenerator {
                 }
             })
     }
-    
+
     static func callCountDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
-        return try StructDeclSyntax(
+        try StructDeclSyntax(
             name: "CallCounts",
             memberBlockBuilder: {
                 for functionDeclaration in functionDeclarations {
@@ -56,9 +56,9 @@ enum StorageGenerator {
                 }
             })
     }
-    
+
     static func receivedInvocationsDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
-        return try StructDeclSyntax(
+        try StructDeclSyntax(
             name: "ReceivedInvocations",
             memberBlockBuilder: {
                 for functionDeclaration in functionDeclarations {
@@ -75,24 +75,24 @@ enum StorageGenerator {
     }
 
     static func actorDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> ActorDeclSyntax {
-        return try ActorDeclSyntax(
+        try ActorDeclSyntax(
             name: "Storage",
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
                     var expectedResponses: ExpectedResponses
                     """)
-                
+
                 try VariableDeclSyntax(
                     """
                     var callCounts: CallCounts = .init()
                     """)
-                
+
                 try VariableDeclSyntax(
                     """
                     var receivedInvocations: ReceivedInvocations = .init()
                     """)
-                
+
                 try InitializerDeclSyntax("init(expectedResponses: consuming ExpectedResponses) {") {
                     ExprSyntax("""
                     self.expectedResponses = expectedResponses

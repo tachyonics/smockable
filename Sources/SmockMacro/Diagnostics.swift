@@ -14,20 +14,20 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
 
     var message: String {
         switch self {
-            case .onlyApplicableToProtocol:
-                "'@Smock' can only be applied to a 'protocol'"
-            case .variableDeclInProtocolWithNotSingleBinding:
-                "Variable declaration in a 'protocol' with the '@Smock' attribute must have exactly one binding"
-            case .variableDeclInProtocolWithNotIdentifierPattern:
-                "Variable declaration in a 'protocol' with the '@Smock' attribute must have identifier pattern"
+        case .onlyApplicableToProtocol:
+            "'@Smock' can only be applied to a 'protocol'"
+        case .variableDeclInProtocolWithNotSingleBinding:
+            "Variable declaration in a 'protocol' with the '@Smock' attribute must have exactly one binding"
+        case .variableDeclInProtocolWithNotIdentifierPattern:
+            "Variable declaration in a 'protocol' with the '@Smock' attribute must have identifier pattern"
         }
     }
 
     var severity: DiagnosticSeverity {
         switch self {
-            case .onlyApplicableToProtocol: .error
-            case .variableDeclInProtocolWithNotSingleBinding: .error
-            case .variableDeclInProtocolWithNotIdentifierPattern: .error
+        case .onlyApplicableToProtocol: .error
+        case .variableDeclInProtocolWithNotSingleBinding: .error
+        case .variableDeclInProtocolWithNotIdentifierPattern: .error
         }
     }
 

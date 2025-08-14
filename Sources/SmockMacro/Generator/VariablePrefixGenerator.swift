@@ -25,7 +25,7 @@ enum VariablePrefixGenerator {
 
         let parameters =
             parameterList
-                .map { $0.firstName.text }
+                .map(\.firstName.text)
                 .filter { $0 != "_" }
 
         parts.append(contentsOf: parameters)

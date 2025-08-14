@@ -3,8 +3,9 @@ import SwiftSyntaxBuilder
 
 enum FunctionPropertiesGenerator {
     static func expectedResponseEnumDeclaration(variablePrefix: String,
-                                                functionSignature: FunctionSignatureSyntax) throws -> EnumDeclSyntax {
-        return try EnumDeclSyntax(
+                                                functionSignature: FunctionSignatureSyntax) throws -> EnumDeclSyntax
+    {
+        try EnumDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse",
             genericParameterClause: ": Sendable",
@@ -29,21 +30,23 @@ enum FunctionPropertiesGenerator {
 
     static func expectedResponseVariableDeclaration(variablePrefix: String,
                                                     accessModifier: String,
-                                                    staticName: Bool) throws -> VariableDeclSyntax {
+                                                    staticName: Bool) throws -> VariableDeclSyntax
+    {
         try VariableDeclSyntax(
             """
-            \(raw: accessModifier)var \(raw: staticName ? "expectedResponses" : variablePrefix): [(Int?,\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse)] = []
+            \(raw: accessModifier)var \(raw: staticName ? "expectedResponses" : variablePrefix): [(Int?,\(raw: variablePrefix
+                .capitalizingComponentsFirstLetter())ExpectedResponse)] = []
             """)
     }
 
     static func expectationsClassDeclaration(variablePrefix: String,
-                                             functionSignature: FunctionSignatureSyntax) throws -> ClassDeclSyntax {
-        return try ClassDeclSyntax(
+                                             functionSignature: FunctionSignatureSyntax) throws -> ClassDeclSyntax
+    {
+        try ClassDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Expectations",
             genericParameterClause: ": FieldExpectations<\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse>",
             memberBlockBuilder: {
-
                 try FunctionDeclSyntax("""
                 @discardableResult
                 public func using(_ closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) -> Self {
@@ -77,7 +80,8 @@ enum FunctionPropertiesGenerator {
     }
 
     static func verificationsStructDeclaration(variablePrefix: String,
-                                               parameterList: FunctionParameterListSyntax) throws -> StructDeclSyntax {
+                                               parameterList: FunctionParameterListSyntax) throws -> StructDeclSyntax
+    {
         let elementType = ReceivedInvocationsGenerator.arrayElementType(parameterList: parameterList)
 
         return try StructDeclSyntax(
@@ -118,7 +122,7 @@ enum FunctionPropertiesGenerator {
     }
 
     static func allVerificationsDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
-        return try StructDeclSyntax(
+        try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "Verifications",
             memberBlockBuilder: {
@@ -153,7 +157,7 @@ enum FunctionPropertiesGenerator {
 
 extension String {
     func capitalizingFirstLetter() -> String {
-        return prefix(1).uppercased() + dropFirst()
+        prefix(1).uppercased() + dropFirst()
     }
 
     func capitalizingComponentsFirstLetter() -> String {

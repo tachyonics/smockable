@@ -22,7 +22,8 @@ enum ClosureGenerator {
     }
 
     static func variableDeclaration(variablePrefix: String,
-                                    functionSignature: FunctionSignatureSyntax) throws -> VariableDeclSyntax {
+                                    functionSignature: FunctionSignatureSyntax) throws -> VariableDeclSyntax
+    {
         let elements = self.closureElements(functionSignature: functionSignature)
 
         return try VariableDeclSyntax(
@@ -34,7 +35,8 @@ enum ClosureGenerator {
     static func callExpression(baseName: String,
                                variablePrefix _: String,
                                needsLabels: Bool,
-                               functionSignature: FunctionSignatureSyntax) -> ExprSyntaxProtocol {
+                               functionSignature: FunctionSignatureSyntax) -> ExprSyntaxProtocol
+    {
         let calledExpression = DeclReferenceExprSyntax(
             baseName: "\(raw: baseName)")
 
