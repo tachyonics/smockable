@@ -4,10 +4,12 @@ import SwiftSyntaxBuilder
 enum FunctionImplementationGenerator {
     static func declaration(variablePrefix: String,
                             accessModifier: String?,
-                            protocolFunctionDeclaration: FunctionDeclSyntax) -> FunctionDeclSyntax {
+                            protocolFunctionDeclaration: FunctionDeclSyntax) -> FunctionDeclSyntax
+    {
         var mockFunctionDeclaration = protocolFunctionDeclaration
 
         mockFunctionDeclaration.modifiers = protocolFunctionDeclaration.modifiers.removingMutatingKeyword
+        mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
         if let accessModifier {
             mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "\(raw: accessModifier)")]
@@ -24,7 +26,8 @@ enum FunctionImplementationGenerator {
     }
 
     static func storageDeclaration(variablePrefix: String,
-                                   protocolFunctionDeclaration: FunctionDeclSyntax) -> FunctionDeclSyntax {
+                                   protocolFunctionDeclaration: FunctionDeclSyntax) -> FunctionDeclSyntax
+    {
         var mockFunctionDeclaration = protocolFunctionDeclaration
 
         mockFunctionDeclaration.modifiers = protocolFunctionDeclaration.modifiers.removingMutatingKeyword
@@ -71,7 +74,8 @@ enum FunctionImplementationGenerator {
     }
 
     private static func switchExpression(variablePrefix: String,
-                                         protocolFunctionDeclaration: FunctionDeclSyntax) -> SwitchExprSyntax {
+                                         protocolFunctionDeclaration: FunctionDeclSyntax) -> SwitchExprSyntax
+    {
         SwitchExprSyntax(subject: ExprSyntax(stringLiteral: "first.1"),
                          casesBuilder: {
                              SwitchCaseSyntax(SyntaxNodeString("case .closure(let closure):"), statementsBuilder: {

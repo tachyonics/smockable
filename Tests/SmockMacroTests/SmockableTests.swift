@@ -7,9 +7,9 @@ import Smockable
 
 @Smock
 public protocol Service1Protocol {
-    //mutating func logout() async
+    // mutating func logout() async
     func initialize(name: String, secondName: String?) async -> String
-    //func fetchConfig() async throws -> [String: String]
+    // func fetchConfig() async throws -> [String: String]
 }
 
 struct CompariableInput: Equatable {
@@ -29,13 +29,13 @@ final class SmockableTests: XCTestCase {
         // Note that setting an expectation with `.value(_ value:)/.error(_ error:)/.using(_ closure:)` without following
         // it with a `.times(_ times:)/.unboundedTimes()` modifier treats it as if there is an implicit `.times(1)` modifier
         expectations.initialize_name_secondName.value(expectedReturnValue1)
-        // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
-        // the returned value should be determined by calling this closure.
+            // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
+            // the returned value should be determined by calling this closure.
             .using { name, secondName in
                 "\(name)_\(secondName ?? "empty")"
             }.times(2)
-        // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
-        // `expectedReturnValue2` should be returned
+            // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
+            // `expectedReturnValue2` should be returned
             .value(expectedReturnValue2).times(2)
         // create the mock; no more expectations can be added to the mock
         // and the created mock is thread-safe/sendable
@@ -47,7 +47,7 @@ final class SmockableTests: XCTestCase {
         let returnValue3 = await mock.initialize(name: "Name3", secondName: "SecondName3")
         let returnValue4 = await mock.initialize(name: "Name3", secondName: "SecondName3")
         let returnValue5 = await mock.initialize(name: "Name3", secondName: "SecondName3")
-        
+
         // query the current state of the mock
         let callCount = await mock.__verify.initialize_name_secondName.callCount
         let inputs: [CompariableInput] = await mock.__verify.initialize_name_secondName.receivedInputs.map { .init(name: $0.name, secondName: $0.secondName) }
@@ -64,7 +64,7 @@ final class SmockableTests: XCTestCase {
             .init(name: "Name2", secondName: "SecondName2"),
             .init(name: "Name3", secondName: "SecondName3"),
             .init(name: "Name3", secondName: "SecondName3"),
-            .init(name: "Name3", secondName: "SecondName3")
+            .init(name: "Name3", secondName: "SecondName3"),
         ])
     }
 }
