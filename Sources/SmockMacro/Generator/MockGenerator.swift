@@ -47,6 +47,49 @@ enum MockGenerator {
                     self.__verify = .init(storage: self.storage)
                     """)
                 }
+                
+                try ClassDeclSyntax("""
+                public class FieldExpectations<ExpectedResponseType> {
+                    var expectedResponses: [(Int?, ExpectedResponseType)] = []
+                    private func add(_ expected: ExpectedResponseType) {
+                        self.expectedResponses.append((1, expected))
+                    }
+                    private func updateLastExpectation(count: Int) {
+                        guard let last = self.expectedResponses.last else {
+                            fatalError("Must have added expectation to update its count.")
+                        }
+
+                        guard let currentCount = last.0 else {
+                            fatalError("Cannot add expectations after a previous unbounded expectation.")
+                        }
+
+                        self.expectedResponses.removeLast()
+                        self.expectedResponses.append((currentCount + count, last.1))
+                    }
+                    @discardableResult
+                    public func unboundedTimes() -> Self {
+                        guard let last = self.expectedResponses.last else {
+                            fatalError("Must have added expectation to update its count.")
+                        }
+
+                        self.expectedResponses.removeLast()
+                        self.expectedResponses.append((nil, last.1))
+
+                        return self
+                    }
+                    @discardableResult
+                    public func times(_ count: Int) -> Self {
+                        guard let last = self.expectedResponses.last else {
+                            fatalError("Must have added expectation to update its count.")
+                        }
+
+                        self.expectedResponses.removeLast()
+                        self.expectedResponses.append((count, last.1))
+
+                        return self
+                    }
+                }
+                """)
 
                 for variableDeclaration in variableDeclarations {
                     try VariablesImplementationGenerator.variablesDeclarations(

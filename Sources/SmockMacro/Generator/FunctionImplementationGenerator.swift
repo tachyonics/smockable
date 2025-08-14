@@ -8,6 +8,7 @@ enum FunctionImplementationGenerator {
         var mockFunctionDeclaration = protocolFunctionDeclaration
 
         mockFunctionDeclaration.modifiers = protocolFunctionDeclaration.modifiers.removingMutatingKeyword
+        mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
         if let accessModifier {
             mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "\(raw: accessModifier)")]

@@ -5,7 +5,7 @@ enum FunctionPropertiesGenerator {
     static func expectedResponseEnumDeclaration(variablePrefix: String,
                                                 functionSignature: FunctionSignatureSyntax) throws -> EnumDeclSyntax {
         return try EnumDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "fileprivate")],
+            modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {
@@ -41,64 +41,13 @@ enum FunctionPropertiesGenerator {
         return try ClassDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Expectations",
+            genericParameterClause: ": FieldExpectations<\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse>",
             memberBlockBuilder: {
-                try self.expectedResponseVariableDeclaration(variablePrefix: variablePrefix, accessModifier: "fileprivate ", staticName: true)
-
-                try FunctionDeclSyntax("""
-                private func add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(_ expected: \(
-                    raw: variablePrefix
-                        .capitalizingComponentsFirstLetter())ExpectedResponse) {
-                    self.expectedResponses.append((1, expected))
-                }
-                """)
-
-                try FunctionDeclSyntax("""
-                private func updateLast\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(count: Int) {
-                    guard let last = self.expectedResponses.last else {
-                        fatalError("Must have added expectation to update its count.")
-                    }
-
-                    guard let currentCount = last.0 else {
-                        fatalError("Cannot add expectations after a previous unbounded expectation.")
-                    }
-
-                    self.expectedResponses.removeLast()
-                    self.expectedResponses.append((currentCount + count, last.1))
-                }
-                """)
-
-                try FunctionDeclSyntax("""
-                @discardableResult
-                public func unboundedTimes() -> Self {
-                    guard let last = self.expectedResponses.last else {
-                        fatalError("Must have added expectation to update its count.")
-                    }
-
-                    self.expectedResponses.removeLast()
-                    self.expectedResponses.append((nil, last.1))
-
-                    return self
-                }
-                """)
-
-                try FunctionDeclSyntax("""
-                @discardableResult
-                public func times(_ count: Int) -> Self {
-                    guard let last = self.expectedResponses.last else {
-                        fatalError("Must have added expectation to update its count.")
-                    }
-
-                    self.expectedResponses.removeLast()
-                    self.expectedResponses.append((count, last.1))
-
-                    return self
-                }
-                """)
 
                 try FunctionDeclSyntax("""
                 @discardableResult
                 public func using(_ closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) -> Self {
-                  add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(.closure(closure))
+                  self.expectedResponses.append((1, .closure(closure)))
 
                   return self
                 }
@@ -108,7 +57,7 @@ enum FunctionPropertiesGenerator {
                     try FunctionDeclSyntax("""
                     @discardableResult
                     public func error(_ error: Swift.Error) -> Self {
-                      add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(.error(error))
+                      self.expectedResponses.append((1, .error(error)))
 
                       return self
                     }
@@ -118,7 +67,7 @@ enum FunctionPropertiesGenerator {
                 if let returnType = functionSignature.returnClause?.type {
                     try FunctionDeclSyntax("""
                     public func value(_ value: \(returnType)) -> Self {
-                      add\(raw: variablePrefix.capitalizingComponentsFirstLetter())Expectation(.value(value))
+                      self.expectedResponses.append((1, .value(value)))
 
                       return self
                     }
@@ -137,10 +86,10 @@ enum FunctionPropertiesGenerator {
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    fileprivate let storage: Storage
+                    let storage: Storage
                     """)
 
-                DeclSyntax("""
+                try VariableDeclSyntax("""
                 public var wasCalled: Bool {
                     get async {
                         return await self.storage.callCounts.\(raw: variablePrefix) > 0
@@ -148,7 +97,7 @@ enum FunctionPropertiesGenerator {
                 }
                 """)
 
-                DeclSyntax("""
+                try VariableDeclSyntax("""
                 public var callCount: Int {
                     get async {
                         return await self.storage.callCounts.\(raw: variablePrefix)
@@ -157,7 +106,7 @@ enum FunctionPropertiesGenerator {
                 """)
 
                 if !parameterList.isEmpty {
-                    DeclSyntax("""
+                    try VariableDeclSyntax("""
                     public var receivedInputs: [\(elementType)] {
                         get async {
                             return await self.storage.receivedInvocations.\(raw: variablePrefix)
@@ -182,7 +131,7 @@ enum FunctionPropertiesGenerator {
                         """)
                 }
 
-                try InitializerDeclSyntax("fileprivate init(storage: Storage) {") {
+                try InitializerDeclSyntax("init(storage: Storage) {") {
                     for functionDeclaration in functionDeclarations {
                         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
