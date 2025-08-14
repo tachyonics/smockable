@@ -87,6 +87,10 @@ enum FunctionPropertiesGenerator {
         return try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Verifications",
+            inheritanceClause: InheritanceClauseSyntax {
+                InheritedTypeSyntax(
+                    type: IdentifierTypeSyntax(name: "Sendable"))
+            },
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
@@ -125,6 +129,10 @@ enum FunctionPropertiesGenerator {
         try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: "Verifications",
+            inheritanceClause: InheritanceClauseSyntax {
+                InheritedTypeSyntax(
+                    type: IdentifierTypeSyntax(name: "Sendable"))
+            },
             memberBlockBuilder: {
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)

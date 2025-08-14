@@ -28,7 +28,7 @@ enum MockGenerator {
         } else {
             genericParameterClause = nil
         }
-
+        
         return try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
             name: identifier,
@@ -36,6 +36,9 @@ enum MockGenerator {
             inheritanceClause: InheritanceClauseSyntax {
                 InheritedTypeSyntax(
                     type: IdentifierTypeSyntax(name: protocolDeclaration.name))
+                
+                InheritedTypeSyntax(
+                    type: IdentifierTypeSyntax(name: "Sendable"))
             },
             memberBlockBuilder: {
                 try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {
