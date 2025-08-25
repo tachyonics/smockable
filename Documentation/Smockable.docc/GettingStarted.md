@@ -1,91 +1,110 @@
-# Getting Started
+# Quick Start
 
-Learn how to set up and use Smockable in your Swift projects.
+Get up and running with Smockable.
 
 ## Overview
 
-Smockable is a Swift library that uses code generation through Macros that generates mock implementations for protocols at compile time. This guide will walk you through the basic concepts and show you how to create your first mock.
+This getting started guide will walk through installing Smockable and creating an initial mock.
 
-## What is Smockable?
+## Step 1: Install Smockable
 
-Smockable uses Swift macros to automatically generate mock implementations of your protocols. When you annotate a protocol with `@Smock`, the macro generates a corresponding `Mock{ProtocolName}` struct that:
+Add Smockable to your project using Swift Package Manager. In Xcode:
 
-- Implements all protocol requirements
-- Provides an expectations-based API for configuring behavior
-- Tracks all method calls for verification
-- Is thread-safe and Sendable
-- Supports async/await and throwing functions
+1. Go to **File → Add Package Dependencies**
+2. Enter: `https://github.com/tachyonics/smockable.git`
+3. Add it to your test targets
 
-## Basic Workflow
+Or in your `Package.swift`:
 
-The typical workflow with Smockable follows these steps:
+```swift
+dependencies: [
+    .package(url: "https://github.com/tachyonics/smockable.git", from: "1.0.0")
+]
+```
 
-1. **Define a protocol** with the `@Smock` attribute
-2. **Create expectations** to define how the mock should behave
-3. **Initialize the mock** with those expectations
-4. **Use the mock** in your tests or code
-5. **Verify behavior** by checking call counts and received inputs
+## Step 2: Create a Protocol
 
-## Your First Mock
-
-Let's create a simple example:
+Create a protocol and annotate it with `@Smock`:
 
 ```swift
 import Smockable
 
-// 1. Define a protocol with @Smock
 @Smock
-protocol NetworkService {
-    func fetchData(from url: String) async throws -> Data
+protocol WeatherService {
+    func getCurrentTemperature(for city: String) async throws -> Double
+    func getForecast(for city: String, days: Int) async throws -> [WeatherDay]
 }
 
-// 2. In your test
-@Test func networkCall() async throws {
-    // Create expectations
-    let expectations = MockNetworkService.Expectations()
-    
-    // Configure expected behavior
-    let expectedData = "Hello, World!".data(using: .utf8)!
-    expectations.fetchData_from.value(expectedData)
-    
-    // Create the mock
-    let mockService = MockNetworkService(expectations: expectations)
-    
-    // Use the mock
-    let data = try await mockService.fetchData(from: "https://example.com")
-    
-    // Verify
-    #expect(data == expectedData)
-    
-    let callCount = await mockService.__verify.fetchData_from.callCount
-    #expect(callCount == 1)
+struct WeatherDay {
+    let date: Date
+    let temperature: Double
+    let condition: String
 }
 ```
 
-## Key Components
+## Step 3: Create an implementation that needs to be tested
 
-### @Smock Macro
+The point of creating mock implementations is to allow you to easily test your own code and how it uses it an underlying
+implementation. To demonstrate this we will create a simple implementation that uses an instance of the `WeatherService`
+protocol.
 
-The `@Smock` macro is applied to protocol declarations and generates the mock implementation. It must be applied to protocols only.
+```swift
+struct WeatherApp<Service: WeatherService> {
+    private let weatherService: Service
+    
+    init(weatherService: Service) {
+        self.weatherService = weatherService
+    }
+    
+    func displayCurrentWeather(for city: String) async -> String {
+        do {
+            let temperature = try await weatherService.getCurrentTemperature(for: city)
+            return "Current temperature in \(city): \(temperature)°C"
+        } catch {
+            return "Unable to fetch weather for \(city)"
+        }
+    }
+}
+```
 
-### Expectations
+## Step 4: Create a test that verifies the happy path
 
-Expectations define how your mock should behave when methods are called. They support:
+```swift
+@Test func weatherApp_DisplaysTemperature() async {
+    let expectations = MockWeatherService.Expectations()
+    expectations.getCurrentTemperature_for.value(22.5)
+    
+    let mockWeatherService = MockWeatherService(expectations: expectations)
+    let weatherApp = WeatherApp(weatherService: mockWeatherService)
+    
+    let result = await weatherApp.displayCurrentWeather(for: "London")
+    
+    #expect(result == "Current temperature in London: 22.5°C")
+}
 
-- **Return values**: `.value(someValue)`
-- **Errors**: `.error(someError)`
-- **Custom logic**: `.using { parameters in ... }`
-- **Call counts**: `.times(n)` or `.unboundedTimes()`
+```
 
-### Verification
+## Step 5: Create a test that verifies the unhappy path
 
-The `__verify` property on generated mocks provides access to call tracking:
-
-- `callCount`: Number of times a method was called
-- `receivedInputs`: Array of all parameter values received
+```swift
+@Test func weatherApp_HandlesError() async {
+    let expectations = MockWeatherService.Expectations()
+    expectations.getCurrentTemperature_for.error(WeatherError.serviceUnavailable)
+    
+    let mockWeatherService = MockWeatherService(expectations: expectations)
+    let weatherApp = WeatherApp(weatherService: mockWeatherService)
+    
+    let result = await weatherApp.displayCurrentWeather(for: "London")
+    
+    #expect(result == "Unable to fetch weather for London")
+}
+```
 
 ## Next Steps
 
-- Learn about <doc:Expectations> to understand how to configure mock behavior
-- Explore <doc:Verification> to see how to validate interactions
-- Check out <doc:AsyncAndThrowing> for async and throwing function support
+This guide walked through how to test a basic implementation with only a couple of code paths. More complex
+implementations will likely have significantly more code paths but can be tested using Smockable in the same way.
+
+- **<doc:Expectations>**: Learn about advanced expectation patterns
+- **<doc:Verification>**: Discover comprehensive verification techniques  
+- **<doc:AsyncAndThrowing>**: Master async and throwing function patterns

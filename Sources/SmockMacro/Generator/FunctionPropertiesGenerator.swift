@@ -69,6 +69,7 @@ enum FunctionPropertiesGenerator {
 
                 if let returnType = functionSignature.returnClause?.type {
                     try FunctionDeclSyntax("""
+                    @discardableResult
                     public func value(_ value: \(returnType)) -> Self {
                       self.expectedResponses.append((1, .value(value)))
 

@@ -6,6 +6,8 @@ Learn how to configure mock behavior using Smockable's expectation system.
 
 Expectations are the core of Smockable's mocking system. They define how your mock should behave when methods are called, what values to return, what errors to throw, and how many times these behaviors should occur.
 
+Expectations can only be set prior to a mock being created and are always passed into the constructor of the mock instance.
+
 ## Basic Expectations
 
 ### Return Values
@@ -28,6 +30,8 @@ expectations.fetchUser_id
 ### Throwing Errors
 
 Use `.error()` to make a method throw an error:
+
+**Note:** The error expectation will only be available if the method or property can throw.
 
 ```swift
 expectations.fetchUser_id.error(NetworkError.notFound)
@@ -90,38 +94,6 @@ If you don't specify a count modifier, it defaults to `.times(1)`:
 // These are equivalent:
 expectations.fetchUser_id.value(user1)
 expectations.fetchUser_id.value(user1).times(1)
-```
-
-## Advanced Patterns
-
-### Chaining Expectations
-
-You can chain multiple expectations for complex scenarios:
-
-```swift
-expectations.authenticate_username_password
-    .error(AuthError.invalidCredentials).times(2)  // First 2 attempts fail
-    .value(AuthToken(value: "valid-token"))        // Third attempt succeeds
-    .error(AuthError.sessionExpired).unboundedTimes() // All further attempts fail
-```
-
-### Conditional Logic
-
-Use closures for conditional behavior:
-
-```swift
-expectations.processPayment_amount_method.using { amount, method in
-    switch method {
-    case .creditCard:
-        guard amount <= 10000 else {
-            throw PaymentError.amountTooHigh
-        }
-        return PaymentResult.success
-    case .bankTransfer:
-        // Bank transfers have no limit
-        return PaymentResult.pending
-    }
-}
 ```
 
 ### Stateful Mocks

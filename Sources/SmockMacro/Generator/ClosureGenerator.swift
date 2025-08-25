@@ -46,7 +46,7 @@ enum ClosureGenerator {
             arguments: LabeledExprListSyntax {
                 for parameter in functionSignature.parameterClause.parameters {
                     LabeledExprSyntax(
-                        label: needsLabels ? (parameter.secondName ?? parameter.firstName) : nil,
+                        label: needsLabels ? parameter.firstName : nil,
                         colon: needsLabels ? .colonToken() : nil,
                         expression: DeclReferenceExprSyntax(
                             baseName: parameter.secondName ?? parameter.firstName))
