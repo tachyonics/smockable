@@ -43,59 +43,67 @@ import SwiftSyntaxBuilder
 /// - Important: The variable declaration must have exactly one binding. Any deviation from this will result in
 ///              an error diagnostic produced by the macro.
 enum VariablesImplementationGenerator {
-    @MemberBlockItemListBuilder
-    static func variablesDeclarations(protocolVariableDeclaration: VariableDeclSyntax) throws -> MemberBlockItemListSyntax {
-        if protocolVariableDeclaration.bindings.count == 1 {
-            // Since the count of `bindings` is exactly 1, it is safe to force unwrap it.
-            let binding = protocolVariableDeclaration.bindings.first!
+  @MemberBlockItemListBuilder
+  static func variablesDeclarations(protocolVariableDeclaration: VariableDeclSyntax) throws
+    -> MemberBlockItemListSyntax
+  {
+    if protocolVariableDeclaration.bindings.count == 1 {
+      // Since the count of `bindings` is exactly 1, it is safe to force unwrap it.
+      let binding = protocolVariableDeclaration.bindings.first!
 
-            if binding.typeAnnotation?.type.is(OptionalTypeSyntax.self) == true {
-                let accessorRemovalVisitor = AccessorRemovalVisitor()
+      if binding.typeAnnotation?.type.is(OptionalTypeSyntax.self) == true {
+        let accessorRemovalVisitor = AccessorRemovalVisitor()
 
-                accessorRemovalVisitor.visit(protocolVariableDeclaration)
-            } else {
-                try self.protocolVariableDeclarationWithGetterAndSetter(binding: binding)
+        accessorRemovalVisitor.visit(protocolVariableDeclaration)
+      } else {
+        try self.protocolVariableDeclarationWithGetterAndSetter(binding: binding)
 
-                try self.underlyingVariableDeclaration(binding: binding)
-            }
-        } else {
-            // As far as I know variable declaration in a protocol should have exactly one binding.
-            throw SmockDiagnostic.variableDeclInProtocolWithNotSingleBinding
-        }
+        try self.underlyingVariableDeclaration(binding: binding)
+      }
+    } else {
+      // As far as I know variable declaration in a protocol should have exactly one binding.
+      throw SmockDiagnostic.variableDeclInProtocolWithNotSingleBinding
+    }
+  }
+
+  private static func protocolVariableDeclarationWithGetterAndSetter(binding: PatternBindingSyntax)
+    throws -> VariableDeclSyntax
+  {
+    try VariableDeclSyntax(
+      """
+      var \(binding.pattern.trimmed)\(binding.typeAnnotation!.trimmed) {
+          get { \(raw: self.underlyingVariableName(binding: binding)) }
+          set { \(raw: self.underlyingVariableName(binding: binding)) = newValue }
+      }
+      """)
+  }
+
+  private static func underlyingVariableDeclaration(binding: PatternBindingListSyntax.Element)
+    throws -> VariableDeclSyntax
+  {
+    try VariableDeclSyntax(
+      """
+      var \(raw: self.underlyingVariableName(binding: binding)): (\(binding.typeAnnotation!.type.trimmed))!
+      """)
+  }
+
+  private static func underlyingVariableName(binding: PatternBindingListSyntax.Element) throws
+    -> String
+  {
+    guard let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+      // As far as I know variable declaration in a protocol should have identifier pattern
+      throw SmockDiagnostic.variableDeclInProtocolWithNotIdentifierPattern
     }
 
-    private static func protocolVariableDeclarationWithGetterAndSetter(binding: PatternBindingSyntax) throws -> VariableDeclSyntax {
-        try VariableDeclSyntax(
-            """
-            var \(binding.pattern.trimmed)\(binding.typeAnnotation!.trimmed) {
-                get { \(raw: self.underlyingVariableName(binding: binding)) }
-                set { \(raw: self.underlyingVariableName(binding: binding)) = newValue }
-            }
-            """)
-    }
+    let identifierText = identifierPattern.identifier.text
 
-    private static func underlyingVariableDeclaration(binding: PatternBindingListSyntax.Element) throws -> VariableDeclSyntax {
-        try VariableDeclSyntax(
-            """
-            var \(raw: self.underlyingVariableName(binding: binding)): (\(binding.typeAnnotation!.type.trimmed))!
-            """)
-    }
-
-    private static func underlyingVariableName(binding: PatternBindingListSyntax.Element) throws -> String {
-        guard let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
-            // As far as I know variable declaration in a protocol should have identifier pattern
-            throw SmockDiagnostic.variableDeclInProtocolWithNotIdentifierPattern
-        }
-
-        let identifierText = identifierPattern.identifier.text
-
-        return "underlying" + identifierText.prefix(1).uppercased() + identifierText.dropFirst()
-    }
+    return "underlying" + identifierText.prefix(1).uppercased() + identifierText.dropFirst()
+  }
 }
 
 private class AccessorRemovalVisitor: SyntaxRewriter {
-    override func visit(_ node: PatternBindingSyntax) -> PatternBindingSyntax {
-        let superResult = super.visit(node)
-        return superResult.with(\.accessorBlock, nil)
-    }
+  override func visit(_ node: PatternBindingSyntax) -> PatternBindingSyntax {
+    let superResult = super.visit(node)
+    return superResult.with(\.accessorBlock, nil)
+  }
 }
