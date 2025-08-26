@@ -28,6 +28,11 @@ enum FunctionPropertiesGenerator {
             """
             case value(\(returnType))
             """)
+        } else {
+          try EnumCaseDeclSyntax(
+            """
+            case success
+            """)
         }
       })
   }
@@ -82,6 +87,16 @@ enum FunctionPropertiesGenerator {
             @discardableResult
             public func value(_ value: \(returnType)) -> Self {
               self.expectedResponses.append((1, .value(value)))
+
+              return self
+            }
+            """)
+        } else {
+          try FunctionDeclSyntax(
+            """
+            @discardableResult
+            public func success() -> Self {
+              self.expectedResponses.append((1, .success))
 
               return self
             }

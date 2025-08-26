@@ -6,6 +6,9 @@ Learn how to verify mock interactions and validate test behavior.
 
 Verification is how you check that your code interacted with mocks as expected. Smockable provides comprehensive verification capabilities through the `__verify` property on generated mocks, allowing you to inspect call counts, received parameters, and call order.
 
+The `__verify` is available anytime afer the creation of the mock, representing its current state. This means in advanced test scenarios, you can
+verify the state of the mock at multiple points during the test.
+
 ## Basic Verification
 
 ### Call Counts
@@ -20,8 +23,13 @@ await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
 
 // Verify call count
-let callCount = await mock.__verify.fetchUser_id.callCount
-#expect(callCount == 2)
+let callCount1 = await mock.__verify.fetchUser_id.callCount
+#expect(callCount1 == 2)
+
+await mock.fetchUser(id: "789")
+
+let callCount2 = await mock.__verify.fetchUser_id.callCount
+#expect(callCount2 == 3)
 ```
 
 ### Received Inputs
@@ -32,14 +40,14 @@ Inspect the parameters passed to mock methods:
 // Use the mock with different parameters
 await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
-await mock.updateUser(user1)
-await mock.updateUser(user2)
+await mock.updateUser(id: "123", user: user1)
+await mock.updateUser(id: "456", user: user2)
 
 // Verify received inputs
 let fetchInputs = await mock.__verify.fetchUser_id.receivedInputs
 #expect(fetchInputs.count == 2)
-#expect(fetchInputs[0].id == "123")
-#expect(fetchInputs[1].id == "456")
+#expect(fetchInputs[0] == "123")
+#expect(fetchInputs[1] == "456")
 
 let updateInputs = await mock.__verify.updateUser.receivedInputs
 #expect(updateInputs.count == 2)
@@ -47,29 +55,20 @@ let updateInputs = await mock.__verify.updateUser.receivedInputs
 #expect(updateInputs[1].id == user2.id)
 ```
 
-## Advanced Verification
-
-### Verifying Call Order
-
-Check the order of method calls across different methods:
+**Note:** For functions with a single input (in this case `fetchUser`), the `receivedInputs` will be a simple array of that type. For functions
+with multiple inputs, `receivedInputs` (in this case `updateUser`) will be an array of tuples with appropriately typed elements labelled according to the function's
+inputs.
 
 ```swift
-// Use the mock
-await mock.authenticate(username: "john", password: "secret")
-await mock.fetchUser(id: "123")
-await mock.updateUser(user)
-await mock.logout()
+await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
 
-// Verify the sequence
-let authCount = await mock.__verify.authenticate_username_password.callCount
-let fetchCount = await mock.__verify.fetchUser_id.callCount
-let updateCount = await mock.__verify.updateUser.callCount
-let logoutCount = await mock.__verify.logout.callCount
+let inputs = await mock.__verify.searchUsers_query_limit_includeInactive.receivedInputs
+#expect(inputs.count == 1)
 
-#expect(authCount == 1)
-#expect(fetchCount == 1)
-#expect(updateCount == 1)
-#expect(logoutCount == 1)
+let firstCall = inputs[0]
+#expect(firstCall.query == "john")
+#expect(firstCall.limit == 10)
+#expect(!firstCall.includeInactive)
 ```
 
 ### Verifying No Calls
@@ -86,22 +85,6 @@ let deleteCount = await mock.__verify.deleteUser_id.callCount
 
 #expect(updateCount == 0)
 #expect(deleteCount == 0)
-```
-
-### Parameter Validation
-
-Verify specific parameter values and types:
-
-```swift
-await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
-
-let inputs = await mock.__verify.searchUsers_query_limit_includeInactive.receivedInputs
-#expect(inputs.count == 1)
-
-let firstCall = inputs[0]
-#expect(firstCall.query == "john")
-#expect(firstCall.limit == 10)
-#expect(!firstCall.includeInactive)
 ```
 
 ## Working with Complex Parameters

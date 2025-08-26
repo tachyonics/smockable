@@ -182,11 +182,22 @@ struct SmockableTests {
     #expect(callCount == 2)
   }
 
+  actor LastCity {
+    var value: String?
+
+    func set(_ value: String) {
+      self.value = value
+    }
+  }
+
   @Test func getTemperature_WithCustomLogic() async throws {
     let expectations = MockWeatherService.Expectations()
 
     // Use a closure to provide custom logic
+    let lastCity = LastCity()
     expectations.getCurrentTemperature_for.using { city in
+      await lastCity.set(city)
+
       switch city {
       case "London":
         return 15.0
@@ -207,10 +218,77 @@ struct SmockableTests {
 
     #expect(londonTemp == 15.0)
     #expect(parisTemp == 18.0)
+    await #expect(lastCity.value == "Paris")
 
     // Test error case
     await #expect(throws: WeatherError.cityNotFound) {
       try await mockWeatherService.getCurrentTemperature(for: "Unknown City")
+    }
+  }
+
+  struct AccountBalance {
+    let value: Double
+  }
+
+  struct AccountDetails: Equatable {
+    let name: String
+  }
+
+  @Smock
+  protocol Bank {
+    func withdraw(amount: Double) async throws -> AccountBalance
+    func getBalance() async -> AccountBalance
+    func setAccountDetails(details: AccountDetails) async
+  }
+
+  enum BankError: Error {
+    case insufficientFunds
+  }
+
+  actor MockBankLogic {
+    var balance: Double = 1000
+
+    func withdraw(amount: Double) async throws -> AccountBalance {
+      guard balance >= amount else {
+        throw BankError.insufficientFunds
+      }
+      balance -= amount
+      return AccountBalance(value: balance)
+    }
+
+    func getBalance() async -> AccountBalance {
+      return AccountBalance(value: balance)
+    }
+  }
+
+  @Test func getTemperature_WithActorAsLogic() async throws {
+    let expectations = MockBank.Expectations()
+    let accountDetails = AccountDetails(name: "MyAccount")
+
+    // Use a closure to provide custom logic
+    let logic = MockBankLogic()
+    expectations.withdraw_amount.using(logic.withdraw).unboundedTimes()
+    expectations.getBalance.using(logic.getBalance).unboundedTimes()
+    expectations.setAccountDetails_details.success()
+
+    let mockBank = MockBank(expectations: expectations)
+
+    // Withdraw some amounts
+    await mockBank.setAccountDetails(details: accountDetails)
+    let balance1 = try await mockBank.withdraw(amount: 500)
+    let balance2 = try await mockBank.withdraw(amount: 200)
+    let balance3 = await mockBank.getBalance()
+
+    #expect(balance1.value == 500)
+    #expect(balance2.value == 300)
+    #expect(balance3.value == 300)
+
+    let receivedInputs = await mockBank.__verify.setAccountDetails_details.receivedInputs
+    #expect(receivedInputs[0] == accountDetails)
+
+    // Test error case
+    await #expect(throws: BankError.insufficientFunds) {
+      try await mockBank.withdraw(amount: 500)
     }
   }
 }

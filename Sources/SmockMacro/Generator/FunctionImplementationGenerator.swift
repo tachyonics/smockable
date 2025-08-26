@@ -115,6 +115,12 @@ enum FunctionImplementationGenerator {
             case .value(let value):
                 return value
             """)
+        } else {
+          SwitchCaseSyntax(
+            """
+            case .success:
+                return
+            """)
         }
       })
   }

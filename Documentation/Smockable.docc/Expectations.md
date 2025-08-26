@@ -18,13 +18,24 @@ Use `.value()` to specify what a method should return:
 let expectations = MockUserService.Expectations()
 
 // Simple return value
-expectations.fetchUser_id.value(User(id: "123", name: "John"))
+expectations.fetchUser_user.value(User(id: "123", name: "John"))
 
 // Multiple different return values
-expectations.fetchUser_id
+expectations.fetchUser_user
     .value(user1)      // First call
     .value(user2)      // Second call
     .value(user3)      // Third call
+```
+
+### Functions with no Return Value
+
+When a function has no return value use `.success()` to specify that the mocked implementation should return successfully.
+
+```swift
+let expectations = MockUserService.Expectations()
+
+// Simple return value
+expectations.setUser_user.success()
 ```
 
 ### Throwing Errors
@@ -98,34 +109,104 @@ expectations.fetchUser_id.value(user1).times(1)
 
 ### Stateful Mocks
 
-Create stateful behavior using closures with captured variables:
+Using closures for your expectations allows you to manage state within your mock. The simplest way to do this is to capture
+variables by the closure. However as your expectation closures may be called concurrently, any captured variables must 
+themselves be thread-safe. As an example the following will not compile-
 
 ```swift
-var balance: Decimal = 1000
+var lastCity: String?
 
-expectations.withdraw_amount.using { amount in
-    guard balance >= amount else {
-        throw BankError.insufficientFunds
+expectations.getCurrentTemperature_for.using { city in
+    lastCity = city // error: Mutation of captured var 'balance' in concurrently-executing code
+
+    switch city {
+    case "London":
+        return 15.0
+    case "Paris":
+        return 18.0
+    case "New York":
+        return 25.0
+    default:
+        throw WeatherError.cityNotFound
     }
-    balance -= amount
-    return WithdrawalResult(newBalance: balance)
-}
-
-expectations.getBalance.using { _ in
-    return balance
 }.unboundedTimes()
 ```
 
-## Working with Different Return Types
-
-### Void Functions
-
-For functions that return `Void`, use `()`:
+Instead you will need to serial access to any state you want to use within your mock-
 
 ```swift
-expectations.updateUser.value(())
-expectations.deleteUser_id.value(())
+actor LastCity {
+    var value: String?
+
+    func set(_ value: String) {
+      self.value = value
+    }
+}
+
+// then within your test
+
+let lastCity = LastCity() // note this is an immutable let variable
+expectations.getCurrentTemperature_for.using { city in
+    await lastCity.set(city)
+
+    switch city {
+    case "London":
+        return 15.0
+    case "Paris":
+        return 18.0
+    case "New York":
+        return 25.0
+    default:
+        throw WeatherError.cityNotFound
+    }
+}.unboundedTimes()
 ```
+
+This also allows you to store custom state from the mock to use later in the test as part of verifications if required.
+
+This technique of capturing variables is useful for use cases like this where interaction with the state within the mock is fairly limited.
+However some times a mocked implementation of a method is so closely tied that it makes more sense for the actor itself to manage the entire
+mocked implementation
+
+
+```swift
+protocol Bank {
+    func withdraw(amount: Double) async throws -> Double
+    func getBalance() async -> Double
+  }
+
+  enum BankError: Error {
+    case insufficientFunds
+  }
+
+  actor MockBankLogic {
+      var balance: Double = 1000
+
+      func withdraw(amount: Double) async throws -> Double {
+          guard balance >= amount else {
+            throw BankError.insufficientFunds
+        }
+        balance -= amount
+        return balance
+      }
+
+      func getBalance() async -> Double {
+          return balance
+      }
+  }
+
+// then in the test
+let logic = MockBankLogic()
+expectations.withdraw_amount.using(logic.withdraw).unboundedTimes()
+expectations.getBalance.using(logic.getBalance).unboundedTimes()
+```
+
+In this exanple, the `withdraw` implementation is checking the existing balance, subtracting the withdraw amount and then returning the new balance.
+For correctness, you want to protect all three of these operations within the same actor isolation. This technique is also useful for larger protocols 
+when you only need to test a subset of its functions. You can provide the implementations of those functions and let the mock provide implementations 
+for the rest.
+
+## Working with Different Return Types
 
 ### Optional Returns
 
@@ -147,90 +228,6 @@ expectations.fetchDataAsync_from.using { url in
     let data = await someAsyncOperation(url)
     return data
 }
-```
-
-## Error Handling
-
-### Throwing Functions
-
-For throwing functions, you can mix successful returns and errors:
-
-```swift
-expectations.riskyOperation_input
-    .value(successResult)
-    .error(OperationError.temporaryFailure)
-    .value(anotherSuccessResult)
-    .error(OperationError.permanentFailure).unboundedTimes()
-```
-
-### Non-throwing Functions
-
-You cannot use `.error()` with non-throwing functions - this will result in a compile error:
-
-```swift
-@Smock
-protocol Service {
-    func safeOperation() -> String  // Non-throwing
-}
-
-// This won't compile:
-// expectations.safeOperation.error(SomeError())
-
-// This is correct:
-expectations.safeOperation.value("result")
-```
-
-## Best Practices
-
-### 1. Set Up All Expectations Before Creating Mock
-
-```swift
-// Good: Set up all expectations first
-let expectations = MockService.Expectations()
-expectations.method1.value(result1)
-expectations.method2.value(result2)
-let mock = MockService(expectations: expectations)
-
-// Avoid: Trying to modify expectations after mock creation
-// This won't work - expectations are consumed during mock creation
-```
-
-### 2. Use Descriptive Test Data
-
-```swift
-// Good: Clear, descriptive test data
-let validUser = User(id: "valid-123", name: "John Doe", email: "john@example.com")
-let invalidUser = User(id: "", name: "", email: "invalid-email")
-
-expectations.validateUser.value(true).value(false)
-
-// Better: Use the actual test data in expectations
-expectations.validateUser
-    .using { user in user.id.isEmpty ? false : true }
-```
-
-### 3. Handle Edge Cases
-
-```swift
-expectations.divide_by.using { divisor in
-    guard divisor != 0 else {
-        throw MathError.divisionByZero
-    }
-    return 10.0 / divisor
-}
-```
-
-### 4. Use Unbounded Times Carefully
-
-```swift
-// Good: Specific expectations followed by fallback
-expectations.fetchConfig
-    .value(config1).times(1)           // First call
-    .value(config2).times(2)           // Next 2 calls  
-    .error(ConfigError.unavailable).unboundedTimes()  // All remaining calls
-
-// Avoid: Starting with unbounded - no further expectations can be added
-// expectations.fetchConfig.value(config).unboundedTimes().value(other) // Won't work
 ```
 
 ## Next Steps
