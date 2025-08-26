@@ -233,5 +233,3 @@ expectations.fetchDataAsync_from.using { url in
 ## Next Steps
 
 - Learn about <doc:Verification> to check how your mocks were used
-- Explore <doc:AsyncAndThrowing> for async and throwing function patterns
-- See <doc:CommonPatterns> for real-world examples

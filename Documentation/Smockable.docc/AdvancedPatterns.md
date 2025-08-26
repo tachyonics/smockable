@@ -623,6 +623,5 @@ class IntegrationTestSuite: XCTestCase {
 
 ## Next Steps
 
-- Review <doc:CommonPatterns> for practical examples
 - Explore <doc:BestPractices> for testing strategy recommendations
 - See <doc:TestingStrategies> for comprehensive testing approaches

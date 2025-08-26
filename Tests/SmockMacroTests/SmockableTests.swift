@@ -230,7 +230,7 @@ struct SmockableTests {
     let value: Double
   }
 
-  struct AccountDetails: Equatable {
+  struct AccountDetails: Equatable, Hashable {
     let name: String
   }
 
@@ -289,6 +289,52 @@ struct SmockableTests {
     // Test error case
     await #expect(throws: BankError.insufficientFunds) {
       try await mockBank.withdraw(amount: 500)
+    }
+  }
+
+  @Test func setAccountDetails_ConcurrentCalls() async throws {
+    let expectations = MockBank.Expectations()
+    
+    // Configure the mock to succeed for all setAccountDetails calls
+    expectations.setAccountDetails_details.success().unboundedTimes()
+    
+    let mockBank = MockBank(expectations: expectations)
+    
+    // Create multiple AccountDetails instances
+    let accountDetails1 = AccountDetails(name: "Account1")
+    let accountDetails2 = AccountDetails(name: "Account2")
+    let accountDetails3 = AccountDetails(name: "Account3")
+    let accountDetails4 = AccountDetails(name: "Account4")
+    let accountDetails5 = AccountDetails(name: "Account5")
+    
+    // Make concurrent calls to setAccountDetails
+    await withTaskGroup(of: Void.self) { group in
+      group.addTask { await mockBank.setAccountDetails(details: accountDetails1) }
+      group.addTask { await mockBank.setAccountDetails(details: accountDetails2) }
+      group.addTask { await mockBank.setAccountDetails(details: accountDetails3) }
+      group.addTask { await mockBank.setAccountDetails(details: accountDetails4) }
+      group.addTask { await mockBank.setAccountDetails(details: accountDetails5) }
+    }
+    
+    // Verify call count
+    let callCount = await mockBank.__verify.setAccountDetails_details.callCount
+    #expect(callCount == 5)
+    
+    // Verify received inputs (order may vary due to concurrency)
+    let receivedInputs = await mockBank.__verify.setAccountDetails_details.receivedInputs
+    #expect(receivedInputs.count == 5)
+    
+    // Create expected set of account details for comparison
+    let expectedAccountDetails = Set([accountDetails1, accountDetails2, accountDetails3, accountDetails4, accountDetails5])
+    let receivedAccountDetailsSet = Set(receivedInputs)
+    
+    // Verify that all expected account details were received (regardless of order)
+    #expect(receivedAccountDetailsSet == expectedAccountDetails)
+    
+    // Verify each expected account detail appears exactly once
+    for expectedDetail in expectedAccountDetails {
+      let count = receivedInputs.filter { $0 == expectedDetail }.count
+      #expect(count == 1, "Account detail \(expectedDetail.name) should appear exactly once, but appeared \(count) times")
     }
   }
 }

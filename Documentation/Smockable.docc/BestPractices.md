@@ -535,6 +535,5 @@ func testCreateUser_WhenEmailAlreadyExists_ThrowsDuplicateEmailError() async {
 
 ## Next Steps
 
-- Review <doc:CommonPatterns> for practical examples
 - Explore <doc:TestingStrategies> for comprehensive testing approaches
 - See <doc:AdvancedPatterns> for complex testing scenarios

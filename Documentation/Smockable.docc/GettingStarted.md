@@ -107,4 +107,3 @@ implementations will likely have significantly more code paths but can be tested
 
 - **<doc:Expectations>**: Learn about advanced expectation patterns
 - **<doc:Verification>**: Discover comprehensive verification techniques  
-- **<doc:AsyncAndThrowing>**: Master async and throwing function patterns

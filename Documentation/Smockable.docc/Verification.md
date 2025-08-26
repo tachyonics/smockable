@@ -91,7 +91,12 @@ let deleteCount = await mock.__verify.deleteUser_id.callCount
 
 ### Custom Types
 
-For custom types, ensure they conform to `Equatable` for easy verification:
+Any custom types used as either the inputs or outputs of functions must be `Sendable` so they can be passed in or out of the mock implementation and - in the case
+of inputs - stored by the mock. The documentation [here](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/concurrency/#Sendable-Types) 
+explains the rules for Sendable types. Some types are always sendable, like structures that have only sendable properties and enumerations that have only sendable 
+associated values.
+
+Additionally while not required making any custom type conform to `Equatable` will allow for for easy verification:
 
 ```swift
 struct SearchCriteria: Equatable {
@@ -145,7 +150,7 @@ let inputs = await mock.__verify.fetchUser_id_includeDetails.receivedInputs
 
 ### Concurrent Access
 
-Verification properties are thread-safe and can be accessed concurrently:
+Special care needs when dealing with concurrency to account for the inherent uncertainty in these scenarios.
 
 ```swift
 // Multiple concurrent calls
@@ -168,158 +173,10 @@ let expectedIds = Set((0..<10).map { "\($0)" })
 #expect(receivedIds == expectedIds)
 ```
 
-### Timing Verification
-
-Verify that calls happen within expected timeframes:
-
-```swift
-let startTime = Date()
-
-await mock.performLongOperation()
-
-let endTime = Date()
-let duration = endTime.timeIntervalSince(startTime)
-
-let callCount = await mock.__verify.performLongOperation.callCount
-#expect(callCount == 1)
-#expect(duration < 1.0) // Should complete quickly since it's a mock
-```
-
-## Verification Patterns
-
-### Test Setup Pattern
-
-```swift
-@Suite struct UserServiceTests {
-    var mockService: MockUserService!
-    var expectations: MockUserService.Expectations!
-    
-    init() {
-        expectations = MockUserService.Expectations()
-        // Set up common expectations
-        expectations.fetchUser_id.value(defaultUser)
-    }
-    
-    @Test func userFetching() async {
-        mockService = MockUserService(expectations: expectations)
-        
-        // Test code
-        let user = await mockService.fetchUser(id: "123")
-        
-        // Verification
-        await verifyFetchUserCalled(with: "123")
-    }
-    
-    private func verifyFetchUserCalled(with id: String) async {
-        let inputs = await mockService.__verify.fetchUser_id.receivedInputs
-        #expect(inputs.contains { $0.id == id })
-    }
-}
-```
-
-### Verification Helper Methods
-
-Create reusable verification helpers:
-
-```swift
-extension MockUserService {
-    func verifyFetchUserCalled(times expectedCount: Int) async -> Bool {
-        let count = await self.__verify.fetchUser_id.callCount
-        return count == expectedCount
-    }
-    
-    func verifyFetchUserCalledWith(id: String) async -> Bool {
-        let inputs = await self.__verify.fetchUser_id.receivedInputs
-        return inputs.contains { $0.id == id }
-    }
-    
-    func verifyNoUpdatesCalled() async -> Bool {
-        let count = await self.__verify.updateUser.callCount
-        return count == 0
-    }
-}
-
-// Usage in tests
-#expect(await mock.verifyFetchUserCalled(times: 2))
-#expect(await mock.verifyFetchUserCalledWith(id: "123"))
-#expect(await mock.verifyNoUpdatesCalled())
-```
-
-## Common Verification Mistakes
-
-### 1. Forgetting Async Context
-
-```swift
-// Wrong: Missing await
-let callCount = mock.__verify.fetchUser_id.callCount // Compile error
-
-// Correct: Using await
-let callCount = await mock.__verify.fetchUser_id.callCount
-```
-
-### 2. Checking Verification Before Mock Usage
-
-```swift
-// Wrong: Checking before using mock
-let callCount = await mock.__verify.fetchUser_id.callCount // Will be 0
-await mock.fetchUser(id: "123")
-
-// Correct: Check after using mock
-await mock.fetchUser(id: "123")
-let callCount = await mock.__verify.fetchUser_id.callCount // Will be 1
-```
-
-### 3. Not Handling Async Properly in Tests
-
-```swift
-// Wrong: Not marking test as async
-func testUserService() { // Missing async
-    let callCount = await mock.__verify.fetchUser_id.callCount // Compile error
-}
-
-// Correct: Async test
-@Test func userService() async {
-    let callCount = await mock.__verify.fetchUser_id.callCount
-}
-```
-
-## Best Practices
-
-### 1. Verify Both Positive and Negative Cases
-
-```swift
-// Verify expected calls happened
-#expect(await mock.__verify.fetchUser_id.callCount == 1)
-
-// Verify unexpected calls didn't happen
-#expect(await mock.__verify.deleteUser_id.callCount == 0)
-```
-
-### 2. Use Descriptive Assertions
-
-```swift
-// Good: Descriptive assertion messages
-#expect(
-    await mock.__verify.fetchUser_id.callCount == 1,
-    "fetchUser should be called exactly once during initialization"
-)
-```
-
-### 3. Group Related Verifications
-
-```swift
-// Verify authentication flow
-let authInputs = await mock.__verify.authenticate_username_password.receivedInputs
-#expect(authInputs.count == 1)
-#expect(authInputs[0].username == "testuser")
-
-// Verify subsequent operations
-#expect(await mock.__verify.fetchUserProfile.callCount == 1)
-#expect(await mock.__verify.loadPreferences.callCount == 1)
-```
+In the case above, `receivedInputs` has no guaranteed order as its ordering is dependant on how the executing machine happened to schedule threads. One method
+to ensure a unit test is robust against this uncertainty is shown above - using a set to ensure all expected calls where made while ignoring the order they happened
+to be processed by the mock.
 
 ## Next Steps
 
-- Explore <doc:AsyncAndThrowing> for async-specific patterns
-- See <doc:CommonPatterns> for real-world verification examples
 - Learn about <doc:BestPractices> for effective testing strategies
