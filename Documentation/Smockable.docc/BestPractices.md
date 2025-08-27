@@ -88,8 +88,8 @@ Always configure all expectations before creating the mock:
 func testUserService() async throws {
     let expectations = MockUserRepository.Expectations()
     expectations.findUser_by.value(testUser)
-    expectations.saveUser.value(())
-    expectations.deleteUser_id.value(())
+    expectations.saveUser.success()
+    expectations.deleteUser_id.success()
     
     let mock = MockUserRepository(expectations: expectations)
     let service = UserService(repository: mock)
@@ -256,7 +256,7 @@ func testCreateUser_WhenFirstAttemptFails_RetriesSuccessfully() async throws {
     let expectations = MockUserRepository.Expectations()
     expectations.saveUser
         .error(DatabaseError.temporaryFailure)  // First attempt fails
-        .value(())                              // Retry succeeds
+        .success()                              // Retry succeeds
     
     let mock = MockUserRepository(expectations: expectations)
     let service = UserServiceWithRetry(repository: mock)
@@ -428,7 +428,7 @@ Keep mock expectations simple and focused:
 ```swift
 // Good: Simple, focused expectations
 expectations.fetchUser_id.value(testUser)
-expectations.saveUser.value(())
+expectations.saveUser.success()
 
 // Avoid: Overly complex mock logic
 expectations.fetchUser_id.using { id in
@@ -448,8 +448,8 @@ extension MockUserRepository {
     static func withStandardBehavior() -> MockUserRepository {
         let expectations = Expectations()
         expectations.findUser_by.value(User.testUser())
-        expectations.saveUser.value(())
-        expectations.deleteUser_id.value(())
+        expectations.saveUser.success()
+        expectations.deleteUser_id.success()
         return MockUserRepository(expectations: expectations)
     }
     

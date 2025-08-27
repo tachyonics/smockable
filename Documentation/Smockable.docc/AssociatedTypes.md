@@ -25,9 +25,9 @@ func testUserRepository() async throws {
     let expectations = MockRepository<User>.Expectations()
     
     let testUser = User(id: "123", name: "John Doe")
-    expectations.save.value(())
+    expectations.save.success()
     expectations.find_id.value(testUser)
-    expectations.delete_id.value(())
+    expectations.delete_id.success()
     
     let mockRepo = MockRepository<User>(expectations: expectations)
     
@@ -64,7 +64,7 @@ func testStringIntStore() async throws {
         default: return nil
         }
     }.unboundedTimes()
-    expectations.remove_key.value(())
+    expectations.remove_key.success()
     expectations.keys.value(["count", "total"])
     
     let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
@@ -157,7 +157,7 @@ struct UserCreatedEvent: EventProtocol {
 func testUserEventHandler() async throws {
     let expectations = MockEventHandler<UserCreatedEvent>.Expectations()
     
-    expectations.handle.value(())
+    expectations.handle.success()
     expectations.canHandle.value(true)
     
     let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
@@ -218,11 +218,11 @@ func testAuditableUserRepository() async throws {
     let auditLog = UserAuditLog(action: "created", timestamp: Date(), userId: "123")
     
     // Configure inherited methods
-    expectations.save.value(())
+    expectations.save.success()
     expectations.find_id.value(user)
     
     // Configure protocol-specific methods
-    expectations.saveWithAudit_entity_audit.value(())
+    expectations.saveWithAudit_entity_audit.success()
     expectations.getAuditLog_for.value([auditLog])
     
     let mockRepo = MockAuditableRepository<User, UserAuditLog>(expectations: expectations)
@@ -334,8 +334,8 @@ func testReadWritableService() async throws {
     let updatedUser = User(id: "123", name: "John Updated")
     
     expectations.read_id.value(user)
-    expectations.write_id_item.value(())
-    expectations.update_id_item.value(())
+    expectations.write_id_item.success()
+    expectations.update_id_item.success()
     
     let mockService = MockReadWritable<User>(expectations: expectations)
     
@@ -412,7 +412,7 @@ class AssociatedTypeTests: XCTestCase {
     func testRepositoryWithUsers() async throws {
         // Test with User type
         let userExpectations = MockRepository<User>.Expectations()
-        userExpectations.save.value(())
+        userExpectations.save.success()
         
         let userRepo = MockRepository<User>(expectations: userExpectations)
         let user = User(id: "123", name: "John")
@@ -422,7 +422,7 @@ class AssociatedTypeTests: XCTestCase {
     func testRepositoryWithProducts() async throws {
         // Test with Product type
         let productExpectations = MockRepository<Product>.Expectations()
-        productExpectations.save.value(())
+        productExpectations.save.success()
         
         let productRepo = MockRepository<Product>(expectations: productExpectations)
         let product = Product(id: "456", name: "Widget")

@@ -46,7 +46,7 @@ class UserServiceUnitTests: XCTestCase {
         
         mockValidator.expectations.validate.value(ValidationResult.valid)
         mockRepository.expectations.save.value(expectedUser)
-        mockNotificationService.expectations.sendWelcomeEmail.value(())
+        mockNotificationService.expectations.sendWelcomeEmail.success()
         
         // When
         let result = try await userService.createUser(userData)

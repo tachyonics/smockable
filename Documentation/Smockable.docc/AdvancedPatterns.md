@@ -30,13 +30,13 @@ func testInheritedProtocol() async throws {
     let expectations = MockDataService.Expectations()
     
     // Configure inherited methods
-    expectations.connect.value(())
-    expectations.disconnect.value(())
+    expectations.connect.success()
+    expectations.disconnect.success()
     expectations.isConnected.value(true)
     
     // Configure protocol-specific methods
     expectations.fetchData.value("test data".data(using: .utf8)!)
-    expectations.saveData.value(())
+    expectations.saveData.success()
     
     let mock = MockDataService(expectations: expectations)
     
@@ -105,7 +105,7 @@ func testSecureDataService() async throws {
     let testData = "secure data".data(using: .utf8)!
     
     authExpectations.authenticate_token.value(testUser)
-    loggingExpectations.log_message_level.value(()).unboundedTimes()
+    loggingExpectations.log_message_level.success().unboundedTimes()
     dataExpectations.fetchData.value(testData)
     
     let mockAuth = MockAuthenticationService(expectations: authExpectations)
@@ -153,8 +153,8 @@ func testUserRepository() async throws {
     
     let testUser = User(id: "123", name: "John Doe")
     expectations.find_by.value(testUser)
-    expectations.save.value(())
-    expectations.delete_id.value(())
+    expectations.save.success()
+    expectations.delete_id.success()
     
     let mockRepo = MockRepository<User, String>(expectations: expectations)
     
@@ -190,8 +190,8 @@ func testCacheService() async {
         .value(nil)         // Cache miss
         .value(testProfile) // Cache hit
     
-    expectations.set_key_value.value(()).unboundedTimes()
-    expectations.remove_key.value(())
+    expectations.set_key_value.success().unboundedTimes()
+    expectations.remove_key.success()
     
     let mockCache = MockCacheService<String, UserProfile>(expectations: expectations)
     
@@ -440,11 +440,11 @@ func testEventDrivenSystem() async {
         publishedEvents.append(event)
     }.unboundedTimes()
     
-    publisherExpectations.subscribe_to_handler.value(()).unboundedTimes()
+    publisherExpectations.subscribe_to_handler.success().unboundedTimes()
     
-    handlerExpectations.handle_UserCreatedEvent.value(()).unboundedTimes()
-    handlerExpectations.handle_UserUpdatedEvent.value(()).unboundedTimes()
-    handlerExpectations.handle_UserDeletedEvent.value(()).unboundedTimes()
+    handlerExpectations.handle_UserCreatedEvent.success().unboundedTimes()
+    handlerExpectations.handle_UserUpdatedEvent.success().unboundedTimes()
+    handlerExpectations.handle_UserDeletedEvent.success().unboundedTimes()
     
     let mockPublisher = MockEventPublisher(expectations: publisherExpectations)
     let mockHandler = MockEventHandler(expectations: handlerExpectations)
@@ -596,8 +596,8 @@ class IntegrationTestSuite: XCTestCase {
         
         // Configure cross-service interactions
         userExpectations.createUser.value(User.testUser())
-        notificationExpectations.sendWelcomeEmail.value(())
-        auditExpectations.logUserAction.value(()).unboundedTimes()
+        notificationExpectations.sendWelcomeEmail.success()
+        auditExpectations.logUserAction.success().unboundedTimes()
         
         mockUserService = MockUserService(expectations: userExpectations)
         mockNotificationService = MockNotificationService(expectations: notificationExpectations)

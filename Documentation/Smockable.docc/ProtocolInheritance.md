@@ -28,13 +28,13 @@ func testInheritedProtocol() async throws {
     let expectations = MockDataService.Expectations()
     
     // Configure inherited methods
-    expectations.connect.value(())
-    expectations.disconnect.value(())
+    expectations.connect.success()
+    expectations.disconnect.success()
     expectations.isConnected.value(true)
     
     // Configure protocol-specific methods
     expectations.fetchData.value("test data".data(using: .utf8)!)
-    expectations.saveData.value(())
+    expectations.saveData.success()
     
     let mock = MockDataService(expectations: expectations)
     
@@ -75,7 +75,7 @@ func testMultipleInheritance() async throws {
     
     // Configure methods from all inherited protocols
     expectations.authenticate_token.value(true)
-    expectations.cache_key_value.value(())
+    expectations.cache_key_value.success()
     expectations.getCached_key.value("cached data".data(using: .utf8)!)
     expectations.securelyFetchData_id.value("secure data".data(using: .utf8)!)
     
@@ -149,10 +149,10 @@ func testUserManagerWithMultipleProtocols() async throws {
     let encodedUserData = try JSONEncoder().encode(userData)
     
     authExpectations.authenticate_token.value(true)
-    dataExpectations.connect.value(())
+    dataExpectations.connect.success()
     dataExpectations.fetchData.value(encodedUserData)
     cacheExpectations.getCached_key.value(nil) // Cache miss
-    cacheExpectations.cache_key_value.value(())
+    cacheExpectations.cache_key_value.success()
     
     let mockAuth = MockAuthenticatable(expectations: authExpectations)
     let mockData = MockDataService(expectations: dataExpectations)
@@ -209,15 +209,15 @@ func testDeepInheritanceChain() async throws {
     let expectations = MockTransactionalRepository.Expectations()
     
     // Configure all methods from the inheritance chain
-    expectations.connect.value(())
-    expectations.disconnect.value(())
+    expectations.connect.success()
+    expectations.disconnect.success()
     expectations.find_id.value("test data".data(using: .utf8)!)
     expectations.findAll.value([Data()])
-    expectations.save_id_data.value(())
-    expectations.delete_id.value(())
-    expectations.beginTransaction.value(())
-    expectations.commitTransaction.value(())
-    expectations.rollbackTransaction.value(())
+    expectations.save_id_data.success()
+    expectations.delete_id.success()
+    expectations.beginTransaction.success()
+    expectations.commitTransaction.success()
+    expectations.rollbackTransaction.success()
     
     let mock = MockTransactionalRepository(expectations: expectations)
     
@@ -366,7 +366,7 @@ class ProtocolInheritanceTests: XCTestCase {
     func testBaseProtocolFunctionality() async throws {
         // Test just the base protocol methods
         let expectations = MockBaseService.Expectations()
-        expectations.connect.value(())
+        expectations.connect.success()
         
         let mock = MockBaseService(expectations: expectations)
         try await mock.connect()
@@ -377,7 +377,7 @@ class ProtocolInheritanceTests: XCTestCase {
     func testDerivedProtocolFunctionality() async throws {
         // Test the derived protocol including inherited methods
         let expectations = MockDataService.Expectations()
-        expectations.connect.value(()) // Inherited
+        expectations.connect.success() // Inherited
         expectations.fetchData.value(Data()) // New method
         
         let mock = MockDataService(expectations: expectations)
@@ -390,7 +390,7 @@ class ProtocolInheritanceTests: XCTestCase {
     func testProtocolInteraction() async throws {
         // Test how inherited and new methods work together
         let expectations = MockDataService.Expectations()
-        expectations.connect.value(())
+        expectations.connect.success()
         expectations.fetchData.using { 
             // Only return data if connected
             return "connected data".data(using: .utf8)!

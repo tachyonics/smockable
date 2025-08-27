@@ -81,7 +81,6 @@ struct WeatherApp<Service: WeatherService> {
     
     #expect(result == "Current temperature in London: 22.5°C")
 }
-
 ```
 
 ## Step 5: Create a test that verifies the unhappy path

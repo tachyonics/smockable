@@ -92,7 +92,7 @@ import Testing
     // Set up expected behavior
     let expectedUser = User(id: "123", name: "John Doe")
     expectations.fetchUser_id.value(expectedUser)
-    expectations.updateUser.value(())
+    expectations.updateUser.success()
     
     // Create the mock
     let mockService = MockUserService(expectations: expectations)
@@ -124,6 +124,9 @@ expectations.fetchUser_id
 expectations.fetchUser_id.using { id in
     return User(id: id, name: "Generated User")
 }.unboundedTimes() // Apply to all subsequent calls
+
+// For functions returning Void, use .success() instead of .value(())
+expectations.updateUser.success()
 
 // Throwing errors
 expectations.updateUser.error(ValidationError.invalidData)
