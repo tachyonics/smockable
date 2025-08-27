@@ -32,7 +32,6 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 ### Advanced Usage
 
-- <doc:AdvancedPatterns>
 - <doc:ProtocolInheritance>
 - <doc:AssociatedTypes>
 
@@ -45,4 +44,3 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 ### Examples
 
 - <doc:TestingStrategies>
-- <doc:BestPractices>

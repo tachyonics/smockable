@@ -176,7 +176,3 @@ let expectedIds = Set((0..<10).map { "\($0)" })
 In the case above, `receivedInputs` has no guaranteed order as its ordering is dependant on how the executing machine happened to schedule threads. One method
 to ensure a unit test is robust against this uncertainty is shown above - using a set to ensure all expected calls where made while ignoring the order they happened
 to be processed by the mock.
-
-## Next Steps
-
-- Learn about <doc:BestPractices> for effective testing strategies

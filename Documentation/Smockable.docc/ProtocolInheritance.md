@@ -409,5 +409,3 @@ class ProtocolInheritanceTests: XCTestCase {
 ## Next Steps
 
 - Learn about <doc:AssociatedTypes> for generic protocol support
-- Explore <doc:AdvancedPatterns> for complex inheritance scenarios
-- Review <doc:BestPractices> for protocol design guidelines

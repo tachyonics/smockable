@@ -351,4 +351,3 @@ class StatefulTestingStrategy: XCTestCase {
 
 - Apply these strategies to your specific testing scenarios
 - Combine multiple strategies for comprehensive test coverage
-- Review <doc:BestPractices> for implementation guidelines
