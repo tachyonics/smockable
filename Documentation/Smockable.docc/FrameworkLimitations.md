@@ -203,4 +203,3 @@ func testMultipleInheritanceWorkaround() async throws {
 ## Next Steps
 
 - Learn about <doc:AssociatedTypes> for generic protocol support
-- See <doc:TestingStrategies> for advanced testing patterns

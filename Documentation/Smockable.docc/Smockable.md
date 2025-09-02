@@ -30,11 +30,7 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 - <doc:Expectations>
 - <doc:Verification>
 
-### Advanced Usage
+### Advanced Topics
 
-- <doc:FrameworkLimitations>
 - <doc:AssociatedTypes>
-
-### Examples
-
-- <doc:TestingStrategies>
+- <doc:FrameworkLimitations>
