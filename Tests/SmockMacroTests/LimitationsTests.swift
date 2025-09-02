@@ -1,4 +1,5 @@
 import Foundation
+import FoundationNetworking
 import Testing
 @testable import Smockable
 
