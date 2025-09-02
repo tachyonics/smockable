@@ -19,7 +19,7 @@ requirements explicitly declared in that protocol.
 protocol BaseService {
     func connect() async throws
     func disconnect() async throws
-    var isConnected: Bool { get }
+    func getConnectionStatus() async -> Bool
 }
 
 @Smock
@@ -29,7 +29,7 @@ protocol DataService: BaseService {
 }
 
 // MockDataService will only have fetchData and saveData methods
-// connect, disconnect, and isConnected will be missing!
+// connect, disconnect, and getConnectionStatus will be missing!
 ```
 
 ### The Workaround: Mirror Inherited Requirements
