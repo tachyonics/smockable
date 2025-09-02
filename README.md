@@ -76,7 +76,6 @@ import Smockable
 protocol UserService {
     func fetchUser(id: String) async throws -> User
     func updateUser(_ user: User) async throws
-    var isLoggedIn: Bool { get }
 }
 ```
 

@@ -19,7 +19,7 @@ requirements explicitly declared in that protocol.
 protocol BaseService {
     func connect() async throws
     func disconnect() async throws
-    var isConnected: Bool { get }
+    func isConnected() async -> Bool
 }
 
 @Smock
