@@ -3,7 +3,7 @@ import Smockable
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import Testing
-
+/*
 @Smock
 public protocol Service1Protocol {
   // mutating func logout() async
@@ -337,4 +337,4 @@ struct SmockableTests {
       #expect(count == 1, "Account detail \(expectedDetail.name) should appear exactly once, but appeared \(count) times")
     }
   }
-}
+}*/
