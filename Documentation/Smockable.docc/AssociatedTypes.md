@@ -181,4 +181,4 @@ func testUserEventHandler() async throws {
 
 ## Next Steps
 
-- Review <doc:ProtocolInheritance> for inheritance with associated types
+- Review <doc:FrameworkLimitations> for a discussion of Smockable's limitations and possible workarounds

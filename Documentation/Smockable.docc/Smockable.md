@@ -32,14 +32,8 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 ### Advanced Usage
 
-- <doc:ProtocolInheritance>
+- <doc:FrameworkLimitations>
 - <doc:AssociatedTypes>
-
-### API Reference
-
-- <doc:SmockMacro>
-- <doc:MockGeneration>
-- <doc:ExpectationAPI>
 
 ### Examples
 
