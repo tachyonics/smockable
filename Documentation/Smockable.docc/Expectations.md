@@ -17,11 +17,11 @@ Smockable provides a powerful function-style API that allows you to match method
 ```swift
 var expectations = MockUserService.Expectations()
 
-// For functions that return values, use when()
+// For functions that return values, use when(:times:return)
 when(expectations.fetchUser(id: "100"..."999"), return: user)
 when(expectations.getUserProfile(name: "A"..."Z"), return: profile)
 
-// For functions with no return type (Void)
+// For functions with no return type (Void), use when(:times:complete)
 when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
 when(expectations.deleteUser(id: "100"..."999"), complete: .withSuccess)
 
@@ -61,10 +61,8 @@ when(expectations.logEvent(message: .any), times: .unbounded, complete: .withSuc
 ### Error Handling
 
 ```swift
-// For functions that can throw errors and return values
+// For functions that can throw errors; the syntax is the same regardless of if the function returns a value or not
 when(expectations.fetchUser(id: "invalid"), throw: UserError.notFound)
-
-// For functions that can throw errors but return void
 when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
 ```
 
