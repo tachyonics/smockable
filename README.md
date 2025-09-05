@@ -93,7 +93,7 @@ import Testing
     when(expectations.fetchUser(id: "100"..."999"), useValue: expectedUser)
     
     // For functions with no return type, use successWhen
-    successWhen(expectations.updateUser(user: .any))
+    successWhen(expectations.updateUser(.any))
     
     // Create the mock
     let mockService = MockUserService(expectations: expectations)

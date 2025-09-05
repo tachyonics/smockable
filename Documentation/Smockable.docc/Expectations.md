@@ -204,7 +204,7 @@ themselves be thread-safe. As an example the following will not compile-
 ```swift
 var lastCity: String?
 
-expectations.getCurrentTemperature_for.using { city in
+when(expectations.getCurrentTemperature(for: .any), times: .unbounded) { city in
     lastCity = city // error: Mutation of captured var 'balance' in concurrently-executing code
 
     switch city {
@@ -217,7 +217,7 @@ expectations.getCurrentTemperature_for.using { city in
     default:
         throw WeatherError.cityNotFound
     }
-}.unboundedTimes()
+}
 ```
 
 Instead you will need to serial access to any state you want to use within your mock-
@@ -234,7 +234,7 @@ actor LastCity {
 // then within your test
 
 let lastCity = LastCity() // note this is an immutable let variable
-expectations.getCurrentTemperature_for.using { city in
+when(expectations.getCurrentTemperature(for: .any), times: .unbounded) { city in
     await lastCity.set(city)
 
     switch city {
@@ -247,7 +247,7 @@ expectations.getCurrentTemperature_for.using { city in
     default:
         throw WeatherError.cityNotFound
     }
-}.unboundedTimes()
+}
 ```
 
 This also allows you to store custom state from the mock to use later in the test as part of verifications if required.
@@ -285,8 +285,8 @@ protocol Bank {
 
 // then in the test
 let logic = MockBankLogic()
-expectations.withdraw_amount.using(logic.withdraw).unboundedTimes()
-expectations.getBalance.using(logic.getBalance).unboundedTimes()
+when(expectations.withdraw(amount: .any), times: .unbounded, use: logic.withdraw)
+when(expectations.getBalance(), times: .unbounded, use: logic.getBalance)
 ```
 
 In this exanple, the `withdraw` implementation is checking the existing balance, subtracting the withdraw amount and then returning the new balance.
@@ -301,9 +301,8 @@ for the rest.
 Handle optional return types naturally:
 
 ```swift
-expectations.findUser_email
-    .value(user)        // Returns Optional(user)
-    .value(nil)         // Returns nil
+when(expectations.findUser(email: .any), useValue: user)        // Returns Optional(user)
+when(expectations.findUser(email: .any), useValue: nil)         // Returns nil
 ```
 
 ### Async Functions
@@ -311,7 +310,7 @@ expectations.findUser_email
 Expectations work seamlessly with async functions:
 
 ```swift
-expectations.fetchDataAsync_from.using { url in
+when(expectations.fetchDataAsync(from: .any), times: .unbounded) { url in
     // This closure can be async if needed
     let data = await someAsyncOperation(url)
     return data

@@ -22,12 +22,12 @@ protocol Repository {
 
 // Usage with specific type
 func testUserRepository() async throws {
-    let expectations = MockRepository<User>.Expectations()
+    var expectations = MockRepository<User>.Expectations()
     
     let testUser = User(id: "123", name: "John Doe")
-    expectations.save.success()
-    expectations.find_id.value(testUser)
-    expectations.delete_id.success()
+    successWhen(expectations.save(.any))
+    when(expectations.find(id: .any), useValue: testUser)
+    successWhen(expectations.delete(id: .any))
     
     let mockRepo = MockRepository<User>(expectations: expectations)
     
@@ -54,18 +54,18 @@ protocol KeyValueStore {
 }
 
 func testStringIntStore() async throws {
-    let expectations = MockKeyValueStore<String, Int>.Expectations()
+    var expectations = MockKeyValueStore<String, Int>.Expectations()
     
-    expectations.set_key_value.value(()).unboundedTimes()
-    expectations.get_key.using { key in
+    successWhen(expectations.set(key: .any, value: .any), times: .unbounded)
+    when(expectations.get(key: .any), times: .unbounded) { key in
         switch key {
         case "count": return 42
         case "total": return 100
         default: return nil
         }
-    }.unboundedTimes()
-    expectations.remove_key.success()
-    expectations.keys.value(["count", "total"])
+    }
+    successWhen(expectations.remove(key: .any))
+    when(expectations.keys(), useValue: ["count", "total"])
     
     let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
     
@@ -111,7 +111,7 @@ struct SerializedUserData: Codable {
 }
 
 func testUserDataSerializer() async throws {
-    let expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
+    var expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
     
     let userData = UserData(id: "123", name: "John")
     let serializedData = SerializedUserData(
@@ -119,8 +119,8 @@ func testUserDataSerializer() async throws {
         timestamp: Date()
     )
     
-    expectations.serialize.value(serializedData)
-    expectations.deserialize.value(userData)
+    when(expectations.serialize(.any), useValue: serializedData)
+    when(expectations.deserialize(.any), useValue: userData)
     
     let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
     
@@ -155,10 +155,10 @@ struct UserCreatedEvent: EventProtocol {
 }
 
 func testUserEventHandler() async throws {
-    let expectations = MockEventHandler<UserCreatedEvent>.Expectations()
+    var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
     
-    expectations.handle.success()
-    expectations.canHandle.value(true)
+    successWhen(expectations.handle(.any))
+    when(expectations.canHandle(.any), useValue: true)
     
     let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
     
