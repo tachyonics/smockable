@@ -60,11 +60,11 @@ func testInheritedProtocolWorkaround() async throws {
     var expectations = MockDataService.Expectations()
     
     // Now all methods are available
-    successWhen(expectations.connect())
-    successWhen(expectations.disconnect())
-    when(expectations.getConnectionStatus(), useValue: true)
-    when(expectations.fetchData(), useValue: "test data".data(using: .utf8)!)
-    successWhen(expectations.saveData(.any))
+    when(expectations.connect(), complete: .withSuccess)
+    when(expectations.disconnect(), complete: .withSuccess)
+    when(expectations.getConnectionStatus(), return: true)
+    when(expectations.fetchData(), return: "test data".data(using: .utf8)!)
+    when(expectations.saveData(.any), complete: .withSuccess)
     
     let mock = MockDataService(expectations: expectations)
     let underTest = UnderTestComponent(service: mock)
@@ -111,8 +111,8 @@ func testExternalProtocolWorkaround() async throws {
     let expectations = MockMyNetworkService.Expectations()
     
     // Configure external protocol methods
-    successWhen(expectations.handleDataReceived(.any))
-    successWhen(expectations.handleRequestCompleted(error: .any))
+    when(expectations.handleDataReceived(.any), complete: .withSuccess)
+    when(expectations.handleRequestCompleted(error: .any), complete: .withSuccess)
     
     let mock = MockMyNetworkService(expectations: expectations)
     
@@ -183,10 +183,10 @@ func testMultipleInheritanceWorkaround() async throws {
     var expectations = MockSecureDataService.Expectations()
     
     // Configure methods from all parent protocols
-    when(expectations.authenticate(token: .any), useValue: true)
-    successWhen(expectations.cache(key: .any, value: .any))
-    when(expectations.getCached(key: .any), useValue: "cached data".data(using: .utf8)!)
-    when(expectations.securelyFetchData(id: .any), useValue: "secure data".data(using: .utf8)!)
+    when(expectations.authenticate(token: .any), return: true)
+    when(expectations.cache(key: .any, value: .any), complete: .withSuccess)
+    when(expectations.getCached(key: .any), return: "cached data".data(using: .utf8)!)
+    when(expectations.securelyFetchData(id: .any), return: "secure data".data(using: .utf8)!)
     
     let mock = MockSecureDataService(expectations: expectations)
     

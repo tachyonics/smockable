@@ -180,9 +180,9 @@ struct AssociatedTypesTests {
         var expectations = MockRepository<User>.Expectations()
 
         let testUser = User(id: "123", name: "John Doe")
-        successWhen(expectations.save(.any))
-        when(expectations.find(id: .any), useValue: testUser)
-        successWhen(expectations.delete(id: .any))
+        when(expectations.save(.any), complete: .withSuccess)
+        when(expectations.find(id: .any), return: testUser)
+        when(expectations.delete(id: .any), complete: .withSuccess)
 
         let mockRepo = MockRepository<User>(expectations: expectations)
 
@@ -206,7 +206,7 @@ struct AssociatedTypesTests {
     func testMultipleAssociatedTypes() async throws {
         var expectations = MockKeyValueStore<String, Int>.Expectations()
 
-        successWhen(expectations.set(key: .any, value: .any), times: .unbounded)
+        when(expectations.set(key: .any, value: .any), times: .unbounded, complete: .withSuccess)
         when(expectations.get(key: .any), times: .unbounded) { key in
             switch key {
             case "count": return 42
@@ -214,8 +214,8 @@ struct AssociatedTypesTests {
             default: return nil
             }
         }
-        successWhen(expectations.remove(key: .any))
-        when(expectations.keys(), useValue: ["count", "total"])
+        when(expectations.remove(key: .any), complete: .withSuccess)
+        when(expectations.keys(), return: ["count", "total"])
 
         let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
 
@@ -246,8 +246,8 @@ struct AssociatedTypesTests {
             timestamp: "2024-01-01T00:00:00Z"
         )
 
-        when(expectations.serialize(.any), useValue: serializedData)
-        when(expectations.deserialize(.any), useValue: userData)
+        when(expectations.serialize(.any), return: serializedData)
+        when(expectations.deserialize(.any), return: userData)
 
         let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
 
@@ -268,7 +268,7 @@ struct AssociatedTypesTests {
     func testProtocolConstraints() async throws {
         var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
 
-        successWhen(expectations.handle(.any))
+        when(expectations.handle(.any), complete: .withSuccess)
 
         let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
 
@@ -299,9 +299,9 @@ struct AssociatedTypesTests {
         )
         let config = ProcessingConfig(enableTagging: true, scoreThreshold: 0.5)
 
-        when(expectations.transform(.any, config: .any), useValue: processedData)
-        when(expectations.validateInput(.any), useValue: true)
-        when(expectations.createDefaultConfig(), useValue: config)
+        when(expectations.transform(.any, config: .any), return: processedData)
+        when(expectations.validateInput(.any), return: true)
+        when(expectations.createDefaultConfig(), return: config)
 
         let mockTransformer = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>(
             expectations: expectations
@@ -337,9 +337,9 @@ struct AssociatedTypesTests {
         let user = User(id: "123", name: "John")
         let updatedUser = User(id: "123", name: "John Updated")
 
-        when(expectations.read(id: "100"..."999"), useValue: user)
-        successWhen(expectations.write(id: "400"..."499", item: .any))
-        successWhen(expectations.update(id: "100"..."199", item: .any))
+        when(expectations.read(id: "100"..."999"), return: user)
+        when(expectations.write(id: "400"..."499", item: .any), complete: .withSuccess)
+        when(expectations.update(id: "100"..."199", item: .any), complete: .withSuccess)
 
         let mockService = MockSimpleReadWritable<User>(expectations: expectations)
 
@@ -369,7 +369,7 @@ struct AssociatedTypesTests {
     func testRepositoryWithMultipleTypes() async throws {
         // Test with User type
         var userExpectations = MockRepository<User>.Expectations()
-        successWhen(userExpectations.save(.any))
+        when(userExpectations.save(.any), complete: .withSuccess)
 
         let userRepo = MockRepository<User>(expectations: userExpectations)
         let user = User(id: "123", name: "John")
@@ -380,7 +380,7 @@ struct AssociatedTypesTests {
 
         // Test with Product type
         var productExpectations = MockRepository<Product>.Expectations()
-        successWhen(productExpectations.save(.any))
+        when(productExpectations.save(.any), complete: .withSuccess)
 
         let productRepo = MockRepository<Product>(expectations: productExpectations)
         let product = Product(id: "456", name: "Widget")
@@ -395,8 +395,8 @@ struct AssociatedTypesTests {
         var expectations = MockCache<String, User>.Expectations()
 
         let user = User(id: "123", name: "John")
-        successWhen(expectations.store(key: "user_100"..."user_999", value: .any))
-        when(expectations.retrieve(key: "user_100"..."user_999"), useValue: user)
+        when(expectations.store(key: "user_100"..."user_999", value: .any), complete: .withSuccess)
+        when(expectations.retrieve(key: "user_100"..."user_999"), return: user)
 
         let mockCache = MockCache<String, User>(expectations: expectations)
 
@@ -417,8 +417,8 @@ struct AssociatedTypesTests {
         var expectations = MockSerializable<UserData>.Expectations()
 
         let userData = UserData(id: "123", name: "John")
-        when(expectations.serialize(), useValue: userData)
-        successWhen(expectations.deserialize(.any))
+        when(expectations.serialize(), return: userData)
+        when(expectations.deserialize(.any), complete: .withSuccess)
 
         let mockSerializable = MockSerializable<UserData>(expectations: expectations)
 
@@ -438,7 +438,7 @@ struct AssociatedTypesTests {
     func testProcessorWithoutConstraints() async throws {
         var expectations = MockProcessor<String, Int>.Expectations()
 
-        when(expectations.process(.any), useValue: 42)
+        when(expectations.process(.any), return: 42)
 
         let mockProcessor = MockProcessor<String, Int>(expectations: expectations)
 

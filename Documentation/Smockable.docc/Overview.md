@@ -40,7 +40,7 @@ import Smockable
         var expectations = MockWeatherService.Expectations()
         
         // 2. Configure what the mock should return
-        when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
+        when(expectations.getCurrentTemperature(for: .any), return: 22.5)
         
         // 3. Create the mock
         let mockWeatherService = MockWeatherService(expectations: expectations)
@@ -80,7 +80,7 @@ Building on our previous example, you can also set expectations that are errors,
 @Test func getCurrentTemperature_WhenServiceFails_ThrowsError() async {
     // Configure mock to throw an error
     var expectations = MockWeatherService.Expectations()
-    when(expectations.getCurrentTemperature(for: .any), useError: WeatherError.serviceUnavailable)
+    when(expectations.getCurrentTemperature(for: .any), throw: WeatherError.serviceUnavailable)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     
@@ -104,8 +104,8 @@ invocations of the same mocked function for property.
     let londonForecast = [WeatherDay(date: Date(), temperature: 20.0, condition: "Sunny")]
     let parisForecast = [WeatherDay(date: Date(), temperature: 18.0, condition: "Cloudy")]
     
-    when(expectations.getForecast(for: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
-    when(expectations.getForecast(for: .any, days: .any), useValue: parisForecast)   // Second call returns Paris forecast
+    when(expectations.getForecast(for: .any, days: .any), return: londonForecast)  // First call returns London forecast
+    when(expectations.getForecast(for: .any, days: .any), return: parisForecast)   // Second call returns Paris forecast
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     

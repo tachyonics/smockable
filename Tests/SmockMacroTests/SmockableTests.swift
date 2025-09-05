@@ -22,7 +22,7 @@ struct SmockableTests {
 
         var expectations = MockService1Protocol.Expectations()
         // expectation for first call
-        when(expectations.initialize(name: .any, secondName: .any), useValue: expectedReturnValue1)
+        when(expectations.initialize(name: .any, secondName: .any), return: expectedReturnValue1)
         // expectation for next two calls
         when(expectations.initialize(name: .any, secondName: .any), times: 2) { name, secondName in
             "\(name)_\(secondName ?? "empty")"
@@ -31,7 +31,7 @@ struct SmockableTests {
         when(
             expectations.initialize(name: .any, secondName: .any),
             times: 2,
-            useValue: expectedReturnValue2
+            return: expectedReturnValue2
         )
 
         // create the mock; no more expectations can be added to the mock
@@ -89,7 +89,7 @@ struct SmockableTests {
         var expectations = MockWeatherService.Expectations()
 
         // 2. Configure what the mock should return
-        when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
+        when(expectations.getCurrentTemperature(for: .any), return: 22.5)
 
         // 3. Create the mock
         let mockWeatherService = MockWeatherService(expectations: expectations)
@@ -127,7 +127,7 @@ struct SmockableTests {
 
     @Test func weatherApp_DisplaysTemperature() async {
         var expectations = MockWeatherService.Expectations()
-        when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
+        when(expectations.getCurrentTemperature(for: .any), return: 22.5)
 
         let mockWeatherService = MockWeatherService(expectations: expectations)
         let weatherApp = WeatherApp(weatherService: mockWeatherService)
@@ -140,7 +140,7 @@ struct SmockableTests {
     @Test func getCurrentTemperature_WhenServiceFails_ThrowsError() async {
         // Configure mock to throw an error
         var expectations = MockWeatherService.Expectations()
-        when(expectations.getCurrentTemperature(for: .any), useError: WeatherError.serviceUnavailable)
+        when(expectations.getCurrentTemperature(for: .any), throw: WeatherError.serviceUnavailable)
 
         let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -157,8 +157,8 @@ struct SmockableTests {
         let londonForecast = [WeatherDay(date: Date(), temperature: 20.0, condition: "Sunny")]
         let parisForecast = [WeatherDay(date: Date(), temperature: 18.0, condition: "Cloudy")]
 
-        when(expectations.getForecast(for: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
-        when(expectations.getForecast(for: .any, days: .any), useValue: parisForecast)  // Second call returns Paris forecast
+        when(expectations.getForecast(for: .any, days: .any), return: londonForecast)  // First call returns London forecast
+        when(expectations.getForecast(for: .any, days: .any), return: parisForecast)  // Second call returns Paris forecast
 
         let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -269,7 +269,7 @@ struct SmockableTests {
         let logic = MockBankLogic()
         when(expectations.withdraw(amount: .any), times: .unbounded, use: logic.withdraw)
         when(expectations.getBalance(), times: .unbounded, use: logic.getBalance)
-        successWhen(expectations.setAccountDetails(details: .any))
+        when(expectations.setAccountDetails(details: .any), complete: .withSuccess)
 
         let mockBank = MockBank(expectations: expectations)
 
@@ -296,7 +296,7 @@ struct SmockableTests {
         var expectations = MockBank.Expectations()
 
         // Configure the mock to succeed for all setAccountDetails calls
-        successWhen(expectations.setAccountDetails(details: .any), times: .unbounded)
+        when(expectations.setAccountDetails(details: .any), times: .unbounded, complete: .withSuccess)
 
         let mockBank = MockBank(expectations: expectations)
 

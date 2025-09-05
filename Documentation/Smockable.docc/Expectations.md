@@ -17,110 +17,108 @@ Smockable provides a powerful function-style API that allows you to match method
 ```swift
 var expectations = MockUserService.Expectations()
 
-// For functions that return values, use when()
-when(expectations.fetchUser(id: "100"..."999"), useValue: user)
-when(expectations.getUserProfile(name: "A"..."Z"), useValue: profile)
+// For functions that return values, use when([:times = 1]:return)
+when(expectations.fetchUser(id: "100"..."999"), return: user)
+when(expectations.getUserProfile(name: "A"..."Z"), times: 3, return: profile)
 
-// For functions with no return type (Void), use successWhen()
-successWhen(expectations.updateUser(name: "A"..."Z", age: 18...65))
-successWhen(expectations.deleteUser(id: "100"..."999"))
+// For functions with no return type (Void), use when([:times = 1]:complete)
+when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
+when(expectations.deleteUser(id: "100"..."999"), times: 8, complete: .withSuccess)
 
 // Match any value using .any
-when(expectations.fetchUser(id: .any), useValue: defaultUser)
+when(expectations.fetchUser(id: .any), return: defaultUser)
 ```
 
 ### Optional Parameter Matching
 
 ```swift
 // Match nil values for functions returning values
-when(expectations.processUser(name: "A"..."Z", age: .nil), useValue: "no age")
+when(expectations.processUser(name: "A"..."Z", age: .nil), return: "no age")
 
 // Match non-nil values in range
-when(expectations.processUser(name: "A"..."Z", age: .range(18...65)), useValue: "valid age")
+when(expectations.processUser(name: "A"..."Z", age: .range(18...65)), return: "valid age")
 
 // Match nil OR values in range
-when(expectations.processUser(name: "A"..."Z", age: .nilOrRange(18...65)), useValue: "flexible age")
+when(expectations.processUser(name: "A"..."Z", age: .nilOrRange(18...65)), return: "flexible age")
 
 // For void functions with optional parameters
-successWhen(expectations.updateUser(name: "A"..."Z", age: .nil))
-successWhen(expectations.updateUser(name: "A"..."Z", age: .range(18...65)))
+when(expectations.updateUser(name: "A"..."Z", age: .nil), complete: .withSuccess)
+when(expectations.updateUser(name: "A"..."Z", age: .range(18...65)), complete: .withSuccess)
 ```
 
 ### Multiple Call Expectations
 
 ```swift
 // Specify number of times expectation should apply
-when(expectations.fetchUser(id: "100"..."999"), times: 3, useValue: user)
-successWhen(expectations.saveData(data: "A"..."Z"), times: 5)
+when(expectations.fetchUser(id: "100"..."999"), times: 3, return: user)
+when(expectations.saveData(data: "A"..."Z"), times: 5, complete: .withSuccess)
 
 // Unbounded expectations (apply to all matching calls)
-when(expectations.fetchUser(id: .any), times: .unbounded, useValue: defaultUser)
-successWhen(expectations.logEvent(message: .any), times: .unbounded)
+when(expectations.fetchUser(id: .any), times: .unbounded, return: defaultUser)
+when(expectations.logEvent(message: .any), times: .unbounded, complete: .withSuccess)
 ```
 
 ### Error Handling
 
 ```swift
-// For functions that can throw errors and return values
-when(expectations.fetchUser(id: "invalid"), useError: UserError.notFound)
-
-// For functions that can throw errors but return void
-when(expectations.saveData(data: "invalid"), useError: ValidationError.invalidData)
+// For functions that can throw errors; the syntax is the same regardless of if the function returns a value or not
+when(expectations.fetchUser(id: "invalid"), throw: UserError.notFound)
+when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
 ```
 
 ## Basic Expectations
 
 ### Return Values
 
-Use `when()` with `useValue:` to specify what a method should return:
+Use `when()` with `return:` to specify what a method should return:
 
 ```swift
 var expectations = MockUserService.Expectations()
 
 // Simple return value with range matching
-when(expectations.fetchUser(id: "100"..."999"), useValue: User(id: "123", name: "John"))
+when(expectations.fetchUser(id: "100"..."999"), return: User(id: "123", name: "John"))
 
 // Multiple different return values for different ranges
-when(expectations.fetchUser(id: "001"..."099"), useValue: user1)
-when(expectations.fetchUser(id: "100"..."199"), useValue: user2)
-when(expectations.fetchUser(id: "200"..."299"), useValue: user3)
+when(expectations.fetchUser(id: "001"..."099"), return: user1)
+when(expectations.fetchUser(id: "100"..."199"), return: user2)
+when(expectations.fetchUser(id: "200"..."299"), return: user3)
 
 // Match any value
-when(expectations.fetchUser(id: .any), useValue: defaultUser)
+when(expectations.fetchUser(id: .any), return: defaultUser)
 ```
 
 ### Functions with no Return Value
 
-When a function has no return value use `successWhen()` to specify that the mocked implementation should return successfully:
+When a function has no return value use `when([:times = 1]:complete)` to specify that the mocked implementation should return successfully:
 
 ```swift
 var expectations = MockUserService.Expectations()
 
 // Functions that complete successfully
-successWhen(expectations.updateUser(name: "A"..."Z", age: 18...65))
-successWhen(expectations.deleteUser(id: "100"..."999"))
-successWhen(expectations.saveSettings(key: .any, value: .any))
+when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
+when(expectations.deleteUser(id: "100"..."999"), complete: .withSuccess)
+when(expectations.saveSettings(key: .any, value: .any), times: 2, complete: .withSuccess)
 ```
 
 ### Throwing Errors
 
-Use `when()` with `useError:` for both functions that return values and functions that return void:
+Use `when()` with `throw:` for both functions that return values and functions that return void:
 
 **Note:** Error expectations are only available for methods that can throw.
 
 ```swift
 // For functions that return values and can throw
-when(expectations.fetchUser(id: "invalid"), useError: NetworkError.notFound)
-when(expectations.fetchUser(id: "timeout"), useError: NetworkError.timeout)
+when(expectations.fetchUser(id: "invalid"), throw: NetworkError.notFound)
+when(expectations.fetchUser(id: "timeout"), throw: NetworkError.timeout)
 
 // For functions that return void and can throw
-when(expectations.saveData(data: "invalid"), useError: ValidationError.invalidData)
-when(expectations.deleteUser(id: "000"), useError: UserError.notFound)
+when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
+when(expectations.deleteUser(id: "000"), throw: UserError.notFound)
 
 // Mix values and errors for different parameter ranges
-when(expectations.fetchUser(id: "100"..."999"), useValue: user1)
-when(expectations.fetchUser(id: "invalid"), useError: NetworkError.notFound)
-when(expectations.fetchUser(id: .any), useValue: defaultUser)
+when(expectations.fetchUser(id: "100"..."999"), return: user1)
+when(expectations.fetchUser(id: "invalid"), throw: NetworkError.notFound)
+when(expectations.fetchUser(id: .any), return: defaultUser)
 ```
 
 ### Custom Logic with Closures
@@ -160,12 +158,12 @@ Use the `times:` parameter to specify how many times an expectation should apply
 
 ```swift
 // For functions that return values
-when(expectations.fetchUser(id: "100"..."999"), times: 3, useValue: user1)
-when(expectations.fetchUser(id: "A"..."M"), times: 2, useValue: user2)
+when(expectations.fetchUser(id: "100"..."999"), times: 3, return: user1)
+when(expectations.fetchUser(id: "A"..."M"), times: 2, return: user2)
 
 // For functions that return void
-successWhen(expectations.saveData(data: "A"..."Z"), times: 5)
-successWhen(expectations.deleteUser(id: "100"..."999"), times: 2)
+when(expectations.saveData(data: "A"..."Z"), times: 5, complete: .withSuccess)
+when(expectations.deleteUser(id: "100"..."999"), times: 2, complete: .withSuccess)
 ```
 
 ### Unbounded Times
@@ -174,11 +172,11 @@ Use `times: .unbounded` for expectations that should apply to all matching calls
 
 ```swift
 // For functions that return values
-when(expectations.fetchUser(id: "default"), times: .unbounded, useValue: defaultUser)
-when(expectations.fetchUser(id: "error"), times: .unbounded, useError: NetworkError.notFound)
+when(expectations.fetchUser(id: "default"), times: .unbounded, return: defaultUser)
+when(expectations.fetchUser(id: "error"), times: .unbounded, throw: NetworkError.notFound)
 
 // For functions that return void
-successWhen(expectations.logEvent(message: .any), times: .unbounded)
+when(expectations.logEvent(message: .any), times: .unbounded, complete: .withSuccess)
 ```
 
 ### Default Behavior
@@ -187,12 +185,12 @@ If you don't specify a `times:` parameter, it defaults to `times: 1`:
 
 ```swift
 // These are equivalent:
-when(expectations.fetchUser(id: "123"), useValue: user1)
-when(expectations.fetchUser(id: "123"), times: 1, useValue: user1)
+when(expectations.fetchUser(id: "123"), return: user1)
+when(expectations.fetchUser(id: "123"), times: 1, return: user1)
 
 // Same for void functions:
-successWhen(expectations.saveData(data: "test"))
-successWhen(expectations.saveData(data: "test"), times: 1)
+when(expectations.saveData(data: "test"), complete: .withSuccess)
+when(expectations.saveData(data: "test"), times: 1, complete: .withSuccess)
 ```
 
 ### Stateful Mocks
@@ -301,8 +299,8 @@ for the rest.
 Handle optional return types naturally:
 
 ```swift
-when(expectations.findUser(email: .any), useValue: user)        // Returns Optional(user)
-when(expectations.findUser(email: .any), useValue: nil)         // Returns nil
+when(expectations.findUser(email: .any), return: user)        // Returns Optional(user)
+when(expectations.findUser(email: .any), return: nil)         // Returns nil
 ```
 
 ### Async Functions
