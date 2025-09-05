@@ -37,10 +37,10 @@ import Smockable
 
 @Test func getCurrentTemperature() async throws {
         // 1. Create expectations
-        let expectations = MockWeatherService.Expectations()
+        var expectations = MockWeatherService.Expectations()
         
         // 2. Configure what the mock should return
-        expectations.getCurrentTemperature_for.value(22.5)
+        when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
         
         // 3. Create the mock
         let mockWeatherService = MockWeatherService(expectations: expectations)
@@ -79,8 +79,8 @@ Building on our previous example, you can also set expectations that are errors,
 ```swift
 @Test func getCurrentTemperature_WhenServiceFails_ThrowsError() async {
     // Configure mock to throw an error
-    let expectations = MockWeatherService.Expectations()
-    expectations.getCurrentTemperature_for.error(WeatherError.serviceUnavailable)
+    var expectations = MockWeatherService.Expectations()
+    when(expectations.getCurrentTemperature(for: .any), useError: WeatherError.serviceUnavailable)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     
@@ -98,15 +98,14 @@ invocations of the same mocked function for property.
 
 ```swift
 @Test func getForecast_MultipleCalls() async throws {
-    let expectations = MockWeatherService.Expectations()
+    var expectations = MockWeatherService.Expectations()
     
     // Configure different responses for different calls
     let londonForecast = [WeatherDay(date: Date(), temperature: 20.0, condition: "Sunny")]
     let parisForecast = [WeatherDay(date: Date(), temperature: 18.0, condition: "Cloudy")]
     
-    expectations.getForecast_for_days
-        .value(londonForecast)  // First call returns London forecast
-        .value(parisForecast)   // Second call returns Paris forecast
+    when(expectations.getForecast(for: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
+    when(expectations.getForecast(for: .any, days: .any), useValue: parisForecast)   // Second call returns Paris forecast
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     
@@ -136,10 +135,10 @@ function is called.
 
 ```swift
 @Test func getTemperature_WithCustomLogic() async throws {
-    let expectations = MockWeatherService.Expectations()
+    var expectations = MockWeatherService.Expectations()
     
     // Use a closure to provide custom logic
-    expectations.getCurrentTemperature_for.using { city in
+    when(expectations.getCurrentTemperature(for: .any), times: .unbounded) { city in
         switch city {
         case "London":
             return 15.0
@@ -150,7 +149,7 @@ function is called.
         default:
             throw WeatherError.cityNotFound
         }
-    }.unboundedTimes()
+    }
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     

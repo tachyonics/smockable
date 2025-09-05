@@ -180,7 +180,7 @@ struct AssociatedTypesTests {
     var expectations = MockRepository<User>.Expectations()
 
     let testUser = User(id: "123", name: "John Doe")
-    successWhen(expectations.save(entity: .any))
+    successWhen(expectations.save(.any))
     when(expectations.find(id: .any), useValue: testUser)
     successWhen(expectations.delete(id: .any))
 
@@ -246,8 +246,8 @@ struct AssociatedTypesTests {
       timestamp: "2024-01-01T00:00:00Z"
     )
 
-    when(expectations.serialize(input: .any), useValue: serializedData)
-    when(expectations.deserialize(output: .any), useValue: userData)
+    when(expectations.serialize(.any), useValue: serializedData)
+    when(expectations.deserialize(.any), useValue: userData)
 
     let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
 
@@ -268,7 +268,7 @@ struct AssociatedTypesTests {
   func testProtocolConstraints() async throws {
     var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
 
-    successWhen(expectations.handle(event: .any))
+    successWhen(expectations.handle(.any))
 
     let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
 
@@ -299,8 +299,8 @@ struct AssociatedTypesTests {
     )
     let config = ProcessingConfig(enableTagging: true, scoreThreshold: 0.5)
 
-    when(expectations.transform(input: .any, config: .any), useValue: processedData)
-    when(expectations.validateInput(input: .any), useValue: true)
+    when(expectations.transform(.any, config: .any), useValue: processedData)
+    when(expectations.validateInput(.any), useValue: true)
     when(expectations.createDefaultConfig(), useValue: config)
 
     let mockTransformer = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>(
@@ -369,7 +369,7 @@ struct AssociatedTypesTests {
   func testRepositoryWithMultipleTypes() async throws {
     // Test with User type
     var userExpectations = MockRepository<User>.Expectations()
-    successWhen(userExpectations.save(entity: .any))
+    successWhen(userExpectations.save(.any))
 
     let userRepo = MockRepository<User>(expectations: userExpectations)
     let user = User(id: "123", name: "John")
@@ -380,7 +380,7 @@ struct AssociatedTypesTests {
 
     // Test with Product type
     var productExpectations = MockRepository<Product>.Expectations()
-    successWhen(productExpectations.save(entity: .any))
+    successWhen(productExpectations.save(.any))
 
     let productRepo = MockRepository<Product>(expectations: productExpectations)
     let product = Product(id: "456", name: "Widget")
@@ -418,7 +418,7 @@ struct AssociatedTypesTests {
 
     let userData = UserData(id: "123", name: "John")
     when(expectations.serialize(), useValue: userData)
-    successWhen(expectations.deserialize(data: .any))
+    successWhen(expectations.deserialize(.any))
 
     let mockSerializable = MockSerializable<UserData>(expectations: expectations)
 
@@ -438,7 +438,7 @@ struct AssociatedTypesTests {
   func testProcessorWithoutConstraints() async throws {
     var expectations = MockProcessor<String, Int>.Expectations()
 
-    when(expectations.process(input: .any), useValue: 42)
+    when(expectations.process(.any), useValue: 42)
 
     let mockProcessor = MockProcessor<String, Int>(expectations: expectations)
 

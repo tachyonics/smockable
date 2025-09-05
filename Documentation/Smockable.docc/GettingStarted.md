@@ -71,8 +71,8 @@ struct WeatherApp<Service: WeatherService> {
 
 ```swift
 @Test func weatherApp_DisplaysTemperature() async {
-    let expectations = MockWeatherService.Expectations()
-    expectations.getCurrentTemperature_for.value(22.5)
+    var expectations = MockWeatherService.Expectations()
+    when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
@@ -87,8 +87,8 @@ struct WeatherApp<Service: WeatherService> {
 
 ```swift
 @Test func weatherApp_HandlesError() async {
-    let expectations = MockWeatherService.Expectations()
-    expectations.getCurrentTemperature_for.error(WeatherError.serviceUnavailable)
+    var expectations = MockWeatherService.Expectations()
+    when(expectations.getCurrentTemperature(for: .any), useError: WeatherError.serviceUnavailable)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
