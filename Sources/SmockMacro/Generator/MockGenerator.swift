@@ -2,18 +2,9 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum MockGenerator {
-  static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
-    let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
-
-    let variableDeclarations = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(VariableDeclSyntax.self) }
-
-    let functionDeclarations = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
-
-    let associatedTypes = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
-
+  static func getGenericParameterClause(associatedTypes: [AssociatedTypeDeclSyntax])
+    -> GenericParameterClauseSyntax?
+  {
     let genericParameterClause: GenericParameterClauseSyntax?
     if !associatedTypes.isEmpty {
       let rawGenericParameterClause = associatedTypes.map { associatedType in
@@ -28,6 +19,23 @@ enum MockGenerator {
     } else {
       genericParameterClause = nil
     }
+
+    return genericParameterClause
+  }
+
+  static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
+    let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
+
+    let variableDeclarations = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+
+    let functionDeclarations = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
+
+    let associatedTypes = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
+
+    let genericParameterClause = getGenericParameterClause(associatedTypes: associatedTypes)
 
     return try StructDeclSyntax(
       modifiers: [DeclModifierSyntax(name: "public")],
