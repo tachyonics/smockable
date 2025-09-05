@@ -92,7 +92,7 @@ enum FunctionImplementationGenerator {
 
   private static func switchExpression(
     variablePrefix: String,
-    protocolFunctionDeclaration: FunctionDeclSyntax,
+    protocolFunctionDeclaration: FunctionDeclSyntax
   ) -> SwitchExprSyntax {
     SwitchExprSyntax(
       subject: ExprSyntax(stringLiteral: "responseProvider"),
