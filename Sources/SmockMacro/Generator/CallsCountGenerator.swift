@@ -21,21 +21,23 @@ import SwiftSyntaxBuilder
 /// ```
 /// and an argument `variablePrefix` equal to `foo`.
 enum CallsCountGenerator {
-  static func variableDeclaration(variablePrefix: String) throws -> VariableDeclSyntax {
-    try VariableDeclSyntax(
-      """
-      var \(raw: variablePrefix) = 0
-      """)
-  }
+    static func variableDeclaration(variablePrefix: String) throws -> VariableDeclSyntax {
+        try VariableDeclSyntax(
+            """
+            var \(raw: variablePrefix) = 0
+            """
+        )
+    }
 
-  static func incrementVariableExpression(variablePrefix: String) -> ExprSyntax {
-    ExprSyntax(
-      """
-      self.\(self.variableIdentifier()).\(raw: variablePrefix) += 1
-      """)
-  }
+    static func incrementVariableExpression(variablePrefix: String) -> ExprSyntax {
+        ExprSyntax(
+            """
+            self.\(self.variableIdentifier()).\(raw: variablePrefix) += 1
+            """
+        )
+    }
 
-  private static func variableIdentifier() -> TokenSyntax {
-    TokenSyntax.identifier("callCounts")
-  }
+    private static func variableIdentifier() -> TokenSyntax {
+        TokenSyntax.identifier("callCounts")
+    }
 }

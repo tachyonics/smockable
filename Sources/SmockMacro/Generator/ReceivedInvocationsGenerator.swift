@@ -41,79 +41,87 @@ import SwiftSyntaxBuilder
 ///         order and number of invocations matter, use `ReceivedInvocationsGenerator`. If you only care
 ///         about the arguments in the last invocation, use `ReceivedArgumentsGenerator`.
 enum ReceivedInvocationsGenerator {
-  static func variableDeclaration(
-    variablePrefix: String,
-    parameterList: FunctionParameterListSyntax
-  ) throws -> VariableDeclSyntax {
-    let elementType = self.arrayElementType(parameterList: parameterList)
+    static func variableDeclaration(
+        variablePrefix: String,
+        parameterList: FunctionParameterListSyntax
+    ) throws -> VariableDeclSyntax {
+        let elementType = self.arrayElementType(parameterList: parameterList)
 
-    return try VariableDeclSyntax(
-      """
-      var \(raw: variablePrefix): [\(elementType)] = []
-      """)
-  }
+        return try VariableDeclSyntax(
+            """
+            var \(raw: variablePrefix): [\(elementType)] = []
+            """
+        )
+    }
 
-  static func arrayElementType(parameterList: FunctionParameterListSyntax) -> TypeSyntaxProtocol {
-    let arrayElementType: TypeSyntaxProtocol
+    static func arrayElementType(parameterList: FunctionParameterListSyntax) -> TypeSyntaxProtocol {
+        let arrayElementType: TypeSyntaxProtocol
 
-    if parameterList.count == 1, var onlyParameterType = parameterList.first?.type {
-      if let attributedType = onlyParameterType.as(AttributedTypeSyntax.self) {
-        onlyParameterType = attributedType.baseType
-      }
-      arrayElementType = onlyParameterType
-    } else {
-      let tupleElements = TupleTypeElementListSyntax {
-        for parameter in parameterList {
-          TupleTypeElementSyntax(
-            firstName: parameter.secondName ?? parameter.firstName,
-            colon: .colonToken(),
-            type: {
-              if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                attributedType.baseType
-              } else {
-                parameter.type
-              }
-            }())
+        if parameterList.count == 1, var onlyParameterType = parameterList.first?.type {
+            if let attributedType = onlyParameterType.as(AttributedTypeSyntax.self) {
+                onlyParameterType = attributedType.baseType
+            }
+            arrayElementType = onlyParameterType
+        } else {
+            let tupleElements = TupleTypeElementListSyntax {
+                for parameter in parameterList {
+                    TupleTypeElementSyntax(
+                        firstName: parameter.secondName ?? parameter.firstName,
+                        colon: .colonToken(),
+                        type: {
+                            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
+                                attributedType.baseType
+                            } else {
+                                parameter.type
+                            }
+                        }()
+                    )
+                }
+            }
+            arrayElementType = TupleTypeSyntax(elements: tupleElements)
         }
-      }
-      arrayElementType = TupleTypeSyntax(elements: tupleElements)
+
+        return arrayElementType
     }
 
-    return arrayElementType
-  }
+    static func appendValueToVariableExpression(
+        variablePrefix: String,
+        parameterList: FunctionParameterListSyntax
+    ) -> ExprSyntax {
+        let identifier = self.variableIdentifier()
+        let argument = self.appendArgumentExpression(parameterList: parameterList)
 
-  static func appendValueToVariableExpression(
-    variablePrefix: String,
-    parameterList: FunctionParameterListSyntax
-  ) -> ExprSyntax {
-    let identifier = self.variableIdentifier()
-    let argument = self.appendArgumentExpression(parameterList: parameterList)
-
-    return ExprSyntax(
-      """
-      \(identifier).\(raw: variablePrefix).append(\(argument))
-      """)
-  }
-
-  private static func appendArgumentExpression(parameterList: FunctionParameterListSyntax)
-    -> LabeledExprListSyntax
-  {
-    let tupleArgument = TupleExprSyntax(
-      elements: LabeledExprListSyntax(
-        itemsBuilder: {
-          for parameter in parameterList {
-            LabeledExprSyntax(
-              expression: DeclReferenceExprSyntax(
-                baseName: parameter.secondName ?? parameter.firstName))
-          }
-        }))
-
-    return LabeledExprListSyntax {
-      LabeledExprSyntax(expression: tupleArgument)
+        return ExprSyntax(
+            """
+            \(identifier).\(raw: variablePrefix).append(\(argument))
+            """
+        )
     }
-  }
 
-  private static func variableIdentifier() -> TokenSyntax {
-    TokenSyntax.identifier("receivedInvocations")
-  }
+    private static func appendArgumentExpression(
+        parameterList: FunctionParameterListSyntax
+    )
+        -> LabeledExprListSyntax
+    {
+        let tupleArgument = TupleExprSyntax(
+            elements: LabeledExprListSyntax(
+                itemsBuilder: {
+                    for parameter in parameterList {
+                        LabeledExprSyntax(
+                            expression: DeclReferenceExprSyntax(
+                                baseName: parameter.secondName ?? parameter.firstName
+                            )
+                        )
+                    }
+                })
+        )
+
+        return LabeledExprListSyntax {
+            LabeledExprSyntax(expression: tupleArgument)
+        }
+    }
+
+    private static func variableIdentifier() -> TokenSyntax {
+        TokenSyntax.identifier("receivedInvocations")
+    }
 }

@@ -55,6 +55,7 @@ protocol DataService: BaseService {
     func saveData(_ data: Data) async throws
 }
 
+@Test
 func testInheritedProtocolWorkaround() async throws {
     var expectations = MockDataService.Expectations()
     
@@ -105,6 +106,7 @@ protocol MyNetworkService: ExternalNetworkService {
     func handleRequestCompleted(error: Error?) async
 }
 
+@Test
 func testExternalProtocolWorkaround() async throws {
     let expectations = MockMyNetworkService.Expectations()
     
@@ -176,6 +178,7 @@ protocol SecureDataService: Authenticatable, Cacheable {
     func securelyFetchData(id: String) async throws -> Data
 }
 
+@Test
 func testMultipleInheritanceWorkaround() async throws {
     var expectations = MockSecureDataService.Expectations()
     

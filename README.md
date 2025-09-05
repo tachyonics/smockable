@@ -97,10 +97,11 @@ import Testing
     
     // Create the mock
     let mockService = MockUserService(expectations: expectations)
+    let codeUnderTest = CodeUnderTest(service: mockService)
     
-    // Use the mock
-    let user = try await mockService.fetchUser(id: "123")
-    try await mockService.updateUser(user)
+    // Exercise the code under test
+    let user = try await codeUnderTest.fetchUser(id: "123")
+    try await codeUnderTest.updateUser(user)
     
     // Verify behavior
     let fetchCallCount = await mockService.__verify.fetchUser_id.callCount

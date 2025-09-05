@@ -18,18 +18,18 @@ import SwiftSyntaxBuilder
 /// It will capitalize the first letter of each parameter name and append it to the function name.
 /// Please note that if a parameter is underscored (anonymous), it's ignored.
 enum VariablePrefixGenerator {
-  static func text(for functionDeclaration: FunctionDeclSyntax) -> String {
-    var parts: [String] = [functionDeclaration.name.text]
+    static func text(for functionDeclaration: FunctionDeclSyntax) -> String {
+        var parts: [String] = [functionDeclaration.name.text]
 
-    let parameterList = functionDeclaration.signature.parameterClause.parameters
+        let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-    let parameters =
-      parameterList
-      .map(\.firstName.text)
-      .filter { $0 != "_" }
+        let parameters =
+            parameterList
+            .map(\.firstName.text)
+            .filter { $0 != "_" }
 
-    parts.append(contentsOf: parameters)
+        parts.append(contentsOf: parameters)
 
-    return parts.joined(separator: "_")
-  }
+        return parts.joined(separator: "_")
+    }
 }
