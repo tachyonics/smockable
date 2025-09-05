@@ -86,12 +86,14 @@ import Testing
 
 @Test func userFetching() async throws {
     // Create expectations
-    let expectations = MockUserService.Expectations()
+    var expectations = MockUserService.Expectations()
     
-    // Set up expected behavior
+    // Set up expected behavior with range matching
     let expectedUser = User(id: "123", name: "John Doe")
-    expectations.fetchUser_id.value(expectedUser)
-    expectations.updateUser.success()
+    when(expectations.fetchUser(id: "100"..."999"), useValue: expectedUser)
+    
+    // For functions with no return type, use successWhen
+    successWhen(expectations.updateUser(user: .any))
     
     // Create the mock
     let mockService = MockUserService(expectations: expectations)
@@ -102,7 +104,7 @@ import Testing
     
     // Verify behavior
     let fetchCallCount = await mockService.__verify.fetchUser_id.callCount
-    let updateInputs = await mockService.__verify.updateUser.receivedInputs
+    let updateInputs = await mockService.__verify.updateUser_user.receivedInputs
     
     #expect(fetchCallCount == 1)
     #expect(updateInputs.count == 1)
@@ -113,22 +115,37 @@ import Testing
 ### 3. Advanced Expectations
 
 ```swift
-// Multiple return values
-expectations.fetchUser_id
-    .value(user1)           // First call returns user1
-    .value(user2).times(2)  // Next 2 calls return user2
-    .error(NetworkError.notFound) // Fourth call throws error
+// Range-based parameter matching for functions with return values
+when(expectations.fetchUser(id: "100"..."999"), useValue: user1)
+when(expectations.fetchUser(id: "A"..."Z"), times: 2, useValue: user2)
+when(expectations.fetchUser(id: .any), useError: NetworkError.notFound)
+
+// Multiple parameter ranges
+when(expectations.processData(input: "A"..."M", count: 1...10), useValue: "processed")
+
+// Functions with no return type - use successWhen
+successWhen(expectations.updateUser(name: "A"..."Z", age: .nil))
+successWhen(expectations.deleteUser(id: "100"..."999"))
+successWhen(expectations.saveData(data: "A"..."Z"), times: 3)
+
+// Optional parameter matching
+when(expectations.getUserProfile(name: "A"..."Z", age: .nil), useValue: profile1)
+when(expectations.getUserProfile(name: "A"..."Z", age: .range(18...65)), useValue: profile2)
+
+// Explicit value matchers for complex scenarios
+when(expectations.fetchUser(id: .range("100"..."999")), useValue: user1)
+when(expectations.fetchUser(id: .any), useValue: user2)
 
 // Custom logic with closures
-expectations.fetchUser_id.using { id in
+when(expectations.fetchUser(id: "A"..."Z"), times: .unbounded) { id in
     return User(id: id, name: "Generated User")
-}.unboundedTimes() // Apply to all subsequent calls
+}
 
-// For functions returning Void, use .success() instead of .value(())
-expectations.updateUser.success()
+// Or with explicit use: parameter
+when(expectations.fetchUser(id: "A"..."Z"), times: 3, use: myClosure)
 
-// Throwing errors
-expectations.updateUser.error(ValidationError.invalidData)
+// Error handling for functions with no return type
+when(expectations.saveData(data: "invalid"), useError: ValidationError.invalidData)
 ```
 
 ## Documentation

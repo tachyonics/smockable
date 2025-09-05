@@ -6,7 +6,7 @@
   struct SmockCompilerPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
       SmockMacro.self,
-      StringifyMacro.self
+      StringifyMacro.self,
     ]
   }
 #endif

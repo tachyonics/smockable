@@ -14,24 +14,26 @@ enum StorageGenerator {
         }
 
         for functionDeclaration in functionDeclarations {
-        let parameterList = functionDeclaration.signature.parameterClause.parameters
+          let parameterList = functionDeclaration.signature.parameterClause.parameters
           let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-            let inputMatcherType = parameterList.count > 0 ? "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
+          let inputMatcherType =
+            parameterList.count > 0
+            ? "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
 
           try VariableDeclSyntax(
             """
             var _\(raw: variablePrefix): [(\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions, \(raw: inputMatcherType))] = []
             """)
         }
-          
-          for functionDeclaration in functionDeclarations {
-            let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
-              for: functionDeclaration
-            )
-            for method in methods {
-              method
-            }
+
+        for functionDeclaration in functionDeclarations {
+          let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
+            for: functionDeclaration
+          )
+          for method in methods {
+            method
           }
+        }
       })
   }
 
@@ -60,7 +62,7 @@ enum StorageGenerator {
                 guard let expectedResponse = $0.expectedResponse else {
                   fatalError("Expectation was added but not set correctly")
                 }
-              
+
                 return ($0.times, expectedResponse, $1) 
               }
               """)
@@ -68,31 +70,32 @@ enum StorageGenerator {
         }
       })
   }
-    
-    static func expectationMatchersDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws
-      -> StructDeclSyntax
-    {
-      try StructDeclSyntax(
-        name: "ExpectationMatchers",
-        inheritanceClause: InheritanceClauseSyntax {
-          InheritedTypeSyntax(type: IdentifierTypeSyntax(name: "Sendable"))
-        },
-        memberBlockBuilder: {
-          for functionDeclaration in functionDeclarations {
-            let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-            let parameterList = functionDeclaration.signature.parameterClause.parameters
-            
-            // Only generate matcher storage for functions with parameters
-            if !parameterList.isEmpty {
-              let inputMatcherType = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
-              try VariableDeclSyntax(
-                """
-                var \(raw: variablePrefix): [\(raw: inputMatcherType)] = []
-                """)
-            }
+
+  static func expectationMatchersDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws
+    -> StructDeclSyntax
+  {
+    try StructDeclSyntax(
+      name: "ExpectationMatchers",
+      inheritanceClause: InheritanceClauseSyntax {
+        InheritedTypeSyntax(type: IdentifierTypeSyntax(name: "Sendable"))
+      },
+      memberBlockBuilder: {
+        for functionDeclaration in functionDeclarations {
+          let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+          let parameterList = functionDeclaration.signature.parameterClause.parameters
+
+          // Only generate matcher storage for functions with parameters
+          if !parameterList.isEmpty {
+            let inputMatcherType =
+              "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+            try VariableDeclSyntax(
+              """
+              var \(raw: variablePrefix): [\(raw: inputMatcherType)] = []
+              """)
           }
-        })
-    }
+        }
+      })
+  }
 
   static func callCountDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws
     -> StructDeclSyntax
@@ -157,7 +160,7 @@ enum StorageGenerator {
         for functionDeclaration in functionDeclarations {
           let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
-         try FunctionImplementationGenerator.storageDeclaration(
+          try FunctionImplementationGenerator.storageDeclaration(
             variablePrefix: variablePrefix,
             protocolFunctionDeclaration: functionDeclaration)
         }

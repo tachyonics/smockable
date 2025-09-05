@@ -78,9 +78,9 @@ enum MockGenerator {
           let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
           let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-            try FunctionPropertiesGenerator.expectationsOptionsClassDeclaration(
-                variablePrefix: variablePrefix,
-                functionSignature: functionDeclaration.signature)
+          try FunctionPropertiesGenerator.expectationsOptionsClassDeclaration(
+            variablePrefix: variablePrefix,
+            functionSignature: functionDeclaration.signature)
           try FunctionPropertiesGenerator.expectedResponseEnumDeclaration(
             variablePrefix: variablePrefix,
             functionSignature: functionDeclaration.signature)

@@ -3,12 +3,10 @@ import Smockable
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import Testing
-/*
+
 @Smock
 public protocol Service1Protocol {
-  // mutating func logout() async
   func initialize(name: String, secondName: String?) async -> String
-  // func fetchConfig() async throws -> [String: String]
 }
 
 struct CompariableInput: Equatable {
@@ -21,24 +19,20 @@ struct SmockableTests {
   func testMacro() async {
     let expectedReturnValue1 = "ReturnValue1"
     let expectedReturnValue2 = "ReturnValue2"
-    // create an expecations object used to initialise the mock
-    // the expectations object is not thread-safe/sendable
-    let expectations = MockService1Protocol.Expectations()
-    // indicate that the first time `initialize(name: String, secondName: String?) async -> String` is called,
-    // `expectedReturnValue1` should be returned
-    // Note that setting an expectation with `.value(_ value:)/.error(_ error:)/.using(_ closure:)` without following
-    // it with a `.times(_ times:)/.unboundedTimes()` modifier treats it as if there is an implicit `.times(1)` modifier
-    expectations.initialize_name_secondName.value(expectedReturnValue1)
-      // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
-      // the returned value should be determined by calling this closure.
-      .using { name, secondName in
-        "\(name)_\(secondName ?? "empty")"
-      }.times(2)
-      // indicate that the next two times `initialize(name: String, secondName: String?) async -> String` is called,
-      // `expectedReturnValue2` should be returned
-      .value(expectedReturnValue2).times(2)
+
+    var expectations = MockService1Protocol.Expectations()
+    // expectation for first call
+    when(expectations.initialize(name: .any, secondName: .any), useValue: expectedReturnValue1)
+    // expectation for next two calls
+    when(expectations.initialize(name: .any, secondName: .any), times: 2) { name, secondName in
+      "\(name)_\(secondName ?? "empty")"
+    }
+    // expectation for final two calls
+    when(
+      expectations.initialize(name: .any, secondName: .any), times: 2,
+      useValue: expectedReturnValue2)
+
     // create the mock; no more expectations can be added to the mock
-    // and the created mock is thread-safe/sendable
     let mock = MockService1Protocol(expectations: expectations)
 
     // perform some operations on the mock
@@ -89,10 +83,10 @@ struct SmockableTests {
 
   @Test func getCurrentTemperature() async throws {
     // 1. Create expectations
-    let expectations = MockWeatherService.Expectations()
+    var expectations = MockWeatherService.Expectations()
 
     // 2. Configure what the mock should return
-    expectations.getCurrentTemperature_for.value(22.5)
+    when(expectations.getCurrentTemperature(city: .any), useValue: 22.5)
 
     // 3. Create the mock
     let mockWeatherService = MockWeatherService(expectations: expectations)
@@ -129,8 +123,8 @@ struct SmockableTests {
   }
 
   @Test func weatherApp_DisplaysTemperature() async {
-    let expectations = MockWeatherService.Expectations()
-    expectations.getCurrentTemperature_for.value(22.5)
+    var expectations = MockWeatherService.Expectations()
+    when(expectations.getCurrentTemperature(city: .any), useValue: 22.5)
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
@@ -142,8 +136,8 @@ struct SmockableTests {
 
   @Test func getCurrentTemperature_WhenServiceFails_ThrowsError() async {
     // Configure mock to throw an error
-    let expectations = MockWeatherService.Expectations()
-    expectations.getCurrentTemperature_for.error(WeatherError.serviceUnavailable)
+    var expectations = MockWeatherService.Expectations()
+    when(expectations.getCurrentTemperature(city: .any), useError: WeatherError.serviceUnavailable)
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -154,15 +148,14 @@ struct SmockableTests {
   }
 
   @Test func getForecast_MultipleCalls() async throws {
-    let expectations = MockWeatherService.Expectations()
+    var expectations = MockWeatherService.Expectations()
 
     // Configure different responses for different calls
     let londonForecast = [WeatherDay(date: Date(), temperature: 20.0, condition: "Sunny")]
     let parisForecast = [WeatherDay(date: Date(), temperature: 18.0, condition: "Cloudy")]
 
-    expectations.getForecast_for_days
-      .value(londonForecast)  // First call returns London forecast
-      .value(parisForecast)  // Second call returns Paris forecast
+    when(expectations.getForecast(city: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
+    when(expectations.getForecast(city: .any, days: .any), useValue: parisForecast)  // Second call returns Paris forecast
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -191,11 +184,11 @@ struct SmockableTests {
   }
 
   @Test func getTemperature_WithCustomLogic() async throws {
-    let expectations = MockWeatherService.Expectations()
+    var expectations = MockWeatherService.Expectations()
 
     // Use a closure to provide custom logic
     let lastCity = LastCity()
-    expectations.getCurrentTemperature_for.using { city in
+    when(expectations.getCurrentTemperature(city: .any), times: .unbounded) { city in
       await lastCity.set(city)
 
       switch city {
@@ -208,7 +201,7 @@ struct SmockableTests {
       default:
         throw WeatherError.cityNotFound
       }
-    }.unboundedTimes()
+    }
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -230,7 +223,11 @@ struct SmockableTests {
     let value: Double
   }
 
-  struct AccountDetails: Equatable, Hashable {
+  struct AccountDetails: Equatable, Hashable, Comparable {
+    static func < (lhs: SmockableTests.AccountDetails, rhs: SmockableTests.AccountDetails) -> Bool {
+      return lhs.name < rhs.name
+    }
+
     let name: String
   }
 
@@ -262,14 +259,14 @@ struct SmockableTests {
   }
 
   @Test func getTemperature_WithActorAsLogic() async throws {
-    let expectations = MockBank.Expectations()
+    var expectations = MockBank.Expectations()
     let accountDetails = AccountDetails(name: "MyAccount")
 
     // Use a closure to provide custom logic
     let logic = MockBankLogic()
-    expectations.withdraw_amount.using(logic.withdraw).unboundedTimes()
-    expectations.getBalance.using(logic.getBalance).unboundedTimes()
-    expectations.setAccountDetails_details.success()
+    when(expectations.withdraw(amount: .any), times: .unbounded, use: logic.withdraw)
+    when(expectations.getBalance(), times: .unbounded, use: logic.getBalance)
+    successWhen(expectations.setAccountDetails(details: .any))
 
     let mockBank = MockBank(expectations: expectations)
 
@@ -293,20 +290,20 @@ struct SmockableTests {
   }
 
   @Test func setAccountDetails_ConcurrentCalls() async throws {
-    let expectations = MockBank.Expectations()
-    
+    var expectations = MockBank.Expectations()
+
     // Configure the mock to succeed for all setAccountDetails calls
-    expectations.setAccountDetails_details.success().unboundedTimes()
-    
+    successWhen(expectations.setAccountDetails(details: .any), times: .unbounded)
+
     let mockBank = MockBank(expectations: expectations)
-    
+
     // Create multiple AccountDetails instances
     let accountDetails1 = AccountDetails(name: "Account1")
     let accountDetails2 = AccountDetails(name: "Account2")
     let accountDetails3 = AccountDetails(name: "Account3")
     let accountDetails4 = AccountDetails(name: "Account4")
     let accountDetails5 = AccountDetails(name: "Account5")
-    
+
     // Make concurrent calls to setAccountDetails
     await withTaskGroup(of: Void.self) { group in
       group.addTask { await mockBank.setAccountDetails(details: accountDetails1) }
@@ -315,26 +312,31 @@ struct SmockableTests {
       group.addTask { await mockBank.setAccountDetails(details: accountDetails4) }
       group.addTask { await mockBank.setAccountDetails(details: accountDetails5) }
     }
-    
+
     // Verify call count
     let callCount = await mockBank.__verify.setAccountDetails_details.callCount
     #expect(callCount == 5)
-    
+
     // Verify received inputs (order may vary due to concurrency)
     let receivedInputs = await mockBank.__verify.setAccountDetails_details.receivedInputs
     #expect(receivedInputs.count == 5)
-    
+
     // Create expected set of account details for comparison
-    let expectedAccountDetails = Set([accountDetails1, accountDetails2, accountDetails3, accountDetails4, accountDetails5])
+    let expectedAccountDetails = Set([
+      accountDetails1, accountDetails2, accountDetails3, accountDetails4, accountDetails5,
+    ])
     let receivedAccountDetailsSet = Set(receivedInputs)
-    
+
     // Verify that all expected account details were received (regardless of order)
     #expect(receivedAccountDetailsSet == expectedAccountDetails)
-    
+
     // Verify each expected account detail appears exactly once
     for expectedDetail in expectedAccountDetails {
       let count = receivedInputs.filter { $0 == expectedDetail }.count
-      #expect(count == 1, "Account detail \(expectedDetail.name) should appear exactly once, but appeared \(count) times")
+      #expect(
+        count == 1,
+        "Account detail \(expectedDetail.name) should appear exactly once, but appeared \(count) times"
+      )
     }
   }
-}*/
+}
