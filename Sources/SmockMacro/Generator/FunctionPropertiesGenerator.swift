@@ -2,13 +2,86 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum FunctionPropertiesGenerator {
+  static func expectationsOptionsClassDeclaration(
+    variablePrefix: String,
+    functionSignature: FunctionSignatureSyntax
+  ) throws -> ClassDeclSyntax {
+
+    var genericParameterClauseElements: [String] = []
+    if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+      genericParameterClauseElements.append("ErrorableFieldOptionsProtocol")
+    }
+
+    if functionSignature.returnClause?.type != nil {
+      genericParameterClauseElements.append("ReturnableFieldOptionsProtocol")
+    } else {
+      genericParameterClauseElements.append("VoidReturnableFieldOptionsProtocol")
+    }
+
+    return try ClassDeclSyntax(
+      modifiers: [DeclModifierSyntax(name: "public")],
+      name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions",
+      genericParameterClause: genericParameterClauseElements.count > 0
+        ? ": \(raw: genericParameterClauseElements.joined(separator: ", ")) " : nil,
+      memberBlockBuilder: {
+        try VariableDeclSyntax(
+          """
+          var expectedResponse: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
+          """)
+
+        try VariableDeclSyntax(
+          """
+          var times: Int?
+          """)
+
+        try FunctionDeclSyntax(
+          """
+          public func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) {
+            self.expectedResponse = .closure(closure)
+          }
+          """)
+
+        if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+          try FunctionDeclSyntax(
+            """
+            public func update(error: Swift.Error) {
+              self.expectedResponse = .error(error)
+            }
+            """)
+        }
+
+        if let returnType = functionSignature.returnClause?.type {
+          try FunctionDeclSyntax(
+            """
+            public func update(value: \(returnType)) {
+              self.expectedResponse = .value(value)
+            }
+            """)
+        } else {
+          try FunctionDeclSyntax(
+            """
+            public func success() {
+              self.expectedResponse = .success
+            }
+            """)
+        }
+
+        try FunctionDeclSyntax(
+          """
+          public func update(times: Int?) {
+            self.times = times
+          }
+          """)
+      })
+  }
+
   static func expectedResponseEnumDeclaration(
     variablePrefix: String,
     functionSignature: FunctionSignatureSyntax
   ) throws -> EnumDeclSyntax {
     try EnumDeclSyntax(
       modifiers: [DeclModifierSyntax(name: "public")],
-      name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse",
+      name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
       genericParameterClause: ": Sendable",
       memberBlockBuilder: {
         try EnumCaseDeclSyntax(
@@ -39,70 +112,22 @@ enum FunctionPropertiesGenerator {
 
   static func expectedResponseVariableDeclaration(
     variablePrefix: String,
+    functionDeclaration: FunctionDeclSyntax,
     accessModifier: String,
     staticName: Bool
   ) throws -> VariableDeclSyntax {
-    try VariableDeclSyntax(
+    let expectedResponseType =
+      "\(variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse"
+    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+    let parameterList = functionDeclaration.signature.parameterClause.parameters
+    let inputMatcherType =
+      parameterList.count > 0
+      ? "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
+
+    return try VariableDeclSyntax(
       """
-      \(raw: accessModifier)var \(raw: staticName ? "expectedResponses" : variablePrefix): [(Int?,\(raw: variablePrefix
-                .capitalizingComponentsFirstLetter())ExpectedResponse)] = []
+      \(raw: accessModifier)var \(raw: staticName ? "expectedResponses" : variablePrefix): [(Int?,\(raw: expectedResponseType),\(raw: inputMatcherType))] = []
       """)
-  }
-
-  static func expectationsClassDeclaration(
-    variablePrefix: String,
-    functionSignature: FunctionSignatureSyntax
-  ) throws -> ClassDeclSyntax {
-    try ClassDeclSyntax(
-      modifiers: [DeclModifierSyntax(name: "public")],
-      name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Expectations",
-      genericParameterClause:
-        ": FieldExpectations<\(raw: variablePrefix.capitalizingComponentsFirstLetter())ExpectedResponse>",
-      memberBlockBuilder: {
-        try FunctionDeclSyntax(
-          """
-          @discardableResult
-          public func using(_ closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) -> Self {
-            self.expectedResponses.append((1, .closure(closure)))
-
-            return self
-          }
-          """)
-
-        if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
-          try FunctionDeclSyntax(
-            """
-            @discardableResult
-            public func error(_ error: Swift.Error) -> Self {
-              self.expectedResponses.append((1, .error(error)))
-
-              return self
-            }
-            """)
-        }
-
-        if let returnType = functionSignature.returnClause?.type {
-          try FunctionDeclSyntax(
-            """
-            @discardableResult
-            public func value(_ value: \(returnType)) -> Self {
-              self.expectedResponses.append((1, .value(value)))
-
-              return self
-            }
-            """)
-        } else {
-          try FunctionDeclSyntax(
-            """
-            @discardableResult
-            public func success() -> Self {
-              self.expectedResponses.append((1, .success))
-
-              return self
-            }
-            """)
-        }
-      })
   }
 
   static func verificationsStructDeclaration(

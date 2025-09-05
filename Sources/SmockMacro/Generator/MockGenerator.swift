@@ -2,18 +2,9 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum MockGenerator {
-  static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
-    let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
-
-    let variableDeclarations = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(VariableDeclSyntax.self) }
-
-    let functionDeclarations = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
-
-    let associatedTypes = protocolDeclaration.memberBlock.members
-      .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
-
+  static func getGenericParameterClause(associatedTypes: [AssociatedTypeDeclSyntax])
+    -> GenericParameterClauseSyntax?
+  {
     let genericParameterClause: GenericParameterClauseSyntax?
     if !associatedTypes.isEmpty {
       let rawGenericParameterClause = associatedTypes.map { associatedType in
@@ -28,6 +19,23 @@ enum MockGenerator {
     } else {
       genericParameterClause = nil
     }
+
+    return genericParameterClause
+  }
+
+  static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
+    let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
+
+    let variableDeclarations = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+
+    let functionDeclarations = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
+
+    let associatedTypes = protocolDeclaration.memberBlock.members
+      .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
+
+    let genericParameterClause = getGenericParameterClause(associatedTypes: associatedTypes)
 
     return try StructDeclSyntax(
       modifiers: [DeclModifierSyntax(name: "public")],
@@ -54,8 +62,6 @@ enum MockGenerator {
             """)
         }
 
-        try fieldExpectations()
-
         for variableDeclaration in variableDeclarations {
           try VariablesImplementationGenerator.variablesDeclarations(
             protocolVariableDeclaration: variableDeclaration)
@@ -63,6 +69,8 @@ enum MockGenerator {
 
         try StorageGenerator.expectationsDeclaration(functionDeclarations: functionDeclarations)
         try StorageGenerator.expectedResponsesDeclaration(
+          functionDeclarations: functionDeclarations)
+        try StorageGenerator.expectationMatchersDeclaration(
           functionDeclarations: functionDeclarations)
         try StorageGenerator.callCountDeclaration(functionDeclarations: functionDeclarations)
         try StorageGenerator.receivedInvocationsDeclaration(
@@ -78,65 +86,27 @@ enum MockGenerator {
           let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
           let parameterList = functionDeclaration.signature.parameterClause.parameters
 
+          try FunctionPropertiesGenerator.expectationsOptionsClassDeclaration(
+            variablePrefix: variablePrefix,
+            functionSignature: functionDeclaration.signature)
           try FunctionPropertiesGenerator.expectedResponseEnumDeclaration(
             variablePrefix: variablePrefix,
             functionSignature: functionDeclaration.signature)
           try FunctionPropertiesGenerator.verificationsStructDeclaration(
             variablePrefix: variablePrefix, parameterList: parameterList)
-          try FunctionPropertiesGenerator.expectationsClassDeclaration(
+
+          // Generate input matcher struct for functions with parameters
+          if let inputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
             variablePrefix: variablePrefix,
-            functionSignature: functionDeclaration.signature)
+            parameterList: parameterList
+          ) {
+            inputMatcherStruct
+          }
 
           FunctionImplementationGenerator.declaration(
             variablePrefix: variablePrefix, accessModifier: "public",
             protocolFunctionDeclaration: functionDeclaration)
         }
       })
-  }
-
-  static func fieldExpectations() throws -> ClassDeclSyntax {
-    try ClassDeclSyntax(
-      """
-      public class FieldExpectations<ExpectedResponseType> {
-          var expectedResponses: [(Int?, ExpectedResponseType)] = []
-          private func add(_ expected: ExpectedResponseType) {
-              self.expectedResponses.append((1, expected))
-          }
-          private func updateLastExpectation(count: Int) {
-              guard let last = self.expectedResponses.last else {
-                  fatalError("Must have added expectation to update its count.")
-              }
-
-              guard let currentCount = last.0 else {
-                  fatalError("Cannot add expectations after a previous unbounded expectation.")
-              }
-
-              self.expectedResponses.removeLast()
-              self.expectedResponses.append((currentCount + count, last.1))
-          }
-          @discardableResult
-          public func unboundedTimes() -> Self {
-              guard let last = self.expectedResponses.last else {
-                  fatalError("Must have added expectation to update its count.")
-              }
-
-              self.expectedResponses.removeLast()
-              self.expectedResponses.append((nil, last.1))
-
-              return self
-          }
-          @discardableResult
-          public func times(_ count: Int) -> Self {
-              guard let last = self.expectedResponses.last else {
-                  fatalError("Must have added expectation to update its count.")
-              }
-
-              self.expectedResponses.removeLast()
-              self.expectedResponses.append((count, last.1))
-
-              return self
-          }
-      }
-      """)
   }
 }

@@ -30,13 +30,18 @@ enum FunctionImplementationGenerator {
   static func storageDeclaration(
     variablePrefix: String,
     protocolFunctionDeclaration: FunctionDeclSyntax
-  ) -> FunctionDeclSyntax {
+  ) throws -> FunctionDeclSyntax {
     var mockFunctionDeclaration = protocolFunctionDeclaration
 
     mockFunctionDeclaration.modifiers =
       protocolFunctionDeclaration.modifiers.removingMutatingKeyword
+    mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
-    mockFunctionDeclaration.body = CodeBlockSyntax {
+    let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
+    let parameters = Array(parameterList)
+    let matcherCall = generateMatcherCall(parameters: parameters)
+
+    mockFunctionDeclaration.body = try CodeBlockSyntax {
       let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
 
       CallsCountGenerator.incrementVariableExpression(variablePrefix: variablePrefix)
@@ -47,39 +52,42 @@ enum FunctionImplementationGenerator {
           parameterList: parameterList)
       }
 
-      IfExprSyntax(
-        conditions: ConditionElementListSyntax {
-          ConditionElementSyntax(
-            condition: .expression(
-              ExprSyntax(
-                """
-                let first = self.expectedResponses.\(raw: variablePrefix).first 
-                """)))
-        },
-        elseKeyword: .keyword(.else),
-        elseBody: .codeBlock(
-          CodeBlockSyntax {
-            ExprSyntax(
-              """
-              fatalError("\(raw: variablePrefix) without a provided return value.")
-              """)
-          }),
-        bodyBuilder: {
-          ExprSyntax(
-            """
-            if first.0 == 1 {
-              self.expectedResponses.\(raw: variablePrefix) = Array(self.expectedResponses.\(raw: variablePrefix).dropFirst())
-            } else if let currentCount = first.0 {
-              self.expectedResponses.\(raw: variablePrefix) = [(currentCount - 1, first.1)] + Array(self.expectedResponses.\(raw: variablePrefix).dropFirst())
+      try VariableDeclSyntax(
+        """
+        var responseProvider: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
+        """)
+
+      try ForStmtSyntax(
+        "for (index, expectedResponse) in self.expectedResponses.\(raw: variablePrefix).enumerated()"
+      ) {
+        ExprSyntax(
+          """
+          if expectedResponse.2.matches(\(raw: matcherCall)) {
+            if expectedResponse.0 == 1 {
+              self.expectedResponses.\(raw: variablePrefix).remove(at: index)
+            } else if let currentCount = expectedResponse.0 {
+              self.expectedResponses.\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
             }
-            """)
-          self.switchExpression(
-            variablePrefix: variablePrefix, protocolFunctionDeclaration: protocolFunctionDeclaration
-          )
-        })
+            
+            responseProvider = expectedResponse.1
+            break
+          }
+          """)
+      }
+
+      self.switchExpression(
+        variablePrefix: variablePrefix, protocolFunctionDeclaration: protocolFunctionDeclaration)
     }
 
     return mockFunctionDeclaration
+  }
+
+  private static func generateMatcherCall(parameters: [FunctionParameterSyntax]) -> String {
+    return parameters.map { parameter in
+      let paramName = parameter.secondName?.text ?? parameter.firstName.text
+      let firstName = parameter.firstName.text
+      return "\(firstName): \(paramName)"
+    }.joined(separator: ", ")
   }
 
   private static func switchExpression(
@@ -87,7 +95,7 @@ enum FunctionImplementationGenerator {
     protocolFunctionDeclaration: FunctionDeclSyntax
   ) -> SwitchExprSyntax {
     SwitchExprSyntax(
-      subject: ExprSyntax(stringLiteral: "first.1"),
+      subject: ExprSyntax(stringLiteral: "responseProvider"),
       casesBuilder: {
         SwitchCaseSyntax(
           SyntaxNodeString("case .closure(let closure):"),
@@ -122,6 +130,12 @@ enum FunctionImplementationGenerator {
                 return
             """)
         }
+
+        SwitchCaseSyntax(
+          """
+          case nil:
+              fatalError("\(raw: variablePrefix) without a matching expectation.")
+          """)
       })
   }
 }

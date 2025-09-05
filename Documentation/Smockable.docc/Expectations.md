@@ -8,64 +8,136 @@ Expectations are the core of Smockable's mocking system. They define how your mo
 
 Expectations can only be set prior to a mock being created and are always passed into the constructor of the mock instance.
 
+## Function-Style Range Matching
+
+Smockable provides a powerful function-style API that allows you to match method calls based on parameter ranges, making your tests more flexible and expressive.
+
+### Basic Range Matching
+
+```swift
+var expectations = MockUserService.Expectations()
+
+// For functions that return values, use when()
+when(expectations.fetchUser(id: "100"..."999"), useValue: user)
+when(expectations.getUserProfile(name: "A"..."Z"), useValue: profile)
+
+// For functions with no return type (Void), use successWhen()
+successWhen(expectations.updateUser(name: "A"..."Z", age: 18...65))
+successWhen(expectations.deleteUser(id: "100"..."999"))
+
+// Match any value using .any
+when(expectations.fetchUser(id: .any), useValue: defaultUser)
+```
+
+### Optional Parameter Matching
+
+```swift
+// Match nil values for functions returning values
+when(expectations.processUser(name: "A"..."Z", age: .nil), useValue: "no age")
+
+// Match non-nil values in range
+when(expectations.processUser(name: "A"..."Z", age: .range(18...65)), useValue: "valid age")
+
+// Match nil OR values in range
+when(expectations.processUser(name: "A"..."Z", age: .nilOrRange(18...65)), useValue: "flexible age")
+
+// For void functions with optional parameters
+successWhen(expectations.updateUser(name: "A"..."Z", age: .nil))
+successWhen(expectations.updateUser(name: "A"..."Z", age: .range(18...65)))
+```
+
+### Multiple Call Expectations
+
+```swift
+// Specify number of times expectation should apply
+when(expectations.fetchUser(id: "100"..."999"), times: 3, useValue: user)
+successWhen(expectations.saveData(data: "A"..."Z"), times: 5)
+
+// Unbounded expectations (apply to all matching calls)
+when(expectations.fetchUser(id: .any), times: .unbounded, useValue: defaultUser)
+successWhen(expectations.logEvent(message: .any), times: .unbounded)
+```
+
+### Error Handling
+
+```swift
+// For functions that can throw errors and return values
+when(expectations.fetchUser(id: "invalid"), useError: UserError.notFound)
+
+// For functions that can throw errors but return void
+when(expectations.saveData(data: "invalid"), useError: ValidationError.invalidData)
+```
+
 ## Basic Expectations
 
 ### Return Values
 
-Use `.value()` to specify what a method should return:
+Use `when()` with `useValue:` to specify what a method should return:
 
 ```swift
-let expectations = MockUserService.Expectations()
+var expectations = MockUserService.Expectations()
 
-// Simple return value
-expectations.fetchUser_user.value(User(id: "123", name: "John"))
+// Simple return value with range matching
+when(expectations.fetchUser(id: "100"..."999"), useValue: User(id: "123", name: "John"))
 
-// Multiple different return values
-expectations.fetchUser_user
-    .value(user1)      // First call
-    .value(user2)      // Second call
-    .value(user3)      // Third call
+// Multiple different return values for different ranges
+when(expectations.fetchUser(id: "001"..."099"), useValue: user1)
+when(expectations.fetchUser(id: "100"..."199"), useValue: user2)
+when(expectations.fetchUser(id: "200"..."299"), useValue: user3)
+
+// Match any value
+when(expectations.fetchUser(id: .any), useValue: defaultUser)
 ```
 
 ### Functions with no Return Value
 
-When a function has no return value use `.success()` to specify that the mocked implementation should return successfully.
+When a function has no return value use `successWhen()` to specify that the mocked implementation should return successfully:
 
 ```swift
-let expectations = MockUserService.Expectations()
+var expectations = MockUserService.Expectations()
 
-// Simple return value
-expectations.setUser_user.success()
+// Functions that complete successfully
+successWhen(expectations.updateUser(name: "A"..."Z", age: 18...65))
+successWhen(expectations.deleteUser(id: "100"..."999"))
+successWhen(expectations.saveSettings(key: .any, value: .any))
 ```
 
 ### Throwing Errors
 
-Use `.error()` to make a method throw an error:
+Use `when()` with `useError:` for both functions that return values and functions that return void:
 
-**Note:** The error expectation will only be available if the method or property can throw.
+**Note:** Error expectations are only available for methods that can throw.
 
 ```swift
-expectations.fetchUser_id.error(NetworkError.notFound)
+// For functions that return values and can throw
+when(expectations.fetchUser(id: "invalid"), useError: NetworkError.notFound)
+when(expectations.fetchUser(id: "timeout"), useError: NetworkError.timeout)
 
-// Mix values and errors
-expectations.fetchUser_id
-    .value(user1)                    // First call succeeds
-    .error(NetworkError.timeout)     // Second call throws
-    .value(user2)                    // Third call succeeds
+// For functions that return void and can throw
+when(expectations.saveData(data: "invalid"), useError: ValidationError.invalidData)
+when(expectations.deleteUser(id: "000"), useError: UserError.notFound)
+
+// Mix values and errors for different parameter ranges
+when(expectations.fetchUser(id: "100"..."999"), useValue: user1)
+when(expectations.fetchUser(id: "invalid"), useError: NetworkError.notFound)
+when(expectations.fetchUser(id: .any), useValue: defaultUser)
 ```
 
 ### Custom Logic with Closures
 
-Use `.using()` to provide custom logic:
+Use `when()` with the `use:` parameter to provide custom logic. The closure comes after the `times:` parameter and can be used as a trailing closure:
 
 ```swift
-// Simple closure
-expectations.fetchUser_id.using { id in
+// Simple closure for functions that return values (trailing closure syntax)
+when(expectations.fetchUser(id: "A"..."Z"), times: .unbounded) { id in
     return User(id: id, name: "Generated User")
 }
 
-// Complex logic
-expectations.processData_with.using { data, options in
+// With explicit use: parameter
+when(expectations.fetchUser(id: "A"..."Z"), times: 3, use: myClosure)
+
+// Complex logic with validation
+when(expectations.processData(data: .any, options: .any), times: 1) { data, options in
     if options.validate {
         guard !data.isEmpty else {
             throw ValidationError.emptyData
@@ -73,38 +145,54 @@ expectations.processData_with.using { data, options in
     }
     return ProcessedData(from: data)
 }
+
+// For void functions, use when with a closure that doesn't return anything
+when(expectations.logMessage(level: .any, message: .any), times: .unbounded) { level, message in
+    print("[\(level)] \(message)")
+}
 ```
 
 ## Call Count Modifiers
 
 ### Specific Number of Times
 
-Use `.times()` to specify how many times an expectation should apply:
+Use the `times:` parameter to specify how many times an expectation should apply:
 
 ```swift
-expectations.fetchUser_id
-    .value(user1).times(3)    // Return user1 for first 3 calls
-    .value(user2).times(2)    // Return user2 for next 2 calls
+// For functions that return values
+when(expectations.fetchUser(id: "100"..."999"), times: 3, useValue: user1)
+when(expectations.fetchUser(id: "A"..."M"), times: 2, useValue: user2)
+
+// For functions that return void
+successWhen(expectations.saveData(data: "A"..."Z"), times: 5)
+successWhen(expectations.deleteUser(id: "100"..."999"), times: 2)
 ```
 
 ### Unbounded Times
 
-Use `.unboundedTimes()` for expectations that should apply to all remaining calls:
+Use `times: .unbounded` for expectations that should apply to all matching calls:
 
 ```swift
-expectations.fetchUser_id
-    .value(user1).times(2)        // First 2 calls
-    .error(NetworkError.notFound).unboundedTimes()  // All subsequent calls
+// For functions that return values
+when(expectations.fetchUser(id: "default"), times: .unbounded, useValue: defaultUser)
+when(expectations.fetchUser(id: "error"), times: .unbounded, useError: NetworkError.notFound)
+
+// For functions that return void
+successWhen(expectations.logEvent(message: .any), times: .unbounded)
 ```
 
 ### Default Behavior
 
-If you don't specify a count modifier, it defaults to `.times(1)`:
+If you don't specify a `times:` parameter, it defaults to `times: 1`:
 
 ```swift
 // These are equivalent:
-expectations.fetchUser_id.value(user1)
-expectations.fetchUser_id.value(user1).times(1)
+when(expectations.fetchUser(id: "123"), useValue: user1)
+when(expectations.fetchUser(id: "123"), times: 1, useValue: user1)
+
+// Same for void functions:
+successWhen(expectations.saveData(data: "test"))
+successWhen(expectations.saveData(data: "test"), times: 1)
 ```
 
 ### Stateful Mocks
