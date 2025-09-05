@@ -91,25 +91,31 @@ enum FunctionStyleExpectationsGenerator {
     for (index, parameter) in parameters.enumerated() {
       let useRange = (combination & (1 << index)) != 0
       let paramName = parameter.secondName?.text ?? parameter.firstName.text
+      let paramNameForSignature: String
+      if let secondName = parameter.secondName?.text {
+        paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
+      } else {
+        paramNameForSignature = parameter.firstName.text
+      }
       let paramType = parameter.type.description
       let isOptional = paramType.hasSuffix("?")
 
       if useRange {
         if isOptional {
           let baseType = String(paramType.dropLast())  // Remove '?'
-          methodParameters.append("\(paramName): ClosedRange<\(baseType)>")
+          methodParameters.append("\(paramNameForSignature): ClosedRange<\(baseType)>")
           matcherInitializers.append("\(paramName): .range(\(paramName))")
         } else {
-          methodParameters.append("\(paramName): ClosedRange<\(paramType)>")
+          methodParameters.append("\(paramNameForSignature): ClosedRange<\(paramType)>")
           matcherInitializers.append("\(paramName): .range(\(paramName))")
         }
       } else {
         if isOptional {
           let baseType = String(paramType.dropLast())  // Remove '?'
-          methodParameters.append("\(paramName): OptionalValueMatcher<\(baseType)>")
+          methodParameters.append("\(paramNameForSignature): OptionalValueMatcher<\(baseType)>")
           matcherInitializers.append("\(paramName): \(paramName)")
         } else {
-          methodParameters.append("\(paramName): ValueMatcher<\(paramType)>")
+          methodParameters.append("\(paramNameForSignature): ValueMatcher<\(paramType)>")
           matcherInitializers.append("\(paramName): \(paramName)")
         }
       }

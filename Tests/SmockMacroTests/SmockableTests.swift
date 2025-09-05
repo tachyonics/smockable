@@ -86,7 +86,7 @@ struct SmockableTests {
     var expectations = MockWeatherService.Expectations()
 
     // 2. Configure what the mock should return
-    when(expectations.getCurrentTemperature(city: .any), useValue: 22.5)
+    when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
 
     // 3. Create the mock
     let mockWeatherService = MockWeatherService(expectations: expectations)
@@ -124,7 +124,7 @@ struct SmockableTests {
 
   @Test func weatherApp_DisplaysTemperature() async {
     var expectations = MockWeatherService.Expectations()
-    when(expectations.getCurrentTemperature(city: .any), useValue: 22.5)
+    when(expectations.getCurrentTemperature(for: .any), useValue: 22.5)
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
@@ -137,7 +137,7 @@ struct SmockableTests {
   @Test func getCurrentTemperature_WhenServiceFails_ThrowsError() async {
     // Configure mock to throw an error
     var expectations = MockWeatherService.Expectations()
-    when(expectations.getCurrentTemperature(city: .any), useError: WeatherError.serviceUnavailable)
+    when(expectations.getCurrentTemperature(for: .any), useError: WeatherError.serviceUnavailable)
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -154,8 +154,8 @@ struct SmockableTests {
     let londonForecast = [WeatherDay(date: Date(), temperature: 20.0, condition: "Sunny")]
     let parisForecast = [WeatherDay(date: Date(), temperature: 18.0, condition: "Cloudy")]
 
-    when(expectations.getForecast(city: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
-    when(expectations.getForecast(city: .any, days: .any), useValue: parisForecast)  // Second call returns Paris forecast
+    when(expectations.getForecast(for: .any, days: .any), useValue: londonForecast)  // First call returns London forecast
+    when(expectations.getForecast(for: .any, days: .any), useValue: parisForecast)  // Second call returns Paris forecast
 
     let mockWeatherService = MockWeatherService(expectations: expectations)
 
@@ -188,7 +188,7 @@ struct SmockableTests {
 
     // Use a closure to provide custom logic
     let lastCity = LastCity()
-    when(expectations.getCurrentTemperature(city: .any), times: .unbounded) { city in
+    when(expectations.getCurrentTemperature(for: .any), times: .unbounded) { city in
       await lastCity.set(city)
 
       switch city {
