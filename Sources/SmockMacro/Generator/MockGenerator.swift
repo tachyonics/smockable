@@ -25,6 +25,7 @@ enum MockGenerator {
         return genericParameterClause
     }
 
+    // swiftlint:disable function_body_length
     static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
 
@@ -126,4 +127,5 @@ enum MockGenerator {
             }
         )
     }
+    // swiftlint:enable function_body_length
 }
