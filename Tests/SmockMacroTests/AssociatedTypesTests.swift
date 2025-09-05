@@ -7,445 +7,445 @@ import Testing
 // MARK: - Test Data Structures
 
 struct User: Codable, Equatable, Sendable, Comparable {
-  static func < (lhs: User, rhs: User) -> Bool {
-    return lhs.id < rhs.id
-  }
+    static func < (lhs: User, rhs: User) -> Bool {
+        return lhs.id < rhs.id
+    }
 
-  let id: String
-  let name: String
+    let id: String
+    let name: String
 }
 
 struct Product: Codable, Equatable, Sendable, Comparable {
-  let id: String
-  let name: String
+    let id: String
+    let name: String
 
-  static func < (lhs: Product, rhs: Product) -> Bool {
-    return lhs.id < rhs.id
-  }
+    static func < (lhs: Product, rhs: Product) -> Bool {
+        return lhs.id < rhs.id
+    }
 }
 
 struct UserData: Codable, Equatable, Sendable, Comparable {
-  let id: String
-  let name: String
+    let id: String
+    let name: String
 
-  static func < (lhs: UserData, rhs: UserData) -> Bool {
-    return lhs.id < rhs.id
-  }
+    static func < (lhs: UserData, rhs: UserData) -> Bool {
+        return lhs.id < rhs.id
+    }
 }
 
 struct SerializedUserData: Codable, Equatable, Sendable, Comparable {
-  let data: String  // Changed from Data to String
-  let timestamp: String  // Changed from Date to String
+    let data: String  // Changed from Data to String
+    let timestamp: String  // Changed from Date to String
 
-  static func < (lhs: SerializedUserData, rhs: SerializedUserData) -> Bool {
-    return lhs.data < rhs.data
-  }
+    static func < (lhs: SerializedUserData, rhs: SerializedUserData) -> Bool {
+        return lhs.data < rhs.data
+    }
 }
 
 public protocol EventProtocol: Sendable {
-  var timestamp: String { get }  // Changed from Date to String
-  var eventId: String { get }
+    var timestamp: String { get }  // Changed from Date to String
+    var eventId: String { get }
 }
 
 struct UserCreatedEvent: EventProtocol, Equatable, Sendable, Comparable {
-  let timestamp: String  // Changed from Date to String
-  let eventId: String
-  let userId: String
-  let userName: String
+    let timestamp: String  // Changed from Date to String
+    let eventId: String
+    let userId: String
+    let userName: String
 
-  static func < (lhs: UserCreatedEvent, rhs: UserCreatedEvent) -> Bool {
-    return lhs.eventId < rhs.eventId
-  }
+    static func < (lhs: UserCreatedEvent, rhs: UserCreatedEvent) -> Bool {
+        return lhs.eventId < rhs.eventId
+    }
 }
 
 struct RawData: Codable, Equatable, Sendable, Comparable {
-  let content: String
-  let metadata: [String: String]
+    let content: String
+    let metadata: [String: String]
 
-  static func < (lhs: RawData, rhs: RawData) -> Bool {
-    return lhs.content < rhs.content
-  }
+    static func < (lhs: RawData, rhs: RawData) -> Bool {
+        return lhs.content < rhs.content
+    }
 }
 
 struct ProcessedData: Codable, Equatable, Sendable, Comparable {
-  let processedContent: String
-  let tags: [String]
-  let score: Double
+    let processedContent: String
+    let tags: [String]
+    let score: Double
 
-  static func < (lhs: ProcessedData, rhs: ProcessedData) -> Bool {
-    return lhs.processedContent < rhs.processedContent
-  }
+    static func < (lhs: ProcessedData, rhs: ProcessedData) -> Bool {
+        return lhs.processedContent < rhs.processedContent
+    }
 }
 
 struct ProcessingConfig: Codable, Equatable, Sendable, Comparable {
-  let enableTagging: Bool
-  let scoreThreshold: Double
+    let enableTagging: Bool
+    let scoreThreshold: Double
 
-  static func < (lhs: ProcessingConfig, rhs: ProcessingConfig) -> Bool {
-    return lhs.scoreThreshold < rhs.scoreThreshold
-  }
+    static func < (lhs: ProcessingConfig, rhs: ProcessingConfig) -> Bool {
+        return lhs.scoreThreshold < rhs.scoreThreshold
+    }
 }
 
 // MARK: - Protocol Definitions
 
 @Smock
 public protocol Repository {
-  associatedtype Entity: Sendable & Comparable
+    associatedtype Entity: Sendable & Comparable
 
-  func save(_ entity: Entity) async throws
-  func find(id: String) async throws -> Entity?
-  func delete(id: String) async throws
+    func save(_ entity: Entity) async throws
+    func find(id: String) async throws -> Entity?
+    func delete(id: String) async throws
 }
 
 @Smock
 public protocol KeyValueStore {
-  associatedtype Key: Hashable & Sendable & Comparable
-  associatedtype Value: Codable & Sendable & Comparable
+    associatedtype Key: Hashable & Sendable & Comparable
+    associatedtype Value: Codable & Sendable & Comparable
 
-  func set(key: Key, value: Value) async throws
-  func get(key: Key) async throws -> Value?
-  func remove(key: Key) async throws
-  func keys() async throws -> [Key]
+    func set(key: Key, value: Value) async throws
+    func get(key: Key) async throws -> Value?
+    func remove(key: Key) async throws
+    func keys() async throws -> [Key]
 }
 
 @Smock
 public protocol Serializer {
-  associatedtype Input: Codable & Sendable & Comparable
-  associatedtype Output: Codable & Sendable & Comparable
+    associatedtype Input: Codable & Sendable & Comparable
+    associatedtype Output: Codable & Sendable & Comparable
 
-  func serialize(_ input: Input) async throws -> Output
-  func deserialize(_ output: Output) async throws -> Input
+    func serialize(_ input: Input) async throws -> Output
+    func deserialize(_ output: Output) async throws -> Input
 }
 
 @Smock
 public protocol EventHandler {
-  associatedtype Event: EventProtocol & Comparable
+    associatedtype Event: EventProtocol & Comparable
 
-  func handle(_ event: Event) async throws
+    func handle(_ event: Event) async throws
 }
 
 @Smock
 public protocol DataTransformer {
-  associatedtype Input: Codable & Sendable & Comparable
-  associatedtype Output: Codable & Sendable & Comparable
-  associatedtype Config: Codable & Sendable & Comparable
+    associatedtype Input: Codable & Sendable & Comparable
+    associatedtype Output: Codable & Sendable & Comparable
+    associatedtype Config: Codable & Sendable & Comparable
 
-  func transform(_ input: Input, config: Config) async throws -> Output
-  func validateInput(_ input: Input) async -> Bool
-  func createDefaultConfig() async -> Config
+    func transform(_ input: Input, config: Config) async throws -> Output
+    func validateInput(_ input: Input) async -> Bool
+    func createDefaultConfig() async -> Config
 }
 
 @Smock
 public protocol SimpleReadWritable {
-  associatedtype Item: Sendable & Comparable
+    associatedtype Item: Sendable & Comparable
 
-  func read(id: String) async throws -> Item?
-  func write(id: String, item: Item) async throws
-  func update(id: String, item: Item) async throws
+    func read(id: String) async throws -> Item?
+    func write(id: String, item: Item) async throws
+    func update(id: String, item: Item) async throws
 }
 
 @Smock
 public protocol Cache {
-  associatedtype CacheKey: Hashable & Sendable & Comparable
-  associatedtype CacheValue: Codable & Sendable & Comparable
+    associatedtype CacheKey: Hashable & Sendable & Comparable
+    associatedtype CacheValue: Codable & Sendable & Comparable
 
-  func store(key: CacheKey, value: CacheValue) async
-  func retrieve(key: CacheKey) async -> CacheValue?
+    func store(key: CacheKey, value: CacheValue) async
+    func retrieve(key: CacheKey) async -> CacheValue?
 }
 
 @Smock
 public protocol Serializable {
-  associatedtype Data: Codable & Sendable & Comparable
+    associatedtype Data: Codable & Sendable & Comparable
 
-  func serialize() async throws -> Data
-  func deserialize(_ data: Data) async throws
+    func serialize() async throws -> Data
+    func deserialize(_ data: Data) async throws
 }
 
 @Smock
 public protocol Processor {
-  associatedtype Input: Sendable & Comparable
-  associatedtype Output: Sendable & Comparable
+    associatedtype Input: Sendable & Comparable
+    associatedtype Output: Sendable & Comparable
 
-  func process(_ input: Input) async throws -> Output
+    func process(_ input: Input) async throws -> Output
 }
 
 // MARK: - Test Cases
 
 struct AssociatedTypesTests {
 
-  // MARK: - Basic Associated Types Tests
+    // MARK: - Basic Associated Types Tests
 
-  @Test
-  func testSimpleAssociatedType() async throws {
-    var expectations = MockRepository<User>.Expectations()
+    @Test
+    func testSimpleAssociatedType() async throws {
+        var expectations = MockRepository<User>.Expectations()
 
-    let testUser = User(id: "123", name: "John Doe")
-    successWhen(expectations.save(.any))
-    when(expectations.find(id: .any), useValue: testUser)
-    successWhen(expectations.delete(id: .any))
+        let testUser = User(id: "123", name: "John Doe")
+        successWhen(expectations.save(.any))
+        when(expectations.find(id: .any), useValue: testUser)
+        successWhen(expectations.delete(id: .any))
 
-    let mockRepo = MockRepository<User>(expectations: expectations)
+        let mockRepo = MockRepository<User>(expectations: expectations)
 
-    try await mockRepo.save(testUser)
-    let foundUser = try await mockRepo.find(id: "123")
-    try await mockRepo.delete(id: "123")
+        try await mockRepo.save(testUser)
+        let foundUser = try await mockRepo.find(id: "123")
+        try await mockRepo.delete(id: "123")
 
-    #expect(foundUser?.name == "John Doe")
+        #expect(foundUser?.name == "John Doe")
 
-    // Verify call counts
-    let saveCount = await mockRepo.__verify.save.callCount
-    let findCount = await mockRepo.__verify.find_id.callCount
-    let deleteCount = await mockRepo.__verify.delete_id.callCount
+        // Verify call counts
+        let saveCount = await mockRepo.__verify.save.callCount
+        let findCount = await mockRepo.__verify.find_id.callCount
+        let deleteCount = await mockRepo.__verify.delete_id.callCount
 
-    #expect(saveCount == 1)
-    #expect(findCount == 1)
-    #expect(deleteCount == 1)
-  }
-
-  @Test
-  func testMultipleAssociatedTypes() async throws {
-    var expectations = MockKeyValueStore<String, Int>.Expectations()
-
-    successWhen(expectations.set(key: .any, value: .any), times: .unbounded)
-    when(expectations.get(key: .any), times: .unbounded) { key in
-      switch key {
-      case "count": return 42
-      case "total": return 100
-      default: return nil
-      }
+        #expect(saveCount == 1)
+        #expect(findCount == 1)
+        #expect(deleteCount == 1)
     }
-    successWhen(expectations.remove(key: .any))
-    when(expectations.keys(), useValue: ["count", "total"])
 
-    let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
+    @Test
+    func testMultipleAssociatedTypes() async throws {
+        var expectations = MockKeyValueStore<String, Int>.Expectations()
 
-    try await mockStore.set(key: "count", value: 42)
-    try await mockStore.set(key: "total", value: 100)
+        successWhen(expectations.set(key: .any, value: .any), times: .unbounded)
+        when(expectations.get(key: .any), times: .unbounded) { key in
+            switch key {
+            case "count": return 42
+            case "total": return 100
+            default: return nil
+            }
+        }
+        successWhen(expectations.remove(key: .any))
+        when(expectations.keys(), useValue: ["count", "total"])
 
-    let count = try await mockStore.get(key: "count")
-    let total = try await mockStore.get(key: "total")
-    let missing = try await mockStore.get(key: "missing")
+        let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
 
-    #expect(count == 42)
-    #expect(total == 100)
-    #expect(missing == nil)
+        try await mockStore.set(key: "count", value: 42)
+        try await mockStore.set(key: "total", value: 100)
 
-    let allKeys = try await mockStore.keys()
-    #expect(Set(allKeys) == Set(["count", "total"]))
-  }
+        let count = try await mockStore.get(key: "count")
+        let total = try await mockStore.get(key: "total")
+        let missing = try await mockStore.get(key: "missing")
 
-  // MARK: - Constrained Associated Types Tests
+        #expect(count == 42)
+        #expect(total == 100)
+        #expect(missing == nil)
 
-  @Test
-  func testTypeConstraints() async throws {
-    var expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
+        let allKeys = try await mockStore.keys()
+        #expect(Set(allKeys) == Set(["count", "total"]))
+    }
 
-    let userData = UserData(id: "123", name: "John")
-    let serializedData = SerializedUserData(
-      data: "serialized_data_123",
-      timestamp: "2024-01-01T00:00:00Z"
-    )
+    // MARK: - Constrained Associated Types Tests
 
-    when(expectations.serialize(.any), useValue: serializedData)
-    when(expectations.deserialize(.any), useValue: userData)
+    @Test
+    func testTypeConstraints() async throws {
+        var expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
 
-    let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
+        let userData = UserData(id: "123", name: "John")
+        let serializedData = SerializedUserData(
+            data: "serialized_data_123",
+            timestamp: "2024-01-01T00:00:00Z"
+        )
 
-    let serialized = try await mockSerializer.serialize(userData)
-    let deserialized = try await mockSerializer.deserialize(serialized)
+        when(expectations.serialize(.any), useValue: serializedData)
+        when(expectations.deserialize(.any), useValue: userData)
 
-    #expect(deserialized.name == "John")
+        let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
 
-    // Verify call counts
-    let serializeCount = await mockSerializer.__verify.serialize.callCount
-    let deserializeCount = await mockSerializer.__verify.deserialize.callCount
+        let serialized = try await mockSerializer.serialize(userData)
+        let deserialized = try await mockSerializer.deserialize(serialized)
 
-    #expect(serializeCount == 1)
-    #expect(deserializeCount == 1)
-  }
+        #expect(deserialized.name == "John")
 
-  @Test
-  func testProtocolConstraints() async throws {
-    var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
+        // Verify call counts
+        let serializeCount = await mockSerializer.__verify.serialize.callCount
+        let deserializeCount = await mockSerializer.__verify.deserialize.callCount
 
-    successWhen(expectations.handle(.any))
+        #expect(serializeCount == 1)
+        #expect(deserializeCount == 1)
+    }
 
-    let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
+    @Test
+    func testProtocolConstraints() async throws {
+        var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
 
-    let event = UserCreatedEvent(
-      timestamp: "2024-01-01T00:00:00Z",
-      eventId: "event-123",
-      userId: "user-456",
-      userName: "John Doe"
-    )
+        successWhen(expectations.handle(.any))
 
-    try await mockHandler.handle(event)
+        let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
 
-    let handleCount = await mockHandler.__verify.handle.callCount
-    #expect(handleCount == 1)
-  }
+        let event = UserCreatedEvent(
+            timestamp: "2024-01-01T00:00:00Z",
+            eventId: "event-123",
+            userId: "user-456",
+            userName: "John Doe"
+        )
 
-  // MARK: - Complex Generic Scenarios Tests
+        try await mockHandler.handle(event)
 
-  @Test
-  func testMultipleGenericParametersWithConstraints() async throws {
-    var expectations = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>.Expectations()
+        let handleCount = await mockHandler.__verify.handle.callCount
+        #expect(handleCount == 1)
+    }
 
-    let rawData = RawData(content: "test content", metadata: [:])
-    let processedData = ProcessedData(
-      processedContent: "processed: test content",
-      tags: ["test"],
-      score: 0.85
-    )
-    let config = ProcessingConfig(enableTagging: true, scoreThreshold: 0.5)
+    // MARK: - Complex Generic Scenarios Tests
 
-    when(expectations.transform(.any, config: .any), useValue: processedData)
-    when(expectations.validateInput(.any), useValue: true)
-    when(expectations.createDefaultConfig(), useValue: config)
+    @Test
+    func testMultipleGenericParametersWithConstraints() async throws {
+        var expectations = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>.Expectations()
 
-    let mockTransformer = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>(
-      expectations: expectations
-    )
+        let rawData = RawData(content: "test content", metadata: [:])
+        let processedData = ProcessedData(
+            processedContent: "processed: test content",
+            tags: ["test"],
+            score: 0.85
+        )
+        let config = ProcessingConfig(enableTagging: true, scoreThreshold: 0.5)
 
-    // Test validation
-    let isValid = await mockTransformer.validateInput(rawData)
-    #expect(isValid == true)
+        when(expectations.transform(.any, config: .any), useValue: processedData)
+        when(expectations.validateInput(.any), useValue: true)
+        when(expectations.createDefaultConfig(), useValue: config)
 
-    // Test config creation
-    let defaultConfig = await mockTransformer.createDefaultConfig()
-    #expect(defaultConfig.enableTagging == true)
+        let mockTransformer = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>(
+            expectations: expectations
+        )
 
-    // Test transformation
-    let result = try await mockTransformer.transform(rawData, config: config)
-    #expect(result.score == 0.85)
-    #expect(result.tags == ["test"])
+        // Test validation
+        let isValid = await mockTransformer.validateInput(rawData)
+        #expect(isValid == true)
 
-    // Verify call counts
-    let validateCount = await mockTransformer.__verify.validateInput.callCount
-    let configCount = await mockTransformer.__verify.createDefaultConfig.callCount
-    let transformCount = await mockTransformer.__verify.transform_config.callCount
+        // Test config creation
+        let defaultConfig = await mockTransformer.createDefaultConfig()
+        #expect(defaultConfig.enableTagging == true)
 
-    #expect(validateCount == 1)
-    #expect(configCount == 1)
-    #expect(transformCount == 1)
-  }
+        // Test transformation
+        let result = try await mockTransformer.transform(rawData, config: config)
+        #expect(result.score == 0.85)
+        #expect(result.tags == ["test"])
 
-  @Test
-  func testSimpleReadWritable() async throws {
-    var expectations = MockSimpleReadWritable<User>.Expectations()
+        // Verify call counts
+        let validateCount = await mockTransformer.__verify.validateInput.callCount
+        let configCount = await mockTransformer.__verify.createDefaultConfig.callCount
+        let transformCount = await mockTransformer.__verify.transform_config.callCount
 
-    let user = User(id: "123", name: "John")
-    let updatedUser = User(id: "123", name: "John Updated")
+        #expect(validateCount == 1)
+        #expect(configCount == 1)
+        #expect(transformCount == 1)
+    }
 
-    when(expectations.read(id: "100"..."999"), useValue: user)
-    successWhen(expectations.write(id: "400"..."499", item: .any))
-    successWhen(expectations.update(id: "100"..."199", item: .any))
+    @Test
+    func testSimpleReadWritable() async throws {
+        var expectations = MockSimpleReadWritable<User>.Expectations()
 
-    let mockService = MockSimpleReadWritable<User>(expectations: expectations)
+        let user = User(id: "123", name: "John")
+        let updatedUser = User(id: "123", name: "John Updated")
 
-    // Test reading
-    let readUser = try await mockService.read(id: "123")
-    #expect(readUser?.name == "John")
+        when(expectations.read(id: "100"..."999"), useValue: user)
+        successWhen(expectations.write(id: "400"..."499", item: .any))
+        successWhen(expectations.update(id: "100"..."199", item: .any))
 
-    // Test writing
-    try await mockService.write(id: "456", item: user)
+        let mockService = MockSimpleReadWritable<User>(expectations: expectations)
 
-    // Test updating
-    try await mockService.update(id: "123", item: updatedUser)
+        // Test reading
+        let readUser = try await mockService.read(id: "123")
+        #expect(readUser?.name == "John")
 
-    // Verify all operations
-    let readCount = await mockService.__verify.read_id.callCount
-    let writeCount = await mockService.__verify.write_id_item.callCount
-    let updateCount = await mockService.__verify.update_id_item.callCount
+        // Test writing
+        try await mockService.write(id: "456", item: user)
 
-    #expect(readCount == 1)
-    #expect(writeCount == 1)
-    #expect(updateCount == 1)
-  }
+        // Test updating
+        try await mockService.update(id: "123", item: updatedUser)
 
-  // MARK: - Best Practices Tests
+        // Verify all operations
+        let readCount = await mockService.__verify.read_id.callCount
+        let writeCount = await mockService.__verify.write_id_item.callCount
+        let updateCount = await mockService.__verify.update_id_item.callCount
 
-  @Test
-  func testRepositoryWithMultipleTypes() async throws {
-    // Test with User type
-    var userExpectations = MockRepository<User>.Expectations()
-    successWhen(userExpectations.save(.any))
+        #expect(readCount == 1)
+        #expect(writeCount == 1)
+        #expect(updateCount == 1)
+    }
 
-    let userRepo = MockRepository<User>(expectations: userExpectations)
-    let user = User(id: "123", name: "John")
-    try await userRepo.save(user)
+    // MARK: - Best Practices Tests
 
-    let userSaveCount = await userRepo.__verify.save.callCount
-    #expect(userSaveCount == 1)
+    @Test
+    func testRepositoryWithMultipleTypes() async throws {
+        // Test with User type
+        var userExpectations = MockRepository<User>.Expectations()
+        successWhen(userExpectations.save(.any))
 
-    // Test with Product type
-    var productExpectations = MockRepository<Product>.Expectations()
-    successWhen(productExpectations.save(.any))
+        let userRepo = MockRepository<User>(expectations: userExpectations)
+        let user = User(id: "123", name: "John")
+        try await userRepo.save(user)
 
-    let productRepo = MockRepository<Product>(expectations: productExpectations)
-    let product = Product(id: "456", name: "Widget")
-    try await productRepo.save(product)
+        let userSaveCount = await userRepo.__verify.save.callCount
+        #expect(userSaveCount == 1)
 
-    let productSaveCount = await productRepo.__verify.save.callCount
-    #expect(productSaveCount == 1)
-  }
+        // Test with Product type
+        var productExpectations = MockRepository<Product>.Expectations()
+        successWhen(productExpectations.save(.any))
 
-  @Test
-  func testCacheWithMeaningfulTypeNames() async throws {
-    var expectations = MockCache<String, User>.Expectations()
+        let productRepo = MockRepository<Product>(expectations: productExpectations)
+        let product = Product(id: "456", name: "Widget")
+        try await productRepo.save(product)
 
-    let user = User(id: "123", name: "John")
-    successWhen(expectations.store(key: "user_100"..."user_999", value: .any))
-    when(expectations.retrieve(key: "user_100"..."user_999"), useValue: user)
+        let productSaveCount = await productRepo.__verify.save.callCount
+        #expect(productSaveCount == 1)
+    }
 
-    let mockCache = MockCache<String, User>(expectations: expectations)
+    @Test
+    func testCacheWithMeaningfulTypeNames() async throws {
+        var expectations = MockCache<String, User>.Expectations()
 
-    await mockCache.store(key: "user_123", value: user)
-    let retrievedUser = await mockCache.retrieve(key: "user_123")
+        let user = User(id: "123", name: "John")
+        successWhen(expectations.store(key: "user_100"..."user_999", value: .any))
+        when(expectations.retrieve(key: "user_100"..."user_999"), useValue: user)
 
-    #expect(retrievedUser?.name == "John")
+        let mockCache = MockCache<String, User>(expectations: expectations)
 
-    let storeCount = await mockCache.__verify.store_key_value.callCount
-    let retrieveCount = await mockCache.__verify.retrieve_key.callCount
+        await mockCache.store(key: "user_123", value: user)
+        let retrievedUser = await mockCache.retrieve(key: "user_123")
 
-    #expect(storeCount == 1)
-    #expect(retrieveCount == 1)
-  }
+        #expect(retrievedUser?.name == "John")
 
-  @Test
-  func testSerializableWithConstraints() async throws {
-    var expectations = MockSerializable<UserData>.Expectations()
+        let storeCount = await mockCache.__verify.store_key_value.callCount
+        let retrieveCount = await mockCache.__verify.retrieve_key.callCount
 
-    let userData = UserData(id: "123", name: "John")
-    when(expectations.serialize(), useValue: userData)
-    successWhen(expectations.deserialize(.any))
+        #expect(storeCount == 1)
+        #expect(retrieveCount == 1)
+    }
 
-    let mockSerializable = MockSerializable<UserData>(expectations: expectations)
+    @Test
+    func testSerializableWithConstraints() async throws {
+        var expectations = MockSerializable<UserData>.Expectations()
 
-    let serialized = try await mockSerializable.serialize()
-    #expect(serialized.name == "John")
+        let userData = UserData(id: "123", name: "John")
+        when(expectations.serialize(), useValue: userData)
+        successWhen(expectations.deserialize(.any))
 
-    try await mockSerializable.deserialize(userData)
+        let mockSerializable = MockSerializable<UserData>(expectations: expectations)
 
-    let serializeCount = await mockSerializable.__verify.serialize.callCount
-    let deserializeCount = await mockSerializable.__verify.deserialize.callCount
+        let serialized = try await mockSerializable.serialize()
+        #expect(serialized.name == "John")
 
-    #expect(serializeCount == 1)
-    #expect(deserializeCount == 1)
-  }
+        try await mockSerializable.deserialize(userData)
 
-  @Test
-  func testProcessorWithoutConstraints() async throws {
-    var expectations = MockProcessor<String, Int>.Expectations()
+        let serializeCount = await mockSerializable.__verify.serialize.callCount
+        let deserializeCount = await mockSerializable.__verify.deserialize.callCount
 
-    when(expectations.process(.any), useValue: 42)
+        #expect(serializeCount == 1)
+        #expect(deserializeCount == 1)
+    }
 
-    let mockProcessor = MockProcessor<String, Int>(expectations: expectations)
+    @Test
+    func testProcessorWithoutConstraints() async throws {
+        var expectations = MockProcessor<String, Int>.Expectations()
 
-    let result = try await mockProcessor.process("test")
-    #expect(result == 42)
+        when(expectations.process(.any), useValue: 42)
 
-    let processCount = await mockProcessor.__verify.process.callCount
-    #expect(processCount == 1)
-  }
+        let mockProcessor = MockProcessor<String, Int>(expectations: expectations)
+
+        let result = try await mockProcessor.process("test")
+        #expect(result == 42)
+
+        let processCount = await mockProcessor.__verify.process.callCount
+        #expect(processCount == 1)
+    }
 }

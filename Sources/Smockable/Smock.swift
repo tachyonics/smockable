@@ -1,8 +1,9 @@
 @attached(peer, names: prefixed(Mock))
 public macro Smock(named name: String? = nil) =
-  #externalMacro(
-    module: "SmockMacro",
-    type: "SmockMacro")
+    #externalMacro(
+        module: "SmockMacro",
+        type: "SmockMacro"
+    )
 
 // MARK: - Stringify Macro
 
@@ -10,4 +11,4 @@ public macro Smock(named name: String? = nil) =
 /// original value as well as the source code that generated it.
 @freestanding(expression)
 public macro stringify<T>(_ value: T) -> (T, String) =
-  #externalMacro(module: "SmockMacro", type: "StringifyMacro")
+    #externalMacro(module: "SmockMacro", type: "StringifyMacro")

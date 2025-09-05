@@ -9,13 +9,15 @@ import SwiftSyntax
 /// meaning the input declaration is not a protocol declaration, the method throws
 /// a `SmockDiagnostic.onlyApplicableToProtocol` error.
 enum Extractor {
-  static func extractProtocolDeclaration(from declaration: DeclSyntaxProtocol) throws
-    -> ProtocolDeclSyntax
-  {
-    guard let protocolDeclaration = declaration.as(ProtocolDeclSyntax.self) else {
-      throw SmockDiagnostic.onlyApplicableToProtocol
-    }
+    static func extractProtocolDeclaration(
+        from declaration: DeclSyntaxProtocol
+    ) throws
+        -> ProtocolDeclSyntax
+    {
+        guard let protocolDeclaration = declaration.as(ProtocolDeclSyntax.self) else {
+            throw SmockDiagnostic.onlyApplicableToProtocol
+        }
 
-    return protocolDeclaration
-  }
+        return protocolDeclaration
+    }
 }

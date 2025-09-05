@@ -21,6 +21,7 @@ protocol Repository {
 }
 
 // Usage with specific type
+@Test
 func testUserRepository() async throws {
     var expectations = MockRepository<User>.Expectations()
     
@@ -35,7 +36,7 @@ func testUserRepository() async throws {
     let foundUser = try await mockRepo.find(id: "123")
     try await mockRepo.delete(id: "123")
     
-    XCTAssertEqual(foundUser?.name, "John Doe")
+    #expect(foundUser?.name == "John Doe")
 }
 ```
 
@@ -53,6 +54,7 @@ protocol KeyValueStore {
     func keys() async throws -> [Key]
 }
 
+@Test
 func testStringIntStore() async throws {
     var expectations = MockKeyValueStore<String, Int>.Expectations()
     
@@ -76,12 +78,12 @@ func testStringIntStore() async throws {
     let total = try await mockStore.get(key: "total")
     let missing = try await mockStore.get(key: "missing")
     
-    XCTAssertEqual(count, 42)
-    XCTAssertEqual(total, 100)
-    XCTAssertNil(missing)
+    #expect(count == 42)
+    #expect(total == 100)
+    #expect(missing == nil)
     
     let allKeys = try await mockStore.keys()
-    XCTAssertEqual(Set(allKeys), Set(["count", "total"]))
+    #expect(Set(allKeys) == Set(["count", "total"]))
 }
 ```
 
@@ -110,6 +112,7 @@ struct SerializedUserData: Codable {
     let timestamp: Date
 }
 
+@Test
 func testUserDataSerializer() async throws {
     var expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
     
@@ -127,7 +130,7 @@ func testUserDataSerializer() async throws {
     let serialized = try await mockSerializer.serialize(userData)
     let deserialized = try await mockSerializer.deserialize(serialized)
     
-    XCTAssertEqual(deserialized.name, "John")
+    #expect(deserialized.name == "John")
 }
 ```
 
@@ -154,6 +157,7 @@ struct UserCreatedEvent: EventProtocol {
     let userName: String
 }
 
+@Test
 func testUserEventHandler() async throws {
     var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
     
@@ -170,12 +174,12 @@ func testUserEventHandler() async throws {
     )
     
     let canHandle = mockHandler.canHandle(UserCreatedEvent.self)
-    XCTAssertTrue(canHandle)
+    #expect(canHandle)
     
     try await mockHandler.handle(event)
     
     let handleCount = await mockHandler.__verify.handle.callCount
-    XCTAssertEqual(handleCount, 1)
+    #expect(handleCount == 1)
 }
 ```
 
