@@ -16,7 +16,7 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testSimpleFunctionWithoutParameters() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.simpleFunction(), useValue: "test result")
+        when(expectations.simpleFunction(), return: "test result")
 
         let mock = MockTestService(expectations: expectations)
         let actualResult = await mock.simpleFunction()
@@ -27,7 +27,7 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testFunctionWithSingleParameterRange() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.fetchUser(id: "100"..."999"), times: 2, useValue: "user found")
+        when(expectations.fetchUser(id: "100"..."999"), times: 2, return: "user found")
 
         let mock = MockTestService(expectations: expectations)
 
@@ -44,7 +44,7 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testFunctionWithMultipleParameterRanges() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.processData(input: "A"..."M", count: 1...10), times: 3, useValue: "processed")
+        when(expectations.processData(input: "A"..."M", count: 1...10), times: 3, return: "processed")
 
         let mock = MockTestService(expectations: expectations)
 
@@ -63,10 +63,10 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testOptionalParameterMatching() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.optionalParameter(name: "A"..."Z", age: .nil), useValue: "no age provided")
+        when(expectations.optionalParameter(name: "A"..."Z", age: .nil), return: "no age provided")
         when(
             expectations.optionalParameter(name: "A"..."Z", age: .range(18...65)),
-            useValue: "valid age"
+            return: "valid age"
         )
 
         let mock = MockTestService(expectations: expectations)
@@ -81,8 +81,8 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testExplicitValueMatcherUsage() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.fetchUser(id: .range("100"..."999")), useValue: "explicit range")
-        when(expectations.fetchUser(id: .any), useValue: "any id")
+        when(expectations.fetchUser(id: .range("100"..."999")), return: "explicit range")
+        when(expectations.fetchUser(id: .any), return: "any id")
 
         let mock = MockTestService(expectations: expectations)
 

@@ -26,9 +26,9 @@ func testUserRepository() async throws {
     var expectations = MockRepository<User>.Expectations()
     
     let testUser = User(id: "123", name: "John Doe")
-    successWhen(expectations.save(.any))
-    when(expectations.find(id: .any), useValue: testUser)
-    successWhen(expectations.delete(id: .any))
+    when(expectations.save(.any), complete: .withSuccess)
+    when(expectations.find(id: .any), return: testUser)
+    when(expectations.delete(id: .any), complete: .withSuccess)
     
     let mockRepo = MockRepository<User>(expectations: expectations)
     
@@ -58,7 +58,7 @@ protocol KeyValueStore {
 func testStringIntStore() async throws {
     var expectations = MockKeyValueStore<String, Int>.Expectations()
     
-    successWhen(expectations.set(key: .any, value: .any), times: .unbounded)
+    when(expectations.set(key: .any, value: .any), times: .unbounded, complete: .withSuccess)
     when(expectations.get(key: .any), times: .unbounded) { key in
         switch key {
         case "count": return 42
@@ -66,8 +66,8 @@ func testStringIntStore() async throws {
         default: return nil
         }
     }
-    successWhen(expectations.remove(key: .any))
-    when(expectations.keys(), useValue: ["count", "total"])
+    when(expectations.remove(key: .any), complete: .withSuccess)
+    when(expectations.keys(), return: ["count", "total"])
     
     let mockStore = MockKeyValueStore<String, Int>(expectations: expectations)
     
@@ -122,8 +122,8 @@ func testUserDataSerializer() async throws {
         timestamp: Date()
     )
     
-    when(expectations.serialize(.any), useValue: serializedData)
-    when(expectations.deserialize(.any), useValue: userData)
+    when(expectations.serialize(.any), return: serializedData)
+    when(expectations.deserialize(.any), return: userData)
     
     let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
     
@@ -161,8 +161,8 @@ struct UserCreatedEvent: EventProtocol {
 func testUserEventHandler() async throws {
     var expectations = MockEventHandler<UserCreatedEvent>.Expectations()
     
-    successWhen(expectations.handle(.any))
-    when(expectations.canHandle(.any), useValue: true)
+    when(expectations.handle(.any), complete: .withSuccess)
+    when(expectations.canHandle(.any), return: true)
     
     let mockHandler = MockEventHandler<UserCreatedEvent>(expectations: expectations)
     

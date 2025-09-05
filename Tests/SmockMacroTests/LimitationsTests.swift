@@ -50,12 +50,12 @@ struct LimitationsTests {
     func testInheritedProtocolWorkaround() async throws {
         var expectations = MockDataService.Expectations()
     
-        // Now all methods are available - use successWhen for functions with no return type
-        successWhen(expectations.connect())
-        successWhen(expectations.disconnect())
-        when(expectations.getConnectionStatus(), useValue: true)
-        when(expectations.fetchData(), useValue: "test data")
-        successWhen(expectations.saveData(data: "A"..."Z"))
+        // Now all methods are available
+        when(expectations.connect(), complete: .withSuccess)
+        when(expectations.disconnect(), complete: .withSuccess)
+        when(expectations.getConnectionStatus(), return: true)
+        when(expectations.fetchData(), return: "test data")
+        when(expectations.saveData(data: "A"..."Z"), complete: .withSuccess)
     
         let mock = MockDataService(expectations: expectations)
     
@@ -102,13 +102,13 @@ struct LimitationsTests {
     func testExternalProtocolWorkaround() async throws {
         var expectations = MockMyNetworkService.Expectations()
     
-        // Configure external protocol methods - use successWhen for functions with no return type
-        successWhen(expectations.handleDataReceived(data: "A"..."Z"))
-        successWhen(expectations.handleRequestCompleted(error: .nil))
+        // Configure external protocol methods
+        when(expectations.handleDataReceived(data: "A"..."Z"), complete: .withSuccess)
+        when(expectations.handleRequestCompleted(error: .nil), complete: .withSuccess)
     
         // Configure your own methods
-        when(expectations.performRequest(), useValue: "response data")
-        successWhen(expectations.configure(url: "https://api"..."https://zzz"))
+        when(expectations.performRequest(), return: "response data")
+        when(expectations.configure(url: "https://api"..."https://zzz"), complete: .withSuccess)
     
         let mock = MockMyNetworkService(expectations: expectations)
         tester(service: mock)

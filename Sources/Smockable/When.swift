@@ -2,18 +2,20 @@
 //  When.swift
 //  smockable
 //
-//  Created by Simon Pilkington on 2/9/2025.
-//
 
 public enum ExpectationTimes {
     case unbounded
     case times(Int)
 }
 
+public enum VoidReturnableCompletion {
+    case withSuccess
+}
+
 public func when<FieldExpectationType: ReturnableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: Int = 1,
-    useValue value: FieldExpectationType.ReturnType
+    return value: FieldExpectationType.ReturnType
 ) {
     expectation.update(value: value)
     expectation.update(times: times)
@@ -22,7 +24,7 @@ public func when<FieldExpectationType: ReturnableFieldOptionsProtocol>(
 public func when<FieldExpectationType: ReturnableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: ExpectationTimes,
-    useValue value: FieldExpectationType.ReturnType
+    return value: FieldExpectationType.ReturnType
 ) {
     expectation.update(value: value)
     switch times {
@@ -37,7 +39,7 @@ public func when<FieldExpectationType: ReturnableFieldOptionsProtocol>(
 public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: Int = 1,
-    useError error: Swift.Error
+    throw error: Swift.Error
 ) {
     expectation.update(error: error)
     expectation.update(times: times)
@@ -46,7 +48,7 @@ public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
 public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: ExpectationTimes,
-    useError error: Swift.Error
+    throw error: Swift.Error
 ) {
     expectation.update(error: error)
     switch times {
@@ -82,17 +84,19 @@ public func when<FieldExpectationType: FieldOptionsProtocol>(
     }
 }
 
-public func successWhen<FieldExpectationType: VoidReturnableFieldOptionsProtocol>(
+public func when<FieldExpectationType: VoidReturnableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
-    times: Int = 1
+    times: Int = 1,
+    complete: VoidReturnableCompletion
 ) {
     expectation.success()
     expectation.update(times: times)
 }
 
-public func successWhen<FieldExpectationType: VoidReturnableFieldOptionsProtocol>(
+public func when<FieldExpectationType: VoidReturnableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
-    times: ExpectationTimes
+    times: ExpectationTimes,
+    complete: VoidReturnableCompletion
 ) {
     expectation.success()
     switch times {
