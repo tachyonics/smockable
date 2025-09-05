@@ -84,7 +84,8 @@ protocol UserService {
 ```swift
 import Testing
 
-@Test func userFetching() async throws {
+@Test
+func userFetching() async throws {
     // Create expectations
     var expectations = MockUserService.Expectations()
     
