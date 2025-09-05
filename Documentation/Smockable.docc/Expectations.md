@@ -17,13 +17,13 @@ Smockable provides a powerful function-style API that allows you to match method
 ```swift
 var expectations = MockUserService.Expectations()
 
-// For functions that return values, use when(:times:return)
+// For functions that return values, use when([:times = 1]:return)
 when(expectations.fetchUser(id: "100"..."999"), return: user)
-when(expectations.getUserProfile(name: "A"..."Z"), return: profile)
+when(expectations.getUserProfile(name: "A"..."Z"), times: 3, return: profile)
 
-// For functions with no return type (Void), use when(:times:complete)
+// For functions with no return type (Void), use when([:times = 1]:complete)
 when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
-when(expectations.deleteUser(id: "100"..."999"), complete: .withSuccess)
+when(expectations.deleteUser(id: "100"..."999"), times: 8, complete: .withSuccess)
 
 // Match any value using .any
 when(expectations.fetchUser(id: .any), return: defaultUser)
@@ -89,8 +89,7 @@ when(expectations.fetchUser(id: .any), return: defaultUser)
 
 ### Functions with no Return Value
 
-When a function has no return value use `when(:times:complete)` (where times will default to 1 if not specified) to specify that the mocked
-implementation should return successfully:
+When a function has no return value use `when([:times = 1]:complete)` to specify that the mocked implementation should return successfully:
 
 ```swift
 var expectations = MockUserService.Expectations()
@@ -98,7 +97,7 @@ var expectations = MockUserService.Expectations()
 // Functions that complete successfully
 when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
 when(expectations.deleteUser(id: "100"..."999"), complete: .withSuccess)
-when(expectations.saveSettings(key: .any, value: .any), complete: .withSuccess)
+when(expectations.saveSettings(key: .any, value: .any), times: 2, complete: .withSuccess)
 ```
 
 ### Throwing Errors

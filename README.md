@@ -88,11 +88,11 @@ import Testing
     // Create expectations
     var expectations = MockUserService.Expectations()
     
-    // Set up expected behavior with range matching
+    // Set up expected behavior with range matching with when(:return)
     let expectedUser = User(id: "123", name: "John Doe")
     when(expectations.fetchUser(id: "100"..."999"), return: expectedUser)
     
-    // For functions with no return type, use when(:times:complete)
+    // For functions with no return type, use when(:complete)
     when(expectations.updateUser(.any), complete: .withSuccess)
     
     // Create the mock
