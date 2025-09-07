@@ -49,21 +49,23 @@ enum FunctionStyleExpectationsGenerator {
             """
         )
     }
-    
+
     private enum ParameterForm: CaseIterable {
         case explicitMatcher
         case range
         case exact
     }
-    
-    private static func getAllParameterSequences(parameters: ArraySlice<FunctionParameterSyntax>,
-                                                 isComparableProvider: (String) -> Bool) -> [[(FunctionParameterSyntax, Bool, ParameterForm)]] {
+
+    private static func getAllParameterSequences(
+        parameters: ArraySlice<FunctionParameterSyntax>,
+        isComparableProvider: (String) -> Bool
+    ) -> [[(FunctionParameterSyntax, Bool, ParameterForm)]] {
         if let firstParameter = parameters.first {
             let firstParamType = firstParameter.type.description
             let firstIsOptional = firstParamType.hasSuffix("?")
             let firstBaseType = firstIsOptional ? String(firstParamType.dropLast()) : firstParamType
             let firstIsComparable = isComparableProvider(firstBaseType)
-            
+
             if parameters.count == 1 {
                 if !firstIsComparable {
                     // only have the explicitMatcher form for this parameter
@@ -76,10 +78,13 @@ enum FunctionStyleExpectationsGenerator {
                     }
                 }
             }
-            
+
             // otherwise get the combinations for the parameters array minus the first element
-            let dropFirstParameterSequences = getAllParameterSequences(parameters: parameters.dropFirst(), isComparableProvider: isComparableProvider)
-            
+            let dropFirstParameterSequences = getAllParameterSequences(
+                parameters: parameters.dropFirst(),
+                isComparableProvider: isComparableProvider
+            )
+
             // iterate through the remaining cases
             return dropFirstParameterSequences.flatMap { partialParameterSequence in
                 if !firstIsComparable {
@@ -109,8 +114,11 @@ enum FunctionStyleExpectationsGenerator {
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
-        let allParameterSequences = getAllParameterSequences(parameters: parameters[...], isComparableProvider: isComparableProvider)
-        
+        let allParameterSequences = getAllParameterSequences(
+            parameters: parameters[...],
+            isComparableProvider: isComparableProvider
+        )
+
         var methods: [FunctionDeclSyntax] = []
 
         // Generate all combinations where each parameter can be either explicit matcher or range
@@ -147,7 +155,7 @@ enum FunctionStyleExpectationsGenerator {
             }
             let paramType = parameter.type.description
             let isOptional = paramType.hasSuffix("?")
-            
+
             switch form {
             case .range:
                 if isOptional {

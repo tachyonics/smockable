@@ -97,9 +97,9 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "explicit range")
         #expect(result2 == "any id")
     }
-    
+
     // MARK: - Exact Value Matching Tests
-    
+
     @Test
     func testExactStringValueMatching() async {
         var expectations = MockTestService.Expectations()
@@ -113,11 +113,11 @@ struct FunctionStyleExpectationsTests {
 
         #expect(result1 == "exact match found")
         #expect(result2 == "another exact match")
-        
+
         let callCount = await mock.__verify.fetchUser_id.callCount
         #expect(callCount == 2)
     }
-    
+
     @Test
     func testExactIntegerValueMatching() async {
         var expectations = MockTestService.Expectations()
@@ -134,11 +134,11 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "answer to everything")
         #expect(result2 == "century")
         #expect(result3 == "zero")
-        
+
         let callCount = await mock.__verify.numericFunction_value.callCount
         #expect(callCount == 3)
     }
-    
+
     @Test
     func testExactDoubleValueMatching() async {
         var expectations = MockTestService.Expectations()
@@ -153,7 +153,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "pi")
         #expect(result2 == "e")
     }
-    
+
     @Test
     func testExactCharacterValueMatching() async {
         var expectations = MockTestService.Expectations()
@@ -168,7 +168,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "letter A")
         #expect(result2 == "digit 1")
     }
-    
+
     @Test
     func testMultipleExactValuesInSameFunction() async {
         var expectations = MockTestService.Expectations()
@@ -183,7 +183,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "perfect match")
         #expect(result2 == "another match")
     }
-    
+
     @Test
     func testMixedExactAndRangeMatching() async {
         var expectations = MockTestService.Expectations()
@@ -200,7 +200,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "exact input with range count")
         #expect(result2 == "range input with exact count")
     }
-    
+
     @Test
     func testExactValueWithOptionalParameter() async {
         var expectations = MockTestService.Expectations()
@@ -215,7 +215,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "John is 25")
         #expect(result2 == "Jane has no age")
     }
-    
+
     @Test
     func testExactValuePriorityOverRange() async {
         var expectations = MockTestService.Expectations()
@@ -231,7 +231,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "in range")
         #expect(result2 == "exact fifty")
     }
-    
+
     @Test
     func testNonComparableTypeOnlySupportsAnyMatcher() async {
         var expectations = MockTestService.Expectations()
@@ -245,7 +245,7 @@ struct FunctionStyleExpectationsTests {
 
         #expect(result == "mixed params")
     }
-    
+
     @Test
     func testExactValueMatchingWithMultipleCalls() async {
         var expectations = MockTestService.Expectations()
@@ -260,7 +260,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "repeated exact match")
         #expect(result2 == "repeated exact match")
         #expect(result3 == "repeated exact match")
-        
+
         let callCount = await mock.__verify.fetchUser_id.callCount
         #expect(callCount == 3)
     }
