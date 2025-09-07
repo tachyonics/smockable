@@ -91,11 +91,11 @@ when(expectations.fetchUser(id: .any), return: defaultUser)
 when(expectations.processUser(name: "A"..."Z", age: nil), return: "no age")
 
 // Match non-nil values in range
-when(expectations.processUser(name: "A"..."Z", age: .range(18...65)), return: "valid age")
+when(expectations.processUser(name: "A"..."Z", age: 18...65), return: "valid age")
 
 // For void functions with optional parameters
 when(expectations.updateUser(name: "A"..."Z", age: nil), complete: .withSuccess)
-when(expectations.updateUser(name: "A"..."Z", age: .range(18...65)), complete: .withSuccess)
+when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
 ```
 
 ### Multiple Call Expectations

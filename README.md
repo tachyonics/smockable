@@ -145,14 +145,14 @@ when(expectations.saveData(data: "important"), times: 2, complete: .withSuccess)
 
 // Optional parameter matching
 when(expectations.getUserProfile(name: "A"..."Z", age: nil), return: profile1)
-when(expectations.getUserProfile(name: "A"..."Z", age: .range(18...65)), return: profile2)
+when(expectations.getUserProfile(name: "A"..."Z", age: 18...65), return: profile2)
 
 // Exact value matching with optionals
 when(expectations.getUserProfile(name: "John", age: 25), return: johnProfile)
 when(expectations.getUserProfile(name: "Jane", age: nil), return: janeProfile)
 
 // Explicit value matchers for complex scenarios
-when(expectations.fetchUser(id: .range("100"..."999")), return: user1)
+when(expectations.fetchUser(id: "100"..."999"), return: user1)
 when(expectations.fetchUser(id: .any), return: user2)
 
 // Custom logic with closures
