@@ -6,6 +6,36 @@ Working with protocols that have associated types in Smockable.
 
 Smockable supports protocols with associated types, allowing you to create generic mocks that work with different concrete types. This enables testing of generic protocols and type-safe mock implementations.
 
+### Comparable Support for Associated Types
+
+**Important:** For associated types to support range and exact-value expectation matching, the associated type must explicitly declare conformance to `Comparable` directly in the protocol definition. This conformance cannot be inherited through other protocol conformances - it must be specified explicitly.
+
+```swift
+@Smock
+protocol Repository {
+    associatedtype Entity: Comparable & Sendable  // Enables range/exact matching
+    
+    func save(_ entity: Entity) async throws
+    func find(id: String) async throws -> Entity?
+}
+
+@Smock
+protocol DataStore {
+    associatedtype Item: Sendable  // Only .any matching available
+    
+    func store(_ item: Item) async throws
+    func retrieve() async throws -> Item?
+}
+```
+
+When an associated type conforms to `Comparable`, you can use:
+- **Exact value matching**: `when(expectations.save("user123"), ...)`
+- **Range matching**: `when(expectations.save("user100"..."user999"), ...)`
+
+When an associated type does **not** conform to `Comparable`, you can only use:
+- **Any matching**: `when(expectations.save(.any), ...)`
+
+
 ## Basic Associated Types
 
 ### Simple Associated Type
@@ -13,7 +43,7 @@ Smockable supports protocols with associated types, allowing you to create gener
 ```swift
 @Smock
 protocol Repository {
-    associatedtype Entity
+    associatedtype Entity: Comparable  // Enables range and exact-value matching
     
     func save(_ entity: Entity) async throws
     func find(id: String) async throws -> Entity?
@@ -26,9 +56,11 @@ func testUserRepository() async throws {
     var expectations = MockRepository<User>.Expectations()
     
     let testUser = User(id: "123", name: "John Doe")
-    when(expectations.save(.any), complete: .withSuccess)
-    when(expectations.find(id: .any), return: testUser)
-    when(expectations.delete(id: .any), complete: .withSuccess)
+    
+    // With Comparable associated types, you can use exact and range matching
+    when(expectations.save(testUser), complete: .withSuccess)  // Exact value
+    when(expectations.find(id: "100"..."999"), return: testUser)  // Range on String parameter
+    when(expectations.delete(id: .any), complete: .withSuccess)  // Any matching
     
     let mockRepo = MockRepository<User>(expectations: expectations)
     
@@ -45,8 +77,8 @@ func testUserRepository() async throws {
 ```swift
 @Smock
 protocol KeyValueStore {
-    associatedtype Key: Hashable
-    associatedtype Value: Codable
+    associatedtype Key: Hashable & Comparable    // Both Hashable and Comparable
+    associatedtype Value: Codable & Comparable   // Codable and Comparable
     
     func set(key: Key, value: Value) async throws
     func get(key: Key) async throws -> Value?
@@ -58,14 +90,12 @@ protocol KeyValueStore {
 func testStringIntStore() async throws {
     var expectations = MockKeyValueStore<String, Int>.Expectations()
     
-    when(expectations.set(key: .any, value: .any), times: .unbounded, complete: .withSuccess)
-    when(expectations.get(key: .any), times: .unbounded) { key in
-        switch key {
-        case "count": return 42
-        case "total": return 100
-        default: return nil
-        }
-    }
+    // With Comparable associated types, you can use exact and range matching
+    when(expectations.set(key: "count", value: 42), complete: .withSuccess)  // Exact values
+    when(expectations.set(key: "total", value: 100), complete: .withSuccess)  // Exact values
+    when(expectations.get(key: "count"), return: 42)  // Exact key matching
+    when(expectations.get(key: "total"), return: 100)  // Exact key matching
+    when(expectations.get(key: .any), return: nil)  // Fallback for other keys
     when(expectations.remove(key: .any), complete: .withSuccess)
     when(expectations.keys(), return: ["count", "total"])
     
@@ -84,6 +114,73 @@ func testStringIntStore() async throws {
     
     let allKeys = try await mockStore.keys()
     #expect(Set(allKeys) == Set(["count", "total"]))
+}
+```
+
+## Non-Comparable Associated Types
+
+When associated types do not conform to `Comparable`, expectation matching is limited to `.any` matchers only.
+
+```swift
+@Smock
+protocol DataStore {
+    associatedtype Item: Sendable  // No Comparable conformance
+    
+    func store(_ item: Item) async throws
+    func retrieve(id: String) async throws -> Item?
+}
+
+struct CustomData: Sendable {
+    let content: String
+    let metadata: [String: String]
+}
+
+@Test
+func testNonComparableAssociatedType() async throws {
+    var expectations = MockDataStore<CustomData>.Expectations()
+    
+    let testData = CustomData(content: "test", metadata: [:])
+    
+    // Only .any matching is available for non-Comparable associated types
+    when(expectations.store(.any), complete: .withSuccess)
+    when(expectations.retrieve(id: .any), return: testData)
+    
+    let mockStore = MockDataStore<CustomData>(expectations: expectations)
+    
+    try await mockStore.store(testData)
+    let retrieved = try await mockStore.retrieve(id: "123")
+    
+    #expect(retrieved?.content == "test")
+}
+```
+
+### Mixed Comparability
+
+You can have protocols with both Comparable and non-Comparable associated types:
+
+```swift
+@Smock
+protocol MixedStore {
+    associatedtype ComparableItem: Comparable & Sendable  // Supports exact/range matching
+    associatedtype NonComparableItem: Sendable // Only supports .any matching
+    
+    func storeComparable(_ item: ComparableItem) async throws
+    func storeNonComparable(_ item: NonComparableItem) async throws
+}
+
+@Test
+func testMixedComparability() async throws {
+    var expectations = MockMixedStore<String, CustomData>.Expectations()
+    
+    // Comparable type supports exact and range matching
+    when(expectations.storeComparable("exact"), complete: .withSuccess)
+    when(expectations.storeComparable("A"..."Z"), complete: .withSuccess)
+    
+    // Non-comparable type only supports .any
+    when(expectations.storeNonComparable(.any), complete: .withSuccess)
+    
+    let mockStore = MockMixedStore<String, CustomData>(expectations: expectations)
+    // ... test implementation
 }
 ```
 

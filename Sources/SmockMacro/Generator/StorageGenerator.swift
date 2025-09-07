@@ -3,7 +3,8 @@ import SwiftSyntaxBuilder
 
 enum StorageGenerator {
     static func expectationsDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
+        functionDeclarations: [FunctionDeclSyntax],
+        isComparableProvider: (String) -> Bool
     ) throws
         -> StructDeclSyntax
     {
@@ -31,7 +32,8 @@ enum StorageGenerator {
 
                 for functionDeclaration in functionDeclarations {
                     let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
-                        for: functionDeclaration
+                        for: functionDeclaration,
+                        isComparableProvider: isComparableProvider
                     )
                     for method in methods {
                         method

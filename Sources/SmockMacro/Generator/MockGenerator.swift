@@ -1,5 +1,6 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import Foundation
 
 enum MockGenerator {
     static func getGenericParameterClause(
@@ -24,6 +25,44 @@ enum MockGenerator {
 
         return genericParameterClause
     }
+    
+    static func getComparableAssociatedTypes(
+        associatedTypes: [AssociatedTypeDeclSyntax]
+    )
+        -> [String]
+    {
+        if !associatedTypes.isEmpty {
+            return associatedTypes.filter { associatedType in
+                let filteredAssociatedTypes = associatedType.inheritanceClause?.inheritedTypes.filter { syntax in
+                    let components = syntax.description.split(separator: "&")
+                    let trimmedComponents = components.map { String($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                    
+                    return Set(trimmedComponents).contains("Comparable")
+                }
+                
+                return !(filteredAssociatedTypes ?? []).isEmpty
+            }.map { $0.name.description }
+        } else {
+            return []
+        }
+    }
+    
+    static func getAssociatedTypesInherited(
+        associatedTypes: [AssociatedTypeDeclSyntax]
+    )
+        -> [[String]]
+    {
+        if !associatedTypes.isEmpty {
+            return associatedTypes.map { associatedType in
+                return associatedType.inheritanceClause?.inheritedTypes.flatMap { syntax in
+                    let components = syntax.description.split(separator: "&")
+                    return components.map { String($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                } ?? []
+            }
+        } else {
+            return []
+        }
+    }
 
     // swiftlint:disable function_body_length
     static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
@@ -39,6 +78,13 @@ enum MockGenerator {
             .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
 
         let genericParameterClause = getGenericParameterClause(associatedTypes: associatedTypes)
+        let comparableAssociatedTypes = getComparableAssociatedTypes(associatedTypes: associatedTypes)
+        
+        func isComparableProvider(baseType: String) -> Bool {
+            let builtInComparableTypes = ["String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Float", "Double", "Character", "Date"]
+            let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes)
+            return comparableTypes.contains(baseType)
+        }
 
         return try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
@@ -74,7 +120,7 @@ enum MockGenerator {
                     )
                 }
 
-                try StorageGenerator.expectationsDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.expectationsDeclaration(functionDeclarations: functionDeclarations, isComparableProvider: isComparableProvider)
                 try StorageGenerator.expectedResponsesDeclaration(
                     functionDeclarations: functionDeclarations
                 )
@@ -113,7 +159,8 @@ enum MockGenerator {
                     // Generate input matcher struct for functions with parameters
                     if let inputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
                         variablePrefix: variablePrefix,
-                        parameterList: parameterList
+                        parameterList: parameterList,
+                        isComparableProvider: isComparableProvider
                     ) {
                         inputMatcherStruct
                     }

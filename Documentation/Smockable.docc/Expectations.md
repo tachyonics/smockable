@@ -12,6 +12,53 @@ Expectations can only be set prior to a mock being created and are always passed
 
 Smockable provides a powerful function-style API that allows you to match method calls based on parameter ranges, making your tests more flexible and expressive.
 
+### Comparable Support
+
+Smockable's function-style expectation API heavily relies on parameter input types conforming to `Comparable`. When an input type is `Comparable`, function expectations
+can match against the exact value or a range of values. Functions with parameter input types that do not conform to `Comparable` are still supported but 
+expectations are limited to the wildcard `.any` - that is expectations will match against any invocation of that function.
+
+#### Expectation Precedence
+
+When multiple expectations could match the same function call, Smockable uses **first-match precedence** - the first available expectation that matches an invocation 
+will be used, based on the order the expectations were added to the expectation instance. Expectations are consumed based on their `times` argument (defaulting to 1), 
+so once an expectation has been matched the specified number of times, it becomes unavailable and subsequent matching calls will fall through to the next 
+matching expectation.
+
+```swift
+var expectations = MockUserService.Expectations()
+
+// Set up expectations with different times limits
+when(expectations.fetchUser(id: "a"..."z"), return: rangeUser)              // 1st: Range covers "admin"
+when(expectations.fetchUser(id: "admin"), times: 2, return: adminUser)      // 2nd: Exact match for "admin"
+when(expectations.fetchUser(id: "admin"), return: fallbackAdminUser)        // 3rd: Another exact match for "admin"
+when(expectations.fetchUser(id: "100"..."999"), return: regularUser)        // 4th: Range for numeric IDs
+when(expectations.fetchUser(id: .any), times: .unbounded, return: defaultUser)  // 5th: Always available fallback
+
+let mock = MockUserService(expectations: expectations)
+
+// These calls demonstrate expectation consumption and precedence:
+let admin1 = await mock.fetchUser(id: "admin")    // Uses 1st expectation → rangeUser (range matches first!)
+let admin2 = await mock.fetchUser(id: "admin")    // 1st exhausted, uses 2nd → adminUser
+let admin3 = await mock.fetchUser(id: "admin")    // Uses 2nd expectation (2/2) → adminUser
+let admin4 = await mock.fetchUser(id: "admin")    // 2nd exhausted, uses 3rd → fallbackAdminUser
+let user = await mock.fetchUser(id: "500")        // Uses 4th expectation → regularUser
+let user2 = await mock.fetchUser(id: "500")       // 4th exhausted, uses 5th → defaultUser
+```
+
+**Important:** Order matters because more general expectations (like `.any`) combined with `.unbounded` times can prevent specific expectations 
+from ever being reached if placed first:
+
+```swift
+// ❌ Incorrect order - .any will consume all calls
+when(expectations.fetchUser(id: .any), times: .unbounded, return: defaultUser)  // Matches everything
+when(expectations.fetchUser(id: "admin"), return: adminUser)                    // Never reached
+
+// ✅ Correct order - specific to general
+when(expectations.fetchUser(id: "admin"), times: 2, return: adminUser)          // Specific first
+when(expectations.fetchUser(id: .any), times: .unbounded, return: defaultUser)  // General fallback last
+```
+
 ### Basic Range Matching
 
 ```swift
@@ -21,9 +68,17 @@ var expectations = MockUserService.Expectations()
 when(expectations.fetchUser(id: "100"..."999"), return: user)
 when(expectations.getUserProfile(name: "A"..."Z"), times: 3, return: profile)
 
+// Exact value matching
+when(expectations.fetchUser(id: "user123"), return: specificUser)
+when(expectations.getUserProfile(name: "John"), return: johnProfile)
+
 // For functions with no return type (Void), use when([:times = 1]:complete)
 when(expectations.updateUser(name: "A"..."Z", age: 18...65), complete: .withSuccess)
 when(expectations.deleteUser(id: "100"..."999"), times: 8, complete: .withSuccess)
+
+// Exact value matching for void functions
+when(expectations.updateUser(name: "John", age: 25), complete: .withSuccess)
+when(expectations.deleteUser(id: "user123"), complete: .withSuccess)
 
 // Match any value using .any
 when(expectations.fetchUser(id: .any), return: defaultUser)
@@ -33,16 +88,13 @@ when(expectations.fetchUser(id: .any), return: defaultUser)
 
 ```swift
 // Match nil values for functions returning values
-when(expectations.processUser(name: "A"..."Z", age: .nil), return: "no age")
+when(expectations.processUser(name: "A"..."Z", age: nil), return: "no age")
 
 // Match non-nil values in range
 when(expectations.processUser(name: "A"..."Z", age: .range(18...65)), return: "valid age")
 
-// Match nil OR values in range
-when(expectations.processUser(name: "A"..."Z", age: .nilOrRange(18...65)), return: "flexible age")
-
 // For void functions with optional parameters
-when(expectations.updateUser(name: "A"..."Z", age: .nil), complete: .withSuccess)
+when(expectations.updateUser(name: "A"..."Z", age: nil), complete: .withSuccess)
 when(expectations.updateUser(name: "A"..."Z", age: .range(18...65)), complete: .withSuccess)
 ```
 
@@ -77,6 +129,10 @@ var expectations = MockUserService.Expectations()
 
 // Simple return value with range matching
 when(expectations.fetchUser(id: "100"..."999"), return: User(id: "123", name: "John"))
+
+// Exact value matching for specific users
+when(expectations.fetchUser(id: "admin"), return: adminUser)
+when(expectations.fetchUser(id: "guest"), return: guestUser)
 
 // Multiple different return values for different ranges
 when(expectations.fetchUser(id: "001"..."099"), return: user1)

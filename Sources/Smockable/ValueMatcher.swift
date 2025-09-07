@@ -14,6 +14,7 @@ public struct AlwaysMatcher: Sendable {
 public enum ValueMatcher<T: Comparable & Sendable>: Sendable {
     case any  // Matches any value
     case range(ClosedRange<T>)  // Matches values in range
+    case exact(T)
 
     /// Check if the given value matches this matcher
     public func matches(_ value: T) -> Bool {
@@ -22,6 +23,20 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable {
             return true
         case .range(let range):
             return range.contains(value)
+        case .exact(let match):
+            return value == match
+        }
+    }
+}
+
+public enum NonComparableValueMatcher<T: Sendable>: Sendable {
+    case any  // Matches any value
+
+    /// Check if the given value matches this matcher
+    public func matches(_ value: T) -> Bool {
+        switch self {
+        case .any:
+            return true
         }
     }
 }
@@ -29,19 +44,31 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable {
 /// A matcher for optional parameters with support for nil matching
 public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable {
     case any  // Matches any value (nil or non-nil)
-    case `nil`  // Matches only nil
     case range(ClosedRange<T>)  // Matches only non-nil values in range
+    case exact(T?)
 
     /// Check if the given optional value matches this matcher
     public func matches(_ value: T?) -> Bool {
         switch self {
         case .any:
             return true
-        case .nil:
-            return value == nil
         case .range(let range):
             guard let unwrapped = value else { return false }
             return range.contains(unwrapped)
+        case .exact(let match):
+            return value == match
+        }
+    }
+}
+
+public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable {
+    case any  // Matches any value (nil or non-nil)
+
+    /// Check if the given optional value matches this matcher
+    public func matches(_ value: T?) -> Bool {
+        switch self {
+        case .any:
+            return true
         }
     }
 }

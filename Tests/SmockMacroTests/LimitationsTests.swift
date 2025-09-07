@@ -25,7 +25,7 @@ struct LimitationsTests {
     }
 
     // MARK: - Limitation 1: Inherited Protocol Requirements Tests
-    /*
+    
     /// Base protocol that will be inherited from
     protocol BaseService {
         func connect() async throws
@@ -54,8 +54,8 @@ struct LimitationsTests {
         when(expectations.connect(), complete: .withSuccess)
         when(expectations.disconnect(), complete: .withSuccess)
         when(expectations.getConnectionStatus(), return: true)
-        when(expectations.fetchData(), return: "test data")
-        when(expectations.saveData(data: "A"..."Z"), complete: .withSuccess)
+        when(expectations.fetchData(), return: "test data".data(using: .utf8)!)
+        when(expectations.saveData(.any), complete: .withSuccess)
     
         let mock = MockDataService(expectations: expectations)
     
@@ -72,20 +72,20 @@ struct LimitationsTests {
         #expect(await mock.__verify.disconnect.callCount == 1)
         #expect(await mock.__verify.getConnectionStatus.callCount == 1)
         #expect(await mock.__verify.fetchData.callCount == 1)
-        #expect(await mock.__verify.saveData_data.callCount == 1)
-    }*/
+        #expect(await mock.__verify.saveData.callCount == 1)
+    }
 
     // MARK: - Limitation 2: External Protocol Dependencies Tests
-    /*
+    
     protocol ExternalNetworkService {
-        func handleDataReceived(_ data: String) async
-        func handleRequestCompleted(error: String?) async
+        func handleDataReceived(_ data: Data) async
+        func handleRequestCompleted(error: Error?) async
     }
     
     /// Mock protocol that mirrors URLSessionDataDelegate methods we need
     @Smock
     protocol MyNetworkService: ExternalNetworkService {
-        // Mirror external requirements you need (simplified names)
+        // Mirror external requirements you need
         func handleDataReceived(_ data: Data) async
         func handleRequestCompleted(error: Error?) async
     
@@ -103,33 +103,33 @@ struct LimitationsTests {
         var expectations = MockMyNetworkService.Expectations()
     
         // Configure external protocol methods
-        when(expectations.handleDataReceived(data: "A"..."Z"), complete: .withSuccess)
-        when(expectations.handleRequestCompleted(error: .nil), complete: .withSuccess)
+        when(expectations.handleDataReceived(.any), complete: .withSuccess)
+        when(expectations.handleRequestCompleted(error: .any), complete: .withSuccess)
     
         // Configure your own methods
-        when(expectations.performRequest(), return: "response data")
-        when(expectations.configure(url: "https://api"..."https://zzz"), complete: .withSuccess)
+        when(expectations.performRequest(), return: "response data".data(using: .utf8)!)
+        when(expectations.configure(with: .any), complete: .withSuccess)
     
         let mock = MockMyNetworkService(expectations: expectations)
         tester(service: mock)
     
         // Test external protocol behavior
-        await mock.handleDataReceived("test data")
+        await mock.handleDataReceived("test data".data(using: .utf8)!)
         await mock.handleRequestCompleted(error: nil)
     
         // Test your own behavior
-        await mock.configure(with: "https://api.example.com")
+        await mock.configure(with: URL(string: "https://api.example.com")!)
         let data = try await mock.performRequest()
     
         #expect(data.count > 0)
     
         // Verify all methods were called
-        #expect(await mock.__verify.handleDataReceived_data.callCount == 1)
+        #expect(await mock.__verify.handleDataReceived.callCount == 1)
         #expect(await mock.__verify.handleRequestCompleted_error.callCount == 1)
-        #expect(await mock.__verify.configure_url.callCount == 1)
+        #expect(await mock.__verify.configure_with.callCount == 1)
         #expect(await mock.__verify.performRequest.callCount == 1)
     }
-    */
+    
     // MARK: - Limitation 3: Multiple Protocol Inheritance Tests
 
     protocol Authenticatable {
@@ -140,7 +140,7 @@ struct LimitationsTests {
         func cache(key: String, value: Data) async
         func getCached(key: String) async -> Data?
     }
-    /*
+    
     @Smock
     protocol SecureDataService: Authenticatable, Cacheable {
         // Mirror Authenticatable requirements
@@ -156,13 +156,13 @@ struct LimitationsTests {
     
     @Test("Multiple inheritance workaround functions correctly")
     func testMultipleInheritanceWorkaround() async throws {
-        let expectations = MockSecureDataService.Expectations()
+        var expectations = MockSecureDataService.Expectations()
     
         // Configure methods from all parent protocols
-        expectations.authenticate_token.value(true)
-        expectations.cache_key_value.success()
-        expectations.getCached_key.value("cached data".data(using: .utf8)!)
-        expectations.securelyFetchData_id.value("secure data".data(using: .utf8)!)
+        when(expectations.authenticate(token: .any), return: true)
+        when(expectations.cache(key: .any, value: .any), complete: .withSuccess)
+        when(expectations.getCached(key: .any), return: "cached data".data(using: .utf8)!)
+        when(expectations.securelyFetchData(id: .any), return: "secure data".data(using: .utf8)!)
     
         let mock = MockSecureDataService(expectations: expectations)
     
@@ -183,7 +183,7 @@ struct LimitationsTests {
         #expect(await mock.__verify.getCached_key.callCount == 1)
         #expect(await mock.__verify.securelyFetchData_id.callCount == 1)
     }
-    */
+    
     // MARK: - Best Practice 1: Composition Tests
 
     @Smock
@@ -198,7 +198,7 @@ struct LimitationsTests {
         func find(id: String) async throws -> Data?
         func findAll() async throws -> [Data]
     }
-    /*
+    
     @Smock
     protocol DataWriting {
         func save(id: String, data: Data) async throws
@@ -231,15 +231,15 @@ struct LimitationsTests {
     
     @Test("Composition approach works correctly")
     func testCompositionApproach() async throws {
-        let connectionExpectations = MockConnectionManaging.Expectations()
-        let readExpectations = MockDataReading.Expectations()
-        let writeExpectations = MockDataWriting.Expectations()
+        var connectionExpectations = MockConnectionManaging.Expectations()
+        var readExpectations = MockDataReading.Expectations()
+        var writeExpectations = MockDataWriting.Expectations()
     
-        connectionExpectations.connect.success()
-        connectionExpectations.disconnect.success()
-        connectionExpectations.isConnected.value(true)
-        readExpectations.find_id.value("test data".data(using: .utf8)!)
-        writeExpectations.save_id_data.success()
+        when(connectionExpectations.connect(), complete: .withSuccess)
+        when(connectionExpectations.disconnect(), complete: .withSuccess)
+        when(connectionExpectations.isConnected(), return: true)
+        when(readExpectations.find(id: .any), return: "test data".data(using: .utf8)!)
+        when(writeExpectations.save(id: .any, data: .any), complete: .withSuccess)
     
         let mockConnection = MockConnectionManaging(expectations: connectionExpectations)
         let mockReader = MockDataReading(expectations: readExpectations)
@@ -265,10 +265,9 @@ struct LimitationsTests {
         #expect(await mockReader.__verify.find_id.callCount == 1)
         #expect(await mockWriter.__verify.save_id_data.callCount == 1)
     }
-    */
+    
     // MARK: - Best Practice 2: Wrapper Protocol Tests
 
-    /*
     @Smock
     protocol NetworkDataHandler: Sendable {
         // Only include the methods you actually use
@@ -279,25 +278,21 @@ struct LimitationsTests {
     // Adapter to bridge between external protocol and your wrapper
     final class NetworkAdapter: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         private let handler: NetworkDataHandler
+        var task: Task<Void, Never>?
     
         init(handler: NetworkDataHandler) {
             self.handler = handler
         }
     
         func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-            Task { await handler.handleReceivedData(data) }
-        }
-    
-        func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didCompleteWithError error: Error?) {
-            Task { await handler.handleCompletion(error: error) }
+            self.task = Task { await handler.handleReceivedData(data) }
         }
     }
     
     @Test("Network adapter wrapper approach works correctly")
     func testNetworkAdapter() async throws {
-        let expectations = MockNetworkDataHandler.Expectations()
-        expectations.handleReceivedData.success()
-        expectations.handleCompletion_error.success()
+        var expectations = MockNetworkDataHandler.Expectations()
+        when(expectations.handleReceivedData(.any), complete: .withSuccess)
     
         let mockHandler = MockNetworkDataHandler(expectations: expectations)
         let adapter = NetworkAdapter(handler: mockHandler)
@@ -306,13 +301,10 @@ struct LimitationsTests {
         let session = URLSession.shared
         let task = session.dataTask(with: URL(string: "https://example.com")!)
         adapter.urlSession(session, dataTask: task, didReceive: Data())
-        adapter.urlSession(session, dataTask: task, didCompleteWithError: nil)
     
-        // Wait a bit for the async tasks to complete
-        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        // Wait until the task has completed
+        await adapter.task?.value
     
         #expect(await mockHandler.__verify.handleReceivedData.callCount == 1)
-        #expect(await mockHandler.__verify.handleCompletion_error.callCount == 1)
     }
-    */
 }
