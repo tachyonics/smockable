@@ -42,6 +42,9 @@ import Smockable
         // 2. Configure what the mock should return
         when(expectations.getCurrentTemperature(for: .any), return: 22.5)
         
+        // Or use exact value matching for specific cities
+        when(expectations.getCurrentTemperature(for: "London"), return: 15.0)
+        
         // 3. Create the mock
         let mockWeatherService = MockWeatherService(expectations: expectations)
         

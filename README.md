@@ -122,17 +122,34 @@ when(expectations.fetchUser(id: "100"..."999"), return: user1)
 when(expectations.fetchUser(id: "A"..."Z"), times: 2, return: user2)
 when(expectations.fetchUser(id: .any), throw: NetworkError.notFound)
 
+// Exact value matching
+when(expectations.fetchUser(id: "user123"), return: specificUser)
+when(expectations.fetchUser(id: "admin"), return: adminUser)
+
 // Multiple parameter ranges
 when(expectations.processData(input: "A"..."M", count: 1...10), return: "processed")
 
+// Mix exact values with ranges
+when(expectations.processData(input: "exact", count: 1...10), return: "exact input")
+when(expectations.processData(input: "A"..."Z", count: 42), return: "exact count")
+
 // Functions with no return type
-when(expectations.updateUser(name: "A"..."Z", age: .nil), complete: .withSuccess)
+when(expectations.updateUser(name: "A"..."Z", age: nil), complete: .withSuccess)
 when(expectations.deleteUser(id: "100"..."999"), complete: .withSuccess)
 when(expectations.saveData(data: "A"..."Z"), times: 3, complete: .withSuccess)
 
+// Exact value matching for void functions
+when(expectations.updateUser(name: "John", age: 25), complete: .withSuccess)
+when(expectations.deleteUser(id: "user123"), complete: .withSuccess)
+when(expectations.saveData(data: "important"), times: 2, complete: .withSuccess)
+
 // Optional parameter matching
-when(expectations.getUserProfile(name: "A"..."Z", age: .nil), return: profile1)
+when(expectations.getUserProfile(name: "A"..."Z", age: nil), return: profile1)
 when(expectations.getUserProfile(name: "A"..."Z", age: .range(18...65)), return: profile2)
+
+// Exact value matching with optionals
+when(expectations.getUserProfile(name: "John", age: 25), return: johnProfile)
+when(expectations.getUserProfile(name: "Jane", age: nil), return: janeProfile)
 
 // Explicit value matchers for complex scenarios
 when(expectations.fetchUser(id: .range("100"..."999")), return: user1)

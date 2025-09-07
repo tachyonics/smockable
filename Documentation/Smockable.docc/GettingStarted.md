@@ -74,6 +74,9 @@ struct WeatherApp<Service: WeatherService> {
     var expectations = MockWeatherService.Expectations()
     when(expectations.getCurrentTemperature(for: .any), return: 22.5)
     
+    // Or use exact value matching for specific cities
+    when(expectations.getCurrentTemperature(for: "London"), return: 15.0)
+    
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
     

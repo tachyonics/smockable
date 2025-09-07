@@ -5,7 +5,8 @@ enum InputMatcherGenerator {
     /// Generate an input matcher struct for a specific function
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
-        parameterList: FunctionParameterListSyntax
+        parameterList: FunctionParameterListSyntax,
+        isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
@@ -22,7 +23,7 @@ enum InputMatcherGenerator {
             memberBlockBuilder: {
                 // Generate properties for each parameter
                 for parameter in parameters {
-                    try generateMatcherProperty(for: parameter)
+                    try generateMatcherProperty(for: parameter, isComparableProvider: isComparableProvider)
                 }
 
                 // Generate matches method
@@ -33,23 +34,27 @@ enum InputMatcherGenerator {
 
     /// Generate a matcher property for a function parameter
     private static func generateMatcherProperty(
-        for parameter: FunctionParameterSyntax
+        for parameter: FunctionParameterSyntax,
+        isComparableProvider: (String) -> Bool
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
         let paramType = parameter.type.description
         let isOptional = paramType.hasSuffix("?")
 
+        let baseType = isOptional ? String(paramType.dropLast()) : paramType
+        let typePrefix = isComparableProvider(baseType) ? "" : "NonComparable"
+
         if isOptional {
             let baseType = String(paramType.dropLast())  // Remove '?'
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): OptionalValueMatcher<\(raw: baseType)>
+                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher<\(raw: baseType)>
                 """
             )
         } else {
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): ValueMatcher<\(raw: paramType)>
+                let \(raw: paramName): \(raw: typePrefix)ValueMatcher<\(raw: paramType)>
                 """
             )
         }
