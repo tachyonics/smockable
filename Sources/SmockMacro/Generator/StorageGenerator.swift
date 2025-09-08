@@ -113,23 +113,6 @@ enum StorageGenerator {
         )
     }
 
-    static func callCountDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
-    ) throws
-        -> StructDeclSyntax
-    {
-        try StructDeclSyntax(
-            name: "CallCounts",
-            memberBlockBuilder: {
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-
-                    try CallsCountGenerator.variableDeclaration(variablePrefix: variablePrefix)
-                }
-            }
-        )
-    }
-
     static func receivedInvocationsDeclaration(
         functionDeclarations: [FunctionDeclSyntax]
     ) throws
@@ -164,12 +147,6 @@ enum StorageGenerator {
                 try VariableDeclSyntax(
                     """
                     var expectedResponses: ExpectedResponses
-                    """
-                )
-
-                try VariableDeclSyntax(
-                    """
-                    var callCounts: CallCounts = .init()
                     """
                 )
 

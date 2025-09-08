@@ -169,7 +169,7 @@ enum FunctionPropertiesGenerator {
                     """
                     public var wasCalled: Bool {
                         get async {
-                            return await self.storage.callCounts.\(raw: variablePrefix) > 0
+                            return await self.storage.receivedInvocations.\(raw: variablePrefix).count > 0
                         }
                     }
                     """
@@ -179,7 +179,7 @@ enum FunctionPropertiesGenerator {
                     """
                     public var callCount: Int {
                         get async {
-                            return await self.storage.callCounts.\(raw: variablePrefix)
+                            return await self.storage.receivedInvocations.\(raw: variablePrefix).count
                         }
                     }
                     """
