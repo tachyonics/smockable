@@ -55,33 +55,34 @@ enum ReceivedInvocationsGenerator {
     }
 
     static func arrayElementType(parameterList: FunctionParameterListSyntax) -> TypeSyntaxProtocol {
-        let arrayElementType: TypeSyntaxProtocol
+        let tupleElements = TupleTypeElementListSyntax {
+            TupleTypeElementSyntax(
+                firstName: TokenSyntax.identifier("__localCallIndex"),
+                colon: .colonToken(),
+                type: IdentifierTypeSyntax(name: "Int")
+            )
 
-        if parameterList.count == 1, var onlyParameterType = parameterList.first?.type {
-            if let attributedType = onlyParameterType.as(AttributedTypeSyntax.self) {
-                onlyParameterType = attributedType.baseType
+            TupleTypeElementSyntax(
+                firstName: TokenSyntax.identifier("__globalCallIndex"),
+                colon: .colonToken(),
+                type: IdentifierTypeSyntax(name: "Int")
+            )
+
+            for parameter in parameterList {
+                TupleTypeElementSyntax(
+                    firstName: parameter.secondName ?? parameter.firstName,
+                    colon: .colonToken(),
+                    type: {
+                        if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
+                            attributedType.baseType
+                        } else {
+                            parameter.type
+                        }
+                    }()
+                )
             }
-            arrayElementType = onlyParameterType
-        } else {
-            let tupleElements = TupleTypeElementListSyntax {
-                for parameter in parameterList {
-                    TupleTypeElementSyntax(
-                        firstName: parameter.secondName ?? parameter.firstName,
-                        colon: .colonToken(),
-                        type: {
-                            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                                attributedType.baseType
-                            } else {
-                                parameter.type
-                            }
-                        }()
-                    )
-                }
-            }
-            arrayElementType = TupleTypeSyntax(elements: tupleElements)
         }
-
-        return arrayElementType
+        return TupleTypeSyntax(elements: tupleElements)
     }
 
     static func appendValueToVariableExpression(
@@ -93,7 +94,7 @@ enum ReceivedInvocationsGenerator {
 
         return ExprSyntax(
             """
-            \(identifier).\(raw: variablePrefix).append(\(argument))
+            await \(identifier).\(raw: variablePrefix).append(\(argument))
             """
         )
     }
@@ -106,6 +107,18 @@ enum ReceivedInvocationsGenerator {
         let tupleArgument = TupleExprSyntax(
             elements: LabeledExprListSyntax(
                 itemsBuilder: {
+                    LabeledExprSyntax(
+                        expression: DeclReferenceExprSyntax(
+                            baseName: TokenSyntax.identifier("self.combinedCallCount")
+                        )
+                    )
+
+                    LabeledExprSyntax(
+                        expression: DeclReferenceExprSyntax(
+                            baseName: TokenSyntax.identifier("smockableGlobalCallIndex.getCurrentIndex()")
+                        )
+                    )
+
                     for parameter in parameterList {
                         LabeledExprSyntax(
                             expression: DeclReferenceExprSyntax(

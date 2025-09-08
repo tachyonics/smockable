@@ -142,12 +142,10 @@ enum StorageGenerator {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-                    if !parameterList.isEmpty {
-                        try ReceivedInvocationsGenerator.variableDeclaration(
-                            variablePrefix: variablePrefix,
-                            parameterList: parameterList
-                        )
-                    }
+                    try ReceivedInvocationsGenerator.variableDeclaration(
+                        variablePrefix: variablePrefix,
+                        parameterList: parameterList
+                    )
                 }
             }
         )
@@ -157,6 +155,12 @@ enum StorageGenerator {
         try ActorDeclSyntax(
             name: "Storage",
             memberBlockBuilder: {
+                try VariableDeclSyntax(
+                    """
+                    var combinedCallCount: Int = 0
+                    """
+                )
+
                 try VariableDeclSyntax(
                     """
                     var expectedResponses: ExpectedResponses

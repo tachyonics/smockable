@@ -48,12 +48,16 @@ enum FunctionImplementationGenerator {
 
             CallsCountGenerator.incrementVariableExpression(variablePrefix: variablePrefix)
 
-            if !parameterList.isEmpty {
-                ReceivedInvocationsGenerator.appendValueToVariableExpression(
-                    variablePrefix: variablePrefix,
-                    parameterList: parameterList
-                )
-            }
+            ExprSyntax(
+                """
+                self.combinedCallCount += 1
+                """
+            )
+
+            ReceivedInvocationsGenerator.appendValueToVariableExpression(
+                variablePrefix: variablePrefix,
+                parameterList: parameterList
+            )
 
             try VariableDeclSyntax(
                 """

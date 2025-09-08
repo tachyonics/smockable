@@ -32,7 +32,7 @@ let callCount2 = await mock.__verify.fetchUser_id.callCount
 #expect(callCount2 == 3)
 ```
 
-### Received Inputs
+### Received Invocations
 
 Inspect the parameters passed to mock methods:
 
@@ -43,29 +43,28 @@ await mock.fetchUser(id: "456")
 await mock.updateUser(id: "123", user: user1)
 await mock.updateUser(id: "456", user: user2)
 
-// Verify received inputs
-let fetchInputs = await mock.__verify.fetchUser_id.receivedInputs
-#expect(fetchInputs.count == 2)
-#expect(fetchInputs[0] == "123")
-#expect(fetchInputs[1] == "456")
+// Verify received invocations
+let fetchInvocations = await mock.__verify.fetchUser_id.receivedInvocations
+#expect(fetchInvocations.count == 2)
+#expect(fetchInvocations[0].id == "123")
+#expect(fetchInvocations[1].id == "456")
 
-let updateInputs = await mock.__verify.updateUser.receivedInputs
-#expect(updateInputs.count == 2)
-#expect(updateInputs[0].id == user1.id)
-#expect(updateInputs[1].id == user2.id)
+let updateInvocations = await mock.__verify.updateUser.receivedInvocations
+#expect(updateIInvocations.count == 2)
+#expect(updateInvocations[0].id == user1.id)
+#expect(updateInvocations[1].id == user2.id)
 ```
 
-**Note:** For functions with a single input (in this case `fetchUser`), the `receivedInputs` will be a simple array of that type. For functions
-with multiple inputs, `receivedInputs` (in this case `updateUser`) will be an array of tuples with appropriately typed elements labelled according to the function's
+**Note:** `receivedInvocations` will be an array of tuples with appropriately typed elements labelled according to the function's
 inputs.
 
 ```swift
 await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
 
-let inputs = await mock.__verify.searchUsers_query_limit_includeInactive.receivedInputs
-#expect(inputs.count == 1)
+let invocations = await mock.__verify.searchUsers_query_limit_includeInactive.receivedInvocations
+#expect(invocations.count == 1)
 
-let firstCall = inputs[0]
+let firstCall = invocations[0]
 #expect(firstCall.query == "john")
 #expect(firstCall.limit == 10)
 #expect(!firstCall.includeInactive)
@@ -114,8 +113,8 @@ let criteria = SearchCriteria(
 
 await mock.searchWithCriteria(criteria)
 
-let inputs = await mock.__verify.searchWithCriteria.receivedInputs
-#expect(inputs[0] == criteria)
+let invocations = await mock.__verify.searchWithCriteria.receivedInvocations
+#expect(invocations[0].criteria == criteria)
 ```
 
 ### Collections
@@ -125,11 +124,11 @@ Verify collection parameters:
 ```swift
 await mock.batchUpdateUsers([user1, user2, user3])
 
-let inputs = await mock.__verify.batchUpdateUsers.receivedInputs
-#expect(inputs[0].count == 3)
-#expect(inputs[0].contains(user1))
-#expect(inputs[0].contains(user2))
-#expect(inputs[0].contains(user3))
+let invocations = await mock.__verify.batchUpdateUsers.receivedInvocations
+#expect(invocations[0].count == 3)
+#expect(invocations[0].contains(user1))
+#expect(invocations[0].contains(user2))
+#expect(invocations[0].contains(user3))
 ```
 
 ### Optional Parameters
@@ -140,10 +139,10 @@ Handle optional parameters in verification:
 await mock.fetchUser(id: "123", includeDetails: true)
 await mock.fetchUser(id: "456", includeDetails: nil)
 
-let inputs = await mock.__verify.fetchUser_id_includeDetails.receivedInputs
-#expect(inputs.count == 2)
-#expect(inputs[0].includeDetails == true)
-#expect(inputs[1].includeDetails == nil)
+let invocations = await mock.__verify.fetchUser_id_includeDetails.receivedInvocations
+#expect(invocations.count == 2)
+#expect(invocations[0].includeDetails == true)
+#expect(invocations[1].includeDetails == nil)
 ```
 
 ## Async Verification
@@ -167,12 +166,12 @@ let callCount = await mock.__verify.fetchUser_id.callCount
 #expect(callCount == 10)
 
 // Verify all IDs were received
-let inputs = await mock.__verify.fetchUser_id.receivedInputs
-let receivedIds = Set(inputs.map { $0.id })
+let invocations = await mock.__verify.fetchUser_id.receivedInvocations
+let receivedIds = Set(invocations.map { $0.id })
 let expectedIds = Set((0..<10).map { "\($0)" })
 #expect(receivedIds == expectedIds)
 ```
 
-In the case above, `receivedInputs` has no guaranteed order as its ordering is dependant on how the executing machine happened to schedule threads. One method
+In the case above, `receivedInvocations` has no guaranteed order as its ordering is dependant on how the executing machine happened to schedule threads. One method
 to ensure a unit test is robust against this uncertainty is shown above - using a set to ensure all expected calls where made while ignoring the order they happened
 to be processed by the mock.

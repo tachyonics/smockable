@@ -185,17 +185,15 @@ enum FunctionPropertiesGenerator {
                     """
                 )
 
-                if !parameterList.isEmpty {
-                    try VariableDeclSyntax(
-                        """
-                        public var receivedInputs: [\(elementType)] {
-                            get async {
-                                return await self.storage.receivedInvocations.\(raw: variablePrefix)
-                            }
+                try VariableDeclSyntax(
+                    """
+                    public var receivedInvocations: [\(elementType)] {
+                        get async {
+                            return await self.storage.receivedInvocations.\(raw: variablePrefix)
                         }
-                        """
-                    )
-                }
+                    }
+                    """
+                )
             }
         )
     }
