@@ -47,7 +47,7 @@ enum FunctionImplementationGenerator {
             let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
 
             CallsCountGenerator.incrementVariableExpression(variablePrefix: variablePrefix)
-            
+
             ExprSyntax(
                 """
                 self.combinedCallCount += 1

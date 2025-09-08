@@ -285,18 +285,20 @@ struct SmockableTests {
 
         let setAccountDetailsReceivedInvocations = await mockBank.__verify.setAccountDetails_details.receivedInvocations
         #expect(setAccountDetailsReceivedInvocations[0].details == accountDetails)
-        
+
         let withdrawReceivedInvocations = await mockBank.__verify.withdraw_amount.receivedInvocations
         let getBalanceReceivedInvocations = await mockBank.__verify.getBalance.receivedInvocations
-        
+
         // confirm the local call index
         #expect(setAccountDetailsReceivedInvocations[0].__localCallIndex == 1)
         #expect(withdrawReceivedInvocations[0].__localCallIndex == 2)
         #expect(withdrawReceivedInvocations[1].__localCallIndex == 3)
         #expect(getBalanceReceivedInvocations[0].__localCallIndex == 4)
-        
+
         // confirm the global call index
-        #expect(withdrawReceivedInvocations[0].__globalCallIndex > setAccountDetailsReceivedInvocations[0].__globalCallIndex)
+        #expect(
+            withdrawReceivedInvocations[0].__globalCallIndex > setAccountDetailsReceivedInvocations[0].__globalCallIndex
+        )
         #expect(withdrawReceivedInvocations[1].__globalCallIndex > withdrawReceivedInvocations[0].__globalCallIndex)
         #expect(getBalanceReceivedInvocations[0].__globalCallIndex > withdrawReceivedInvocations[1].__globalCallIndex)
 

@@ -160,7 +160,7 @@ enum StorageGenerator {
                     var combinedCallCount: Int = 0
                     """
                 )
-                
+
                 try VariableDeclSyntax(
                     """
                     var expectedResponses: ExpectedResponses
