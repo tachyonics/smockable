@@ -46,8 +46,6 @@ enum FunctionImplementationGenerator {
         mockFunctionDeclaration.body = try CodeBlockSyntax {
             let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
 
-            CallsCountGenerator.incrementVariableExpression(variablePrefix: variablePrefix)
-
             ExprSyntax(
                 """
                 self.combinedCallCount += 1

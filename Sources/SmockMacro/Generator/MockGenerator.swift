@@ -118,7 +118,6 @@ enum MockGenerator {
                 try StorageGenerator.expectationMatchersDeclaration(
                     functionDeclarations: functionDeclarations
                 )
-                try StorageGenerator.callCountDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.receivedInvocationsDeclaration(
                     functionDeclarations: functionDeclarations
                 )
