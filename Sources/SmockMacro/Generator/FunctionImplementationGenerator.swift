@@ -47,13 +47,17 @@ enum FunctionImplementationGenerator {
             let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
 
             CallsCountGenerator.incrementVariableExpression(variablePrefix: variablePrefix)
+            
+            ExprSyntax(
+                """
+                self.combinedCallCount += 1
+                """
+            )
 
-            if !parameterList.isEmpty {
-                ReceivedInvocationsGenerator.appendValueToVariableExpression(
-                    variablePrefix: variablePrefix,
-                    parameterList: parameterList
-                )
-            }
+            ReceivedInvocationsGenerator.appendValueToVariableExpression(
+                variablePrefix: variablePrefix,
+                parameterList: parameterList
+            )
 
             try VariableDeclSyntax(
                 """

@@ -46,7 +46,7 @@ struct SmockableTests {
 
         // query the current state of the mock
         let callCount = await mock.__verify.initialize_name_secondName.callCount
-        let inputs: [CompariableInput] = await mock.__verify.initialize_name_secondName.receivedInputs
+        let invocations: [CompariableInput] = await mock.__verify.initialize_name_secondName.receivedInvocations
             .map { .init(name: $0.name, secondName: $0.secondName) }
 
         // verify that the current state of the mock is as expected
@@ -57,7 +57,7 @@ struct SmockableTests {
         #expect(expectedReturnValue2 == returnValue5)
         #expect(5 == callCount)
         #expect(
-            inputs == [
+            invocations == [
                 .init(name: "Name1", secondName: "SecondName1"),
                 .init(name: "Name2", secondName: "SecondName2"),
                 .init(name: "Name3", secondName: "SecondName3"),
@@ -102,10 +102,10 @@ struct SmockableTests {
 
         // 6. Verify the mock was called correctly
         let callCount = await mockWeatherService.__verify.getCurrentTemperature_for.callCount
-        let receivedInputs = await mockWeatherService.__verify.getCurrentTemperature_for.receivedInputs
+        let receivedInvocations = await mockWeatherService.__verify.getCurrentTemperature_for.receivedInvocations
 
         #expect(callCount == 1)
-        #expect(receivedInputs[0] == "London")
+        #expect(receivedInvocations[0].city == "London")
     }
 
     struct WeatherApp<Service: WeatherService> {
@@ -283,8 +283,22 @@ struct SmockableTests {
         #expect(balance2.value == 300)
         #expect(balance3.value == 300)
 
-        let receivedInputs = await mockBank.__verify.setAccountDetails_details.receivedInputs
-        #expect(receivedInputs[0] == accountDetails)
+        let setAccountDetailsReceivedInvocations = await mockBank.__verify.setAccountDetails_details.receivedInvocations
+        #expect(setAccountDetailsReceivedInvocations[0].details == accountDetails)
+        
+        let withdrawReceivedInvocations = await mockBank.__verify.withdraw_amount.receivedInvocations
+        let getBalanceReceivedInvocations = await mockBank.__verify.getBalance.receivedInvocations
+        
+        // confirm the local call index
+        #expect(setAccountDetailsReceivedInvocations[0].__localCallIndex == 1)
+        #expect(withdrawReceivedInvocations[0].__localCallIndex == 2)
+        #expect(withdrawReceivedInvocations[1].__localCallIndex == 3)
+        #expect(getBalanceReceivedInvocations[0].__localCallIndex == 4)
+        
+        // confirm the global call index
+        #expect(withdrawReceivedInvocations[0].__globalCallIndex > setAccountDetailsReceivedInvocations[0].__globalCallIndex)
+        #expect(withdrawReceivedInvocations[1].__globalCallIndex > withdrawReceivedInvocations[0].__globalCallIndex)
+        #expect(getBalanceReceivedInvocations[0].__globalCallIndex > withdrawReceivedInvocations[1].__globalCallIndex)
 
         // Test error case
         await #expect(throws: BankError.insufficientFunds) {
@@ -321,25 +335,17 @@ struct SmockableTests {
         #expect(callCount == 5)
 
         // Verify received inputs (order may vary due to concurrency)
-        let receivedInputs = await mockBank.__verify.setAccountDetails_details.receivedInputs
-        #expect(receivedInputs.count == 5)
+        let receivedInvocations = await mockBank.__verify.setAccountDetails_details.receivedInvocations
+        #expect(receivedInvocations.count == 5)
 
         // Create expected set of account details for comparison
         let expectedAccountDetails = Set([
             accountDetails1, accountDetails2, accountDetails3, accountDetails4, accountDetails5,
         ])
-        let receivedAccountDetailsSet = Set(receivedInputs)
+        let receivedAccountDetailsSet = Set(receivedInvocations.map { $0.details })
 
         // Verify that all expected account details were received (regardless of order)
         #expect(receivedAccountDetailsSet == expectedAccountDetails)
-
-        // Verify each expected account detail appears exactly once
-        for expectedDetail in expectedAccountDetails {
-            let count = receivedInputs.filter { $0 == expectedDetail }.count
-            #expect(
-                count == 1,
-                "Account detail \(expectedDetail.name) should appear exactly once, but appeared \(count) times"
-            )
-        }
+        #expect(expectedAccountDetails.count == receivedInvocations.count)
     }
 }

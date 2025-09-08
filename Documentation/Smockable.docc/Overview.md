@@ -56,10 +56,10 @@ import Smockable
         
         // 6. Verify the mock was called correctly
         let callCount = await mockWeatherService.__verify.getCurrentTemperature_for.callCount
-        let receivedInputs = await mockWeatherService.__verify.getCurrentTemperature_for.receivedInputs
+        let receivedInvocations = await mockWeatherService.__verify.getCurrentTemperature_for.receivedInvocations
         
         #expect(callCount == 1)
-        #expect(receivedInputs[0] == "London")
+        #expect(receivedInvocations[0].city == "London")
 }
 ```
 
@@ -69,9 +69,7 @@ In this simply example we an see that we-
 whatever is under test that expects an instance conforming to the `WeatherService` protocol
 3. Was able to `verify` that the mock method was called once
 4. Was able to `verify` that when the mock method was called it was called with "London" as the city.
-5. For functions with a single input, the `receivedInputs` will be a simple array of that type. For Functions
-with multiple inputs, `receivedInputs` will be an array of tuples with elements labelled according to the function's
-inputs
+5. `receivedInvocations` will be an array of tuples with elements labelled according to the function's inputs
 
 ## Test Error Scenarios
 

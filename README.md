@@ -106,10 +106,10 @@ func userFetching() async throws {
     
     // Verify behavior
     let fetchCallCount = await mockService.__verify.fetchUser_id.callCount
-    let updateInputs = await mockService.__verify.updateUser_user.receivedInputs
+    let updateIInvocations = await mockService.__verify.updateUser_user.receivedInvocations
     
     #expect(fetchCallCount == 1)
-    #expect(updateInputs.count == 1)
+    #expect(updateInvocations.count == 1)
     #expect(user.id == "123")
 }
 ```
