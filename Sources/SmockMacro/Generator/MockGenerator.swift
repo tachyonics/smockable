@@ -93,22 +93,18 @@ enum MockGenerator {
             },
             memberBlockBuilder: {
                 // VerifiableSmock conformance
-                try TypeAliasDeclSyntax("public typealias VerificationsType = Verifications")
-                
-                try FunctionDeclSyntax("public func getVerifications() -> Verifications {") {
-                    ExprSyntax("return self.__verify")
+                try TypeAliasDeclSyntax("public typealias VerifierType = Verifier")
+
+                try FunctionDeclSyntax(
+                    "public func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation) -> Verifier {"
+                ) {
+                    ExprSyntax("return Verifier(storage: self.storage, mode: mode, sourceLocation: sourceLocation)")
                 }
-                
+
                 try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {
                     ExprSyntax(
                         """
                         self.storage = .init(expectedResponses: .init(expectations: expectations))
-                        """
-                    )
-
-                    ExprSyntax(
-                        """
-                        self.__verify = .init(storage: self.storage)
                         """
                     )
                 }
@@ -135,10 +131,10 @@ enum MockGenerator {
                 try StorageGenerator.actorDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.variableDeclaration()
 
-                try FunctionPropertiesGenerator.allVerificationsDeclaration(
-                    functionDeclarations: functionDeclarations
+                try FunctionPropertiesGenerator.verifierClassDeclaration(
+                    functionDeclarations: functionDeclarations,
+                    isComparableProvider: isComparableProvider
                 )
-                try FunctionPropertiesGenerator.allVerificationsVariableDeclaration()
 
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
@@ -151,10 +147,6 @@ enum MockGenerator {
                     try FunctionPropertiesGenerator.expectedResponseEnumDeclaration(
                         variablePrefix: variablePrefix,
                         functionSignature: functionDeclaration.signature
-                    )
-                    try FunctionPropertiesGenerator.verificationsStructDeclaration(
-                        variablePrefix: variablePrefix,
-                        parameterList: parameterList
                     )
 
                     // Generate input matcher struct for functions with parameters

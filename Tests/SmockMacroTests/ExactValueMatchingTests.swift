@@ -117,9 +117,9 @@ struct ExactValueMatchingTests {
     func testOptionalStringExactMatching() async {
         var expectations = MockStringService.Expectations()
 
-        when(expectations.processOptionalString(value: .exact("hello")), return: "exact hello")
-        when(expectations.processOptionalString(value: .exact(nil)), return: "exact nil")
-        when(expectations.processOptionalString(value: .exact("")), return: "exact empty")
+        when(expectations.processOptionalString(value: "hello"), return: "exact hello")
+        when(expectations.processOptionalString(value: nil), return: "exact nil")
+        when(expectations.processOptionalString(value: ""), return: "exact empty")
 
         let mock = MockStringService(expectations: expectations)
 
@@ -133,15 +133,15 @@ struct ExactValueMatchingTests {
         var expectations = MockMixedComparableService.Expectations()
 
         when(
-            expectations.optionalMixFunction(name: .exact("John"), age: .exact(25), score: .exact(95.5)),
+            expectations.optionalMixFunction(name: "John", age: 25, score: 95.5),
             return: "all exact"
         )
         when(
-            expectations.optionalMixFunction(name: .exact(nil), age: .exact(nil), score: .exact(nil)),
+            expectations.optionalMixFunction(name: nil, age: nil, score: nil),
             return: "all nil"
         )
         when(
-            expectations.optionalMixFunction(name: .exact("Jane"), age: .exact(nil), score: .exact(87.2)),
+            expectations.optionalMixFunction(name: "Jane", age: nil, score: 87.2),
             return: "mixed exact"
         )
 

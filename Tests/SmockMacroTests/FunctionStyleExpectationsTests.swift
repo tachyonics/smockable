@@ -42,8 +42,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "user found")
         #expect(result2 == "user found")
 
-        let callCount = await verify(mock).fetchUser_id.callCount
-        #expect(callCount == 2)
+        await verify(mock, times: 2).fetchUser(id: "100"..."999")
     }
 
     @Test
@@ -61,8 +60,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "processed")
         #expect(result3 == "processed")
 
-        let callCount = await verify(mock).processData_input_count.callCount
-        #expect(callCount == 3)
+        await verify(mock, times: 3).processData(input: "A"..."M", count: 1...10)
     }
 
     @Test
@@ -114,8 +112,9 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "exact match found")
         #expect(result2 == "another exact match")
 
-        let callCount = await verify(mock).fetchUser_id.callCount
-        #expect(callCount == 2)
+        await verify(mock, times: 2).fetchUser(id: .any)
+        await verify(mock, times: 1).fetchUser(id: "exact123")
+        await verify(mock, times: 1).fetchUser(id: "exact456")
     }
 
     @Test
@@ -135,8 +134,7 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "century")
         #expect(result3 == "zero")
 
-        let callCount = await verify(mock).numericFunction_value.callCount
-        #expect(callCount == 3)
+        await verify(mock, times: 3).numericFunction(value: .any)
     }
 
     @Test
@@ -204,8 +202,8 @@ struct FunctionStyleExpectationsTests {
     @Test
     func testExactValueWithOptionalParameter() async {
         var expectations = MockTestService.Expectations()
-        when(expectations.optionalParameter(name: "John", age: .exact(25)), return: "John is 25")
-        when(expectations.optionalParameter(name: "Jane", age: .exact(nil)), return: "Jane has no age")
+        when(expectations.optionalParameter(name: "John", age: 25), return: "John is 25")
+        when(expectations.optionalParameter(name: "Jane", age: nil), return: "Jane has no age")
 
         let mock = MockTestService(expectations: expectations)
 
@@ -261,7 +259,6 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "repeated exact match")
         #expect(result3 == "repeated exact match")
 
-        let callCount = await verify(mock).fetchUser_id.callCount
-        #expect(callCount == 3)
+        await verify(mock, times: 3).fetchUser(id: .any)
     }
 }

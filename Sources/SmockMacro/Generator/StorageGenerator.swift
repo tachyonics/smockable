@@ -140,7 +140,7 @@ enum StorageGenerator {
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    var combinedCallCount: Int = 0
+                    var combinedCallCount: UInt32 = 0
                     """
                 )
 

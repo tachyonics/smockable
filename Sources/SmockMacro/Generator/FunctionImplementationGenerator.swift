@@ -41,7 +41,7 @@ enum FunctionImplementationGenerator {
 
         let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
         let parameters = Array(parameterList)
-        let matcherCall = generateMatcherCall(parameters: parameters)
+        let matcherCall = AllParameterSequenceGenerator.generateMatcherCall(parameters: parameters)
 
         mockFunctionDeclaration.body = try CodeBlockSyntax {
             let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
@@ -89,14 +89,6 @@ enum FunctionImplementationGenerator {
         }
 
         return mockFunctionDeclaration
-    }
-
-    private static func generateMatcherCall(parameters: [FunctionParameterSyntax]) -> String {
-        return parameters.map { parameter in
-            let paramName = parameter.secondName?.text ?? parameter.firstName.text
-            let firstName = parameter.firstName.text
-            return "\(firstName): \(paramName)"
-        }.joined(separator: ", ")
     }
 
     private static func switchExpression(

@@ -11,7 +11,7 @@ public struct AlwaysMatcher: Sendable {
 }
 
 /// A matcher for non-optional parameters that can match any value or values within a range
-public enum ValueMatcher<T: Comparable & Sendable>: Sendable {
+public enum ValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value
     case range(ClosedRange<T>)  // Matches values in range
     case exact(T)
@@ -27,9 +27,20 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable {
             return value == match
         }
     }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        case .range(let range):
+            return range.description
+        case .exact(let match):
+            return "\(match)"
+        }
+    }
 }
 
-public enum NonComparableValueMatcher<T: Sendable>: Sendable {
+public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value
 
     /// Check if the given value matches this matcher
@@ -39,10 +50,17 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable {
             return true
         }
     }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        }
+    }
 }
 
 /// A matcher for optional parameters with support for nil matching
-public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable {
+public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value (nil or non-nil)
     case range(ClosedRange<T>)  // Matches only non-nil values in range
     case exact(T?)
@@ -59,9 +77,24 @@ public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable {
             return value == match
         }
     }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        case .range(let range):
+            return range.description
+        case .exact(let match):
+            if let match {
+                return "\(match)"
+            } else {
+                return "nil"
+            }
+        }
+    }
 }
 
-public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable {
+public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value (nil or non-nil)
 
     /// Check if the given optional value matches this matcher
@@ -69,6 +102,13 @@ public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable {
         switch self {
         case .any:
             return true
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
         }
     }
 }
