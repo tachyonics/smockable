@@ -4,10 +4,9 @@ Learn how to verify mock interactions and validate test behavior.
 
 ## Overview
 
-Verification is how you check that your code interacted with mocks as expected. Smockable provides comprehensive verification capabilities through the `__verify` property on generated mocks, allowing you to inspect call counts, received parameters, and call order.
+Verification is how you check that your code interacted with mocks as expected. Smockable provides comprehensive verification capabilities through the global `verify()` function, allowing you to inspect call counts, received parameters, and call order.
 
-The `__verify` is available anytime afer the creation of the mock, representing its current state. This means in advanced test scenarios, you can
-verify the state of the mock at multiple points during the test.
+The `verify()` function can be called anytime after the creation of the mock, representing its current state. This means in advanced test scenarios, you can verify the state of the mock at multiple points during the test.
 
 ## Basic Verification
 
@@ -23,12 +22,12 @@ await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
 
 // Verify call count
-let callCount1 = await mock.__verify.fetchUser_id.callCount
+let callCount1 = await verify(mock).fetchUser_id.callCount
 #expect(callCount1 == 2)
 
 await mock.fetchUser(id: "789")
 
-let callCount2 = await mock.__verify.fetchUser_id.callCount
+let callCount2 = await verify(mock).fetchUser_id.callCount
 #expect(callCount2 == 3)
 ```
 
@@ -44,12 +43,12 @@ await mock.updateUser(id: "123", user: user1)
 await mock.updateUser(id: "456", user: user2)
 
 // Verify received invocations
-let fetchInvocations = await mock.__verify.fetchUser_id.receivedInvocations
+let fetchInvocations = await verify(mock).fetchUser_id.receivedInvocations
 #expect(fetchInvocations.count == 2)
 #expect(fetchInvocations[0].id == "123")
 #expect(fetchInvocations[1].id == "456")
 
-let updateInvocations = await mock.__verify.updateUser.receivedInvocations
+let updateInvocations = await verify(mock).updateUser.receivedInvocations
 #expect(updateIInvocations.count == 2)
 #expect(updateInvocations[0].id == user1.id)
 #expect(updateInvocations[1].id == user2.id)
@@ -61,7 +60,7 @@ inputs.
 ```swift
 await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
 
-let invocations = await mock.__verify.searchUsers_query_limit_includeInactive.receivedInvocations
+let invocations = await verify(mock).searchUsers_query_limit_includeInactive.receivedInvocations
 #expect(invocations.count == 1)
 
 let firstCall = invocations[0]
@@ -79,8 +78,8 @@ Ensure certain methods were never called:
 await mock.fetchUser(id: "123")
 
 // Verify other methods weren't called
-let updateCount = await mock.__verify.updateUser.callCount
-let deleteCount = await mock.__verify.deleteUser_id.callCount
+let updateCount = await verify(mock).updateUser.callCount
+let deleteCount = await verify(mock).deleteUser_id.callCount
 
 #expect(updateCount == 0)
 #expect(deleteCount == 0)
@@ -113,7 +112,7 @@ let criteria = SearchCriteria(
 
 await mock.searchWithCriteria(criteria)
 
-let invocations = await mock.__verify.searchWithCriteria.receivedInvocations
+let invocations = await verify(mock).searchWithCriteria.receivedInvocations
 #expect(invocations[0].criteria == criteria)
 ```
 
@@ -124,7 +123,7 @@ Verify collection parameters:
 ```swift
 await mock.batchUpdateUsers([user1, user2, user3])
 
-let invocations = await mock.__verify.batchUpdateUsers.receivedInvocations
+let invocations = await verify(mock).batchUpdateUsers.receivedInvocations
 #expect(invocations[0].count == 3)
 #expect(invocations[0].contains(user1))
 #expect(invocations[0].contains(user2))
@@ -139,7 +138,7 @@ Handle optional parameters in verification:
 await mock.fetchUser(id: "123", includeDetails: true)
 await mock.fetchUser(id: "456", includeDetails: nil)
 
-let invocations = await mock.__verify.fetchUser_id_includeDetails.receivedInvocations
+let invocations = await verify(mock).fetchUser_id_includeDetails.receivedInvocations
 #expect(invocations.count == 2)
 #expect(invocations[0].includeDetails == true)
 #expect(invocations[1].includeDetails == nil)
@@ -162,11 +161,11 @@ await withTaskGroup(of: Void.self) { group in
 }
 
 // Verify total calls
-let callCount = await mock.__verify.fetchUser_id.callCount
+let callCount = await verify(mock).fetchUser_id.callCount
 #expect(callCount == 10)
 
 // Verify all IDs were received
-let invocations = await mock.__verify.fetchUser_id.receivedInvocations
+let invocations = await verify(mock).fetchUser_id.receivedInvocations
 let receivedIds = Set(invocations.map { $0.id })
 let expectedIds = Set((0..<10).map { "\($0)" })
 #expect(receivedIds == expectedIds)

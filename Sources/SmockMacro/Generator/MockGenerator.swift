@@ -86,8 +86,19 @@ enum MockGenerator {
                 InheritedTypeSyntax(
                     type: IdentifierTypeSyntax(name: "Sendable")
                 )
+
+                InheritedTypeSyntax(
+                    type: IdentifierTypeSyntax(name: "VerifiableSmock")
+                )
             },
             memberBlockBuilder: {
+                // VerifiableSmock conformance
+                try TypeAliasDeclSyntax("public typealias VerificationsType = Verifications")
+                
+                try FunctionDeclSyntax("public func getVerifications() -> Verifications {") {
+                    ExprSyntax("return self.__verify")
+                }
+                
                 try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {
                     ExprSyntax(
                         """

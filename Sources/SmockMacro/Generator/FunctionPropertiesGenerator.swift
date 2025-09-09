@@ -240,7 +240,7 @@ enum FunctionPropertiesGenerator {
     static func allVerificationsVariableDeclaration() throws -> VariableDeclSyntax {
         try VariableDeclSyntax(
             """
-            public let __verify: Verifications
+            private let __verify: Verifications
             """
         )
     }
