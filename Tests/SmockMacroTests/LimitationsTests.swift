@@ -68,11 +68,11 @@ struct LimitationsTests {
         try await mock.disconnect()
 
         // Verify all methods were called
-        #expect(await verify(mock).connect.callCount == 1)
-        #expect(await verify(mock).disconnect.callCount == 1)
-        #expect(await verify(mock).getConnectionStatus.callCount == 1)
-        #expect(await verify(mock).fetchData.callCount == 1)
-        #expect(await verify(mock).saveData.callCount == 1)
+        await verify(mock, times: 1).connect()
+        await verify(mock, times: 1).disconnect()
+        await verify(mock, times: 1).getConnectionStatus()
+        await verify(mock, times: 1).fetchData()
+        await verify(mock, times: 1).saveData(.any)
     }
 
     // MARK: - Limitation 2: External Protocol Dependencies Tests
@@ -124,10 +124,10 @@ struct LimitationsTests {
         #expect(data.count > 0)
 
         // Verify all methods were called
-        #expect(await verify(mock).handleDataReceived.callCount == 1)
-        #expect(await verify(mock).handleRequestCompleted_error.callCount == 1)
-        #expect(await verify(mock).configure_with.callCount == 1)
-        #expect(await verify(mock).performRequest.callCount == 1)
+        await verify(mock, times: 1).handleDataReceived(.any)
+        await verify(mock, times: 1).handleRequestCompleted(error: .any)
+        await verify(mock, times: 1).configure(with: .any)
+        await verify(mock, times: 1).performRequest()
     }
 
     // MARK: - Limitation 3: Multiple Protocol Inheritance Tests
@@ -178,10 +178,10 @@ struct LimitationsTests {
         #expect(secureData.count > 0)
 
         // Verify all methods were called
-        #expect(await verify(mock).authenticate_token.callCount == 1)
-        #expect(await verify(mock).cache_key_value.callCount == 1)
-        #expect(await verify(mock).getCached_key.callCount == 1)
-        #expect(await verify(mock).securelyFetchData_id.callCount == 1)
+        await verify(mock, times: 1).authenticate(token: .any)
+        await verify(mock, times: 1).cache(key: .any, value: .any)
+        await verify(mock, times: 1).getCached(key: .any)
+        await verify(mock, times: 1).securelyFetchData(id: .any)
     }
 
     // MARK: - Best Practice 1: Composition Tests
@@ -260,10 +260,10 @@ struct LimitationsTests {
         #expect(result == "success")
 
         // Verify the transaction workflow
-        #expect(await verify(mockConnection).connect.callCount == 1)
-        #expect(await verify(mockConnection).disconnect.callCount == 1)
-        #expect(await verify(mockReader).find_id.callCount == 1)
-        #expect(await verify(mockWriter).save_id_data.callCount == 1)
+        await verify(mockConnection, times: 1).connect()
+        await verify(mockConnection, times: 1).disconnect()
+        await verify(mockReader, times: 1).find(id: .any)
+        await verify(mockWriter, times: 1).save(id: .any, data: .any)
     }
 
     // MARK: - Best Practice 2: Wrapper Protocol Tests
@@ -305,6 +305,6 @@ struct LimitationsTests {
         // Wait until the task has completed
         await adapter.task?.value
 
-        #expect(await verify(mockHandler).handleReceivedData.callCount == 1)
+        await verify(mockHandler, times: 1).handleReceivedData(.any)
     }
 }

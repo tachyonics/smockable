@@ -144,103 +144,216 @@ enum FunctionPropertiesGenerator {
         )
     }
 
-    static func verificationsStructDeclaration(
-        variablePrefix: String,
-        parameterList: FunctionParameterListSyntax
+    static func verifierStructDeclaration(
+        functionDeclarations: [FunctionDeclSyntax],
+        isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax {
-        let elementType = ReceivedInvocationsGenerator.arrayElementType(parameterList: parameterList)
-
-        return try StructDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
-            name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_Verifications",
-            inheritanceClause: InheritanceClauseSyntax {
-                InheritedTypeSyntax(
-                    type: IdentifierTypeSyntax(name: "Sendable")
-                )
-            },
-            memberBlockBuilder: {
-                try VariableDeclSyntax(
-                    """
-                    let storage: Storage
-                    """
-                )
-
-                try VariableDeclSyntax(
-                    """
-                    public var wasCalled: Bool {
-                        get async {
-                            return await self.storage.receivedInvocations.\(raw: variablePrefix).count > 0
-                        }
-                    }
-                    """
-                )
-
-                try VariableDeclSyntax(
-                    """
-                    public var callCount: Int {
-                        get async {
-                            return await self.storage.receivedInvocations.\(raw: variablePrefix).count
-                        }
-                    }
-                    """
-                )
-
-                try VariableDeclSyntax(
-                    """
-                    public var receivedInvocations: [\(elementType)] {
-                        get async {
-                            return await self.storage.receivedInvocations.\(raw: variablePrefix)
-                        }
-                    }
-                    """
-                )
-            }
-        )
-    }
-
-    static func allVerificationsDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
-    ) throws
-        -> StructDeclSyntax
-    {
         try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
-            name: "Verifications",
-            inheritanceClause: InheritanceClauseSyntax {
-                InheritedTypeSyntax(
-                    type: IdentifierTypeSyntax(name: "Sendable")
-                )
-            },
+            name: "Verifier",
             memberBlockBuilder: {
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                try VariableDeclSyntax(
+                    """
+                    private let storage: Storage
+                    """
+                )
 
-                    try VariableDeclSyntax(
-                        """
-                        public let \(raw: variablePrefix): \(raw: variablePrefix.capitalizingComponentsFirstLetter())_Verifications
-                        """
-                    )
+                try VariableDeclSyntax(
+                    """
+                    private let mode: VerificationMode
+                    """
+                )
+
+                try VariableDeclSyntax(
+                    """
+                    private let sourceLocation: SourceLocation
+                    """
+                )
+
+                try InitializerDeclSyntax(
+                    "init(storage: Storage, mode: VerificationMode, sourceLocation: SourceLocation) {"
+                ) {
+                    ExprSyntax("self.storage = storage")
+                    ExprSyntax("self.mode = mode")
+                    ExprSyntax("self.sourceLocation = sourceLocation")
                 }
 
-                try InitializerDeclSyntax("init(storage: Storage) {") {
-                    for functionDeclaration in functionDeclarations {
-                        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                // Generate verifier methods for each function
+                for functionDeclaration in functionDeclarations {
+                    let parameterList = functionDeclaration.signature.parameterClause.parameters
+                    let parameters = Array(parameterList)
+                    let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
+                        parameters: parameters[...],
+                        isComparableProvider: isComparableProvider
+                    )
 
-                        ExprSyntax(
+                    if parameters.isEmpty {
+                        let functionName = functionDeclaration.name.text
+                        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                        let functionSignature = "\(functionName)()"
+
+                        // Function with no parameters
+                        try FunctionDeclSyntax(
                             """
-                            self.\(raw: variablePrefix) = .init(storage: storage)
+                            public func \(raw: functionName)() async {
+                                let matchingCount = await storage.receivedInvocations.\(raw: variablePrefix).count
+                                
+                                VerificationHelper.performVerification(
+                                    mode: mode,
+                                    matchingCount: matchingCount,
+                                    functionName: "\(raw: functionSignature)",
+                                    sourceLocation: self.sourceLocation
+                                )
+                            }
                             """
                         )
+                    } else {
+                        // Generate all combinations where each parameter can be either explicit matcher or range
+                        for parameterSequence in allParameterSequences {
+                            try generateMethodForCombination(
+                                functionDeclaration: functionDeclaration,
+                                parameterSequence: parameterSequence
+                            )
+                        }
                     }
                 }
             }
         )
     }
 
-    static func allVerificationsVariableDeclaration() throws -> VariableDeclSyntax {
-        try VariableDeclSyntax(
+    private static func getParameters(
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        allParametersAreMatchers: Bool
+    )
+        -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
+    {
+        var methodParameters: [String] = []
+        var methodInterpolationParameters: [String] = []
+        var matcherInitializers: [String] = []
+
+        for (parameter, isComparable, form) in parameterSequence {
+            let paramName = parameter.secondName?.text ?? parameter.firstName.text
+            let paramNameForSignature: String
+            let paramNameForCall: String
+            if let secondName = parameter.secondName?.text {
+                paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
+                paramNameForCall = secondName
+            } else {
+                paramNameForSignature = parameter.firstName.text
+                paramNameForCall = parameter.firstName.text
+            }
+            let paramType = parameter.type.description
+            let isOptional = paramType.hasSuffix("?")
+
+            var matcherInitializerPrefix: String
+            if parameter.firstName.text == "_" {
+                // when allParametersAreMatchers != true, we will delegate to the all matchers variant
+                matcherInitializerPrefix = allParametersAreMatchers ? "\(paramNameForCall): " : ""
+            } else {
+                matcherInitializerPrefix =
+                    allParametersAreMatchers ? "\(paramNameForCall): " : "\(parameter.firstName.text): "
+            }
+
+            if paramType == "String" || paramType == "String?" {
+                methodInterpolationParameters.append(
+                    """
+                    \(paramNameForSignature): \\"\\(\(paramName).description)\\"
+                    """
+                )
+            } else {
+                methodInterpolationParameters.append("\(paramNameForSignature): \\(\(paramName).description)")
+            }
+
+            switch form {
+            case .range:
+                if isOptional {
+                    let baseType = String(paramType.dropLast())  // Remove '?'
+                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(baseType)>")
+                    matcherInitializers.append("\(matcherInitializerPrefix).range(\(paramName))")
+                } else {
+                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(paramType)>")
+                    matcherInitializers.append("\(matcherInitializerPrefix).range(\(paramName))")
+                }
+            case .explicitMatcher:
+                let typePrefix = isComparable ? "" : "NonComparable"
+                if isOptional {
+                    let baseType = String(paramType.dropLast())  // Remove '?'
+                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(baseType)>")
+                    matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
+                } else {
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
+                    matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
+                }
+            case .exact:
+                methodParameters.append("\(paramNameForSignature): \(paramType)")
+                matcherInitializers.append("\(matcherInitializerPrefix).exact(\(paramName))")
+            }
+        }
+
+        return (methodParameters, methodInterpolationParameters, matcherInitializers)
+    }
+
+    /// Generate a specific method for a parameter type combination
+    private static func generateMethodForCombination(
+        functionDeclaration: FunctionDeclSyntax,
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)]
+    ) throws -> FunctionDeclSyntax {
+        let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
+            if case .explicitMatcher = entry.2 {
+                return
+            }
+
+            partialResult = false
+        }
+
+        let (methodParameters, methodInterpolationParameters, matcherInitializers) = getParameters(
+            parameterSequence: parameterSequence,
+            allParametersAreMatchers: allParametersAreMatchers
+        )
+
+        let methodSignature = methodParameters.joined(separator: ", ")
+        let matcherInit = matcherInitializers.joined(separator: ", ")
+        let methodInterpolation = methodInterpolationParameters.joined(separator: ", ")
+
+        let parameterList = functionDeclaration.signature.parameterClause.parameters
+        let parameters = Array(parameterList)
+        let matcherCall = AllParameterSequenceGenerator.generateMatcherCall(
+            parameters: parameters,
+            prefix: "invocation."
+        )
+
+        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+        let inputMatcherType = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let functionName = functionDeclaration.name.text
+        let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
+
+        // if this is not a varient with all matcher inputs
+        if !allParametersAreMatchers {
+            return try FunctionDeclSyntax(
+                """
+                public func \(raw: functionName)(\(raw: methodSignature)) async {
+                    return await \(raw: functionName)(\(raw: matcherInit))
+                }
+                """
+            )
+        }
+
+        // Function with parameters
+        return try FunctionDeclSyntax(
             """
-            private let __verify: Verifications
+            public func \(raw: functionName)(\(raw: methodSignature)) async {
+                let matcher = \(raw: inputMatcherType)(\(raw: matcherInit))
+                let matchingCount = await storage.receivedInvocations.\(raw: variablePrefix).filter { invocation in
+                    matcher.matches(\(raw: matcherCall))
+                }.count
+                
+                VerificationHelper.performVerification(
+                    mode: mode,
+                    matchingCount: matchingCount,
+                    functionName: "\(raw: functionInterpolationSignature)",
+                    sourceLocation: self.sourceLocation
+                )
+            }
             """
         )
     }

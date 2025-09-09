@@ -59,13 +59,13 @@ enum ReceivedInvocationsGenerator {
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__localCallIndex"),
                 colon: .colonToken(),
-                type: IdentifierTypeSyntax(name: "Int")
+                type: IdentifierTypeSyntax(name: "UInt32")
             )
 
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__globalCallIndex"),
                 colon: .colonToken(),
-                type: IdentifierTypeSyntax(name: "Int")
+                type: IdentifierTypeSyntax(name: "UInt32")
             )
 
             for parameter in parameterList {

@@ -14,7 +14,7 @@
 
 A Swift library that uses code generation through Macros for creating type-safe mocks from protocols. Smockable generates mock implementations that support expectations, verification, and comprehensive testing capabilities.
 
-Inspired by and a fork of https://github.com/Matejkob/swift-spyable.
+Inspired by Java's [Mockito](https://site.mockito.org) along with starting out life as a fork of https://github.com/Matejkob/swift-spyable.
 
 ## Features
 

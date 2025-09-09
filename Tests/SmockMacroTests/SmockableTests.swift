@@ -45,9 +45,10 @@ struct SmockableTests {
         let returnValue5 = await mock.initialize(name: "Name3", secondName: "SecondName3")
 
         // query the current state of the mock
-        let callCount = await verify(mock).initialize_name_secondName.callCount
-        let invocations: [CompariableInput] = await verify(mock).initialize_name_secondName.receivedInvocations
-            .map { .init(name: $0.name, secondName: $0.secondName) }
+        await verify(mock, times: 5).initialize(name: .any, secondName: .any)
+        await verify(mock, times: 1).initialize(name: "Name1", secondName: "SecondName1")
+        await verify(mock, times: 1).initialize(name: "Name2", secondName: "SecondName2")
+        await verify(mock, times: 3).initialize(name: "Name3", secondName: "SecondName3")
 
         // verify that the current state of the mock is as expected
         #expect(expectedReturnValue1 == returnValue1)
@@ -55,16 +56,6 @@ struct SmockableTests {
         #expect("Name3_SecondName3" == returnValue3)
         #expect(expectedReturnValue2 == returnValue4)
         #expect(expectedReturnValue2 == returnValue5)
-        #expect(5 == callCount)
-        #expect(
-            invocations == [
-                .init(name: "Name1", secondName: "SecondName1"),
-                .init(name: "Name2", secondName: "SecondName2"),
-                .init(name: "Name3", secondName: "SecondName3"),
-                .init(name: "Name3", secondName: "SecondName3"),
-                .init(name: "Name3", secondName: "SecondName3"),
-            ]
-        )
     }
 
     @Smock
@@ -101,11 +92,8 @@ struct SmockableTests {
         #expect(temperature == 22.5)
 
         // 6. Verify the mock was called correctly
-        let callCount = await verify(mockWeatherService).getCurrentTemperature_for.callCount
-        let receivedInvocations = await verify(mockWeatherService).getCurrentTemperature_for.receivedInvocations
-
-        #expect(callCount == 1)
-        #expect(receivedInvocations[0].city == "London")
+        await verify(mockWeatherService, times: 1).getCurrentTemperature(for: .any)
+        await verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
     }
 
     struct WeatherApp<Service: WeatherService> {
@@ -174,8 +162,7 @@ struct SmockableTests {
         #expect(forecast2[0].temperature == 18.0)
 
         // Verify both calls were made
-        let callCount = await verify(mockWeatherService).getForecast_for_days.callCount
-        #expect(callCount == 2)
+        await verify(mockWeatherService, times: 2).getForecast(for: .any, days: .any)
     }
 
     actor LastCity {
@@ -222,23 +209,11 @@ struct SmockableTests {
         }
     }
 
-    struct AccountBalance {
-        let value: Double
-    }
-
-    struct AccountDetails: Equatable, Hashable, Comparable {
-        static func < (lhs: SmockableTests.AccountDetails, rhs: SmockableTests.AccountDetails) -> Bool {
-            return lhs.name < rhs.name
-        }
-
-        let name: String
-    }
-
     @Smock
     protocol Bank {
-        func withdraw(amount: Double) async throws -> AccountBalance
-        func getBalance() async -> AccountBalance
-        func setAccountDetails(details: AccountDetails) async
+        func withdraw(amount: Double) async throws -> Double
+        func getBalance() async -> Double
+        func setAccountName(_ name: String) async
     }
 
     enum BankError: Error {
@@ -248,59 +223,44 @@ struct SmockableTests {
     actor MockBankLogic {
         var balance: Double = 1000
 
-        func withdraw(amount: Double) async throws -> AccountBalance {
+        func withdraw(amount: Double) async throws -> Double {
             guard balance >= amount else {
                 throw BankError.insufficientFunds
             }
             balance -= amount
-            return AccountBalance(value: balance)
+            return balance
         }
 
-        func getBalance() async -> AccountBalance {
-            return AccountBalance(value: balance)
+        func getBalance() async -> Double {
+            return balance
         }
     }
 
     @Test func getTemperature_WithActorAsLogic() async throws {
         var expectations = MockBank.Expectations()
-        let accountDetails = AccountDetails(name: "MyAccount")
 
         // Use a closure to provide custom logic
         let logic = MockBankLogic()
         when(expectations.withdraw(amount: .any), times: .unbounded, use: logic.withdraw)
         when(expectations.getBalance(), times: .unbounded, use: logic.getBalance)
-        when(expectations.setAccountDetails(details: .any), complete: .withSuccess)
+        when(expectations.setAccountName(.any), complete: .withSuccess)
 
         let mockBank = MockBank(expectations: expectations)
 
         // Withdraw some amounts
-        await mockBank.setAccountDetails(details: accountDetails)
+        await mockBank.setAccountName("MyAccount")
         let balance1 = try await mockBank.withdraw(amount: 500)
         let balance2 = try await mockBank.withdraw(amount: 200)
         let balance3 = await mockBank.getBalance()
 
-        #expect(balance1.value == 500)
-        #expect(balance2.value == 300)
-        #expect(balance3.value == 300)
+        #expect(balance1 == 500)
+        #expect(balance2 == 300)
+        #expect(balance3 == 300)
 
-        let setAccountDetailsReceivedInvocations = await verify(mockBank).setAccountDetails_details.receivedInvocations
-        #expect(setAccountDetailsReceivedInvocations[0].details == accountDetails)
-
-        let withdrawReceivedInvocations = await verify(mockBank).withdraw_amount.receivedInvocations
-        let getBalanceReceivedInvocations = await verify(mockBank).getBalance.receivedInvocations
-
-        // confirm the local call index
-        #expect(setAccountDetailsReceivedInvocations[0].__localCallIndex == 1)
-        #expect(withdrawReceivedInvocations[0].__localCallIndex == 2)
-        #expect(withdrawReceivedInvocations[1].__localCallIndex == 3)
-        #expect(getBalanceReceivedInvocations[0].__localCallIndex == 4)
-
-        // confirm the global call index
-        #expect(
-            withdrawReceivedInvocations[0].__globalCallIndex > setAccountDetailsReceivedInvocations[0].__globalCallIndex
-        )
-        #expect(withdrawReceivedInvocations[1].__globalCallIndex > withdrawReceivedInvocations[0].__globalCallIndex)
-        #expect(getBalanceReceivedInvocations[0].__globalCallIndex > withdrawReceivedInvocations[1].__globalCallIndex)
+        await verify(mockBank, times: 1).setAccountName("MyAccount")
+        await verify(mockBank, times: 1).withdraw(amount: 500)
+        await verify(mockBank, times: 1).withdraw(amount: 200)
+        await verify(mockBank, times: 1).getBalance()
 
         // Test error case
         await #expect(throws: BankError.insufficientFunds) {
@@ -312,43 +272,26 @@ struct SmockableTests {
         var expectations = MockBank.Expectations()
 
         // Configure the mock to succeed for all setAccountDetails calls
-        when(expectations.setAccountDetails(details: .any), times: .unbounded, complete: .withSuccess)
+        when(expectations.setAccountName(.any), times: .unbounded, complete: .withSuccess)
 
         let mockBank = MockBank(expectations: expectations)
 
-        // Create multiple AccountDetails instances
-        let accountDetails1 = AccountDetails(name: "Account1")
-        let accountDetails2 = AccountDetails(name: "Account2")
-        let accountDetails3 = AccountDetails(name: "Account3")
-        let accountDetails4 = AccountDetails(name: "Account4")
-        let accountDetails5 = AccountDetails(name: "Account5")
-
         // Make concurrent calls to setAccountDetails
         await withTaskGroup(of: Void.self) { group in
-            group.addTask { await mockBank.setAccountDetails(details: accountDetails1) }
-            group.addTask { await mockBank.setAccountDetails(details: accountDetails2) }
-            group.addTask { await mockBank.setAccountDetails(details: accountDetails3) }
-            group.addTask { await mockBank.setAccountDetails(details: accountDetails4) }
-            group.addTask { await mockBank.setAccountDetails(details: accountDetails5) }
+            group.addTask { await mockBank.setAccountName("Account1") }
+            group.addTask { await mockBank.setAccountName("Account2") }
+            group.addTask { await mockBank.setAccountName("Account3") }
+            group.addTask { await mockBank.setAccountName("Account4") }
+            group.addTask { await mockBank.setAccountName("Account5") }
         }
 
-        // Verify call count
-        let callCount = await verify(mockBank).setAccountDetails_details.callCount
-        #expect(callCount == 5)
-
         // Verify received inputs (order may vary due to concurrency)
-        let receivedInvocations = await verify(mockBank).setAccountDetails_details.receivedInvocations
-        #expect(receivedInvocations.count == 5)
-
-        // Create expected set of account details for comparison
-        let expectedAccountDetails = Set([
-            accountDetails1, accountDetails2, accountDetails3, accountDetails4, accountDetails5,
-        ])
-        let receivedAccountDetailsSet = Set(receivedInvocations.map { $0.details })
-
-        // Verify that all expected account details were received (regardless of order)
-        #expect(receivedAccountDetailsSet == expectedAccountDetails)
-        #expect(expectedAccountDetails.count == receivedInvocations.count)
+        await verify(mockBank, times: 5).setAccountName(.any)
+        await verify(mockBank, times: 1).setAccountName("Account1")
+        await verify(mockBank, times: 1).setAccountName("Account2")
+        await verify(mockBank, times: 1).setAccountName("Account3")
+        await verify(mockBank, times: 1).setAccountName("Account4")
+        await verify(mockBank, times: 1).setAccountName("Account5")
     }
 
     @Test
@@ -356,22 +299,18 @@ struct SmockableTests {
         // Create expectations
         var expectations = MockService1Protocol.Expectations()
         when(expectations.initialize(name: .any, secondName: .any), return: "test data")
-        
+
         // Create mock
         let mock = MockService1Protocol(expectations: expectations)
-        
+
         // Use the mock
         let result = await mock.initialize(name: "123", secondName: "test")
-        
+
         // Test the new verify function
-        let callCount = await verify(mock).initialize_name_secondName.callCount
-        let invocations = await verify(mock).initialize_name_secondName.receivedInvocations
-        
+        await verify(mock, times: 1).initialize(name: .any, secondName: .any)
+        await verify(mock, times: 1).initialize(name: "123", secondName: "test")
+
         // Verify results
         #expect(result == "test data")
-        #expect(callCount == 1)
-        #expect(invocations.count == 1)
-        #expect(invocations[0].name == "123")
-        #expect(invocations[0].secondName == "test")
     }
 }

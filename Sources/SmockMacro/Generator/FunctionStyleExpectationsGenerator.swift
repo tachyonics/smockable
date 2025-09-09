@@ -50,60 +50,6 @@ enum FunctionStyleExpectationsGenerator {
         )
     }
 
-    private enum ParameterForm: CaseIterable {
-        case explicitMatcher
-        case range
-        case exact
-    }
-
-    private static func getAllParameterSequences(
-        parameters: ArraySlice<FunctionParameterSyntax>,
-        isComparableProvider: (String) -> Bool
-    ) -> [[(FunctionParameterSyntax, Bool, ParameterForm)]] {
-        if let firstParameter = parameters.first {
-            let firstParamType = firstParameter.type.description
-            let firstIsOptional = firstParamType.hasSuffix("?")
-            let firstBaseType = firstIsOptional ? String(firstParamType.dropLast()) : firstParamType
-            let firstIsComparable = isComparableProvider(firstBaseType)
-
-            if parameters.count == 1 {
-                if !firstIsComparable {
-                    // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, false, ParameterForm.explicitMatcher)]]
-                } else {
-                    // when there is only one parameter
-                    return ParameterForm.allCases.map { parameterForm in
-                        // parameter combination for each form
-                        return [(firstParameter, true, parameterForm)]
-                    }
-                }
-            }
-
-            // otherwise get the combinations for the parameters array minus the first element
-            let dropFirstParameterSequences = getAllParameterSequences(
-                parameters: parameters.dropFirst(),
-                isComparableProvider: isComparableProvider
-            )
-
-            // iterate through the remaining cases
-            return dropFirstParameterSequences.flatMap { partialParameterSequence in
-                if !firstIsComparable {
-                    // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, false, ParameterForm.explicitMatcher)] + partialParameterSequence]
-                } else {
-                    // when there is only one parameter
-                    return ParameterForm.allCases.map { parameterForm in
-                        // parameter combination for each type
-                        return [(firstParameter, true, parameterForm)] + partialParameterSequence
-                    }
-                }
-            }
-        } else {
-            // terminating case
-            return []
-        }
-    }
-
     /// Generate all overload combinations for functions with parameters
     private static func generateOverloadCombinations(
         //functionName: String,
@@ -114,7 +60,7 @@ enum FunctionStyleExpectationsGenerator {
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
-        let allParameterSequences = getAllParameterSequences(
+        let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
             parameters: parameters[...],
             isComparableProvider: isComparableProvider
         )
@@ -138,7 +84,7 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, ParameterForm)],
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
         expectationClassName: String,
         variablePrefix: String
     ) throws -> FunctionDeclSyntax {
