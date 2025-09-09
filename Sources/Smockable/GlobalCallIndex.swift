@@ -3,13 +3,15 @@
 //  smockable
 //
 
-public actor GlobalCallIndex {
-    private var value: UInt32 = 0
+import Synchronization
+
+public struct GlobalCallIndex: ~Copyable, Sendable {
+    private let value = Atomic<UInt32>(0)
 
     public func getCurrentIndex() -> UInt32 {
-        self.value += 1
+        let (_, updatedValue) = self.value.add(1, ordering: .sequentiallyConsistent)
 
-        return self.value
+        return updatedValue
     }
 }
 

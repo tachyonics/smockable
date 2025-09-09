@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "smockable",
     platforms: [
-        .macOS(.v10_15), .iOS(.v13), .watchOS(.v6), .tvOS(.v13),
+        .macOS(.v15), .iOS(.v18), .watchOS(.v11), .tvOS(.v18),
     ],
     products: [
         .library(

@@ -94,7 +94,7 @@ enum ReceivedInvocationsGenerator {
 
         return ExprSyntax(
             """
-            await \(identifier).\(raw: variablePrefix).append(\(argument))
+            \(identifier).\(raw: variablePrefix).append(\(argument))
             """
         )
     }
