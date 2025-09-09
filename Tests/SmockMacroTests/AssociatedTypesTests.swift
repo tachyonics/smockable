@@ -193,9 +193,9 @@ struct AssociatedTypesTests {
         #expect(foundUser?.name == "John Doe")
 
         // Verify call counts
-        let saveCount = await mockRepo.__verify.save.callCount
-        let findCount = await mockRepo.__verify.find_id.callCount
-        let deleteCount = await mockRepo.__verify.delete_id.callCount
+        let saveCount = await verify(mockRepo).save.callCount
+        let findCount = await verify(mockRepo).find_id.callCount
+        let deleteCount = await verify(mockRepo).delete_id.callCount
 
         #expect(saveCount == 1)
         #expect(findCount == 1)
@@ -257,8 +257,8 @@ struct AssociatedTypesTests {
         #expect(deserialized.name == "John")
 
         // Verify call counts
-        let serializeCount = await mockSerializer.__verify.serialize.callCount
-        let deserializeCount = await mockSerializer.__verify.deserialize.callCount
+        let serializeCount = await verify(mockSerializer).serialize.callCount
+        let deserializeCount = await verify(mockSerializer).deserialize.callCount
 
         #expect(serializeCount == 1)
         #expect(deserializeCount == 1)
@@ -281,7 +281,7 @@ struct AssociatedTypesTests {
 
         try await mockHandler.handle(event)
 
-        let handleCount = await mockHandler.__verify.handle.callCount
+        let handleCount = await verify(mockHandler).handle.callCount
         #expect(handleCount == 1)
     }
 
@@ -321,9 +321,9 @@ struct AssociatedTypesTests {
         #expect(result.tags == ["test"])
 
         // Verify call counts
-        let validateCount = await mockTransformer.__verify.validateInput.callCount
-        let configCount = await mockTransformer.__verify.createDefaultConfig.callCount
-        let transformCount = await mockTransformer.__verify.transform_config.callCount
+        let validateCount = await verify(mockTransformer).validateInput.callCount
+        let configCount = await verify(mockTransformer).createDefaultConfig.callCount
+        let transformCount = await verify(mockTransformer).transform_config.callCount
 
         #expect(validateCount == 1)
         #expect(configCount == 1)
@@ -354,9 +354,9 @@ struct AssociatedTypesTests {
         try await mockService.update(id: "123", item: updatedUser)
 
         // Verify all operations
-        let readCount = await mockService.__verify.read_id.callCount
-        let writeCount = await mockService.__verify.write_id_item.callCount
-        let updateCount = await mockService.__verify.update_id_item.callCount
+        let readCount = await verify(mockService).read_id.callCount
+        let writeCount = await verify(mockService).write_id_item.callCount
+        let updateCount = await verify(mockService).update_id_item.callCount
 
         #expect(readCount == 1)
         #expect(writeCount == 1)
@@ -375,7 +375,7 @@ struct AssociatedTypesTests {
         let user = User(id: "123", name: "John")
         try await userRepo.save(user)
 
-        let userSaveCount = await userRepo.__verify.save.callCount
+        let userSaveCount = await verify(userRepo).save.callCount
         #expect(userSaveCount == 1)
 
         // Test with Product type
@@ -386,7 +386,7 @@ struct AssociatedTypesTests {
         let product = Product(id: "456", name: "Widget")
         try await productRepo.save(product)
 
-        let productSaveCount = await productRepo.__verify.save.callCount
+        let productSaveCount = await verify(productRepo).save.callCount
         #expect(productSaveCount == 1)
     }
 
@@ -405,8 +405,8 @@ struct AssociatedTypesTests {
 
         #expect(retrievedUser?.name == "John")
 
-        let storeCount = await mockCache.__verify.store_key_value.callCount
-        let retrieveCount = await mockCache.__verify.retrieve_key.callCount
+        let storeCount = await verify(mockCache).store_key_value.callCount
+        let retrieveCount = await verify(mockCache).retrieve_key.callCount
 
         #expect(storeCount == 1)
         #expect(retrieveCount == 1)
@@ -427,8 +427,8 @@ struct AssociatedTypesTests {
 
         try await mockSerializable.deserialize(userData)
 
-        let serializeCount = await mockSerializable.__verify.serialize.callCount
-        let deserializeCount = await mockSerializable.__verify.deserialize.callCount
+        let serializeCount = await verify(mockSerializable).serialize.callCount
+        let deserializeCount = await verify(mockSerializable).deserialize.callCount
 
         #expect(serializeCount == 1)
         #expect(deserializeCount == 1)
@@ -445,7 +445,7 @@ struct AssociatedTypesTests {
         let result = try await mockProcessor.process("test")
         #expect(result == 42)
 
-        let processCount = await mockProcessor.__verify.process.callCount
+        let processCount = await verify(mockProcessor).process.callCount
         #expect(processCount == 1)
     }
 }

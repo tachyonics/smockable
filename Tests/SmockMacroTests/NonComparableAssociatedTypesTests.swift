@@ -73,9 +73,9 @@ struct NonComparableAssociatedTypesTests {
 
         #expect(foundData?.content == "test")
 
-        let saveCount = await mockRepo.__verify.save.callCount
-        let findCount = await mockRepo.__verify.find_id.callCount
-        let deleteCount = await mockRepo.__verify.delete_id.callCount
+        let saveCount = await verify(mockRepo).save.callCount
+        let findCount = await verify(mockRepo).find_id.callCount
+        let deleteCount = await verify(mockRepo).delete_id.callCount
 
         #expect(saveCount == 1)
         #expect(findCount == 1)
@@ -132,8 +132,8 @@ struct NonComparableAssociatedTypesTests {
         #expect(result == 42)
         #expect(isValid == true)
 
-        let processCount = await mockProcessor.__verify.process.callCount
-        let validateCount = await mockProcessor.__verify.validate.callCount
+        let processCount = await verify(mockProcessor).process.callCount
+        let validateCount = await verify(mockProcessor).validate.callCount
 
         #expect(processCount == 1)
         #expect(validateCount == 1)
@@ -162,7 +162,7 @@ struct NonComparableAssociatedTypesTests {
         #expect(found1?.value == "first")
         #expect(found2?.value == "second")
 
-        let saveCount = await mockRepo.__verify.save.callCount
+        let saveCount = await verify(mockRepo).save.callCount
         #expect(saveCount == 2)
     }
 

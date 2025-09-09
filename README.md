@@ -105,8 +105,8 @@ func userFetching() async throws {
     try await codeUnderTest.updateUser(user)
     
     // Verify behavior
-    let fetchCallCount = await mockService.__verify.fetchUser_id.callCount
-    let updateIInvocations = await mockService.__verify.updateUser_user.receivedInvocations
+    let fetchCallCount = await verify(mockService).fetchUser_id.callCount
+    let updateInvocations = await verify(mockService).updateUser_user.receivedInvocations
     
     #expect(fetchCallCount == 1)
     #expect(updateInvocations.count == 1)
