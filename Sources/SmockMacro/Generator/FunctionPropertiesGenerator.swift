@@ -221,22 +221,15 @@ enum FunctionPropertiesGenerator {
         )
     }
 
-    /// Generate a specific method for a parameter type combination
-    private static func generateMethodForCombination(
-        functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)]
-    ) throws -> FunctionDeclSyntax {
+    private static func getParameters(
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        allParametersAreMatchers: Bool
+    )
+        -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
+    {
         var methodParameters: [String] = []
         var methodInterpolationParameters: [String] = []
         var matcherInitializers: [String] = []
-
-        let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
-            if case .explicitMatcher = entry.2 {
-                return
-            }
-
-            partialResult = false
-        }
 
         for (parameter, isComparable, form) in parameterSequence {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
@@ -296,6 +289,27 @@ enum FunctionPropertiesGenerator {
                 matcherInitializers.append("\(matcherInitializerPrefix).exact(\(paramName))")
             }
         }
+
+        return (methodParameters, methodInterpolationParameters, matcherInitializers)
+    }
+
+    /// Generate a specific method for a parameter type combination
+    private static func generateMethodForCombination(
+        functionDeclaration: FunctionDeclSyntax,
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)]
+    ) throws -> FunctionDeclSyntax {
+        let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
+            if case .explicitMatcher = entry.2 {
+                return
+            }
+
+            partialResult = false
+        }
+
+        let (methodParameters, methodInterpolationParameters, matcherInitializers) = getParameters(
+            parameterSequence: parameterSequence,
+            allParametersAreMatchers: allParametersAreMatchers
+        )
 
         let methodSignature = methodParameters.joined(separator: ", ")
         let matcherInit = matcherInitializers.joined(separator: ", ")
