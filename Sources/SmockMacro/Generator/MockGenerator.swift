@@ -131,7 +131,7 @@ enum MockGenerator {
                 try StorageGenerator.actorDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.variableDeclaration()
 
-                try FunctionPropertiesGenerator.verifierClassDeclaration(
+                try FunctionPropertiesGenerator.verifierStructDeclaration(
                     functionDeclarations: functionDeclarations,
                     isComparableProvider: isComparableProvider
                 )

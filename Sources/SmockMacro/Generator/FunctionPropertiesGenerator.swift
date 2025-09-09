@@ -144,7 +144,7 @@ enum FunctionPropertiesGenerator {
         )
     }
 
-    static func verifierClassDeclaration(
+    static func verifierStructDeclaration(
         functionDeclarations: [FunctionDeclSyntax],
         isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax {
