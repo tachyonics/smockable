@@ -4,15 +4,19 @@ Learn how to verify mock interactions and validate test behavior.
 
 ## Overview
 
-Verification is how you check that your code interacted with mocks as expected. Smockable provides comprehensive verification capabilities through the global `verify()` function, allowing you to inspect call counts, received parameters, and call order.
+Verification is how you check that your code interacted with mocks as expected. Smockable provides comprehensive verification capabilities through the 
+global `verify()` function with verification modes, allowing you to assert call counts and parameter matching in an expressive, declarative way.
 
-The `verify()` function can be called anytime after the creation of the mock, representing its current state. This means in advanced test scenarios, you can verify the state of the mock at multiple points during the test.
+The `verify()` function mirrors the `when()` function pattern, providing a consistent API for both setting expectations and verifying behavior. You can 
+verify mock interactions at any point during your test, making it easy to test complex scenarios.
+
+The `verify()` functions integrate with SwiftTesting to provide appropriate error messages when the verification fails. These functions to not track 
 
 ## Basic Verification
 
-### Call Counts
+### Exact Call Counts
 
-Check how many times a method was called:
+Verify that a method was called an exact number of times:
 
 ```swift
 let mock = MockUserService(expectations: expectations)
@@ -21,52 +25,56 @@ let mock = MockUserService(expectations: expectations)
 await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
 
-// Verify call count
-let callCount1 = await verify(mock).fetchUser_id.callCount
-#expect(callCount1 == 2)
+// Verify exact call count
+await verify(mock, times: 2).fetchUser(id: .any)
 
 await mock.fetchUser(id: "789")
 
-let callCount2 = await verify(mock).fetchUser_id.callCount
-#expect(callCount2 == 3)
+// Verify updated call count
+await verify(mock, times: 3).fetchUser(id: .any)
 ```
 
-### Received Invocations
+### Parameter Matching
 
-Inspect the parameters passed to mock methods:
+Verify calls with specific parameter values or patterns:
 
 ```swift
 // Use the mock with different parameters
 await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
-await mock.updateUser(id: "123", user: user1)
-await mock.updateUser(id: "456", user: user2)
+await mock.updateUser(user1)
+await mock.updateUser(user2)
 
-// Verify received invocations
-let fetchInvocations = await verify(mock).fetchUser_id.receivedInvocations
-#expect(fetchInvocations.count == 2)
-#expect(fetchInvocations[0].id == "123")
-#expect(fetchInvocations[1].id == "456")
+// Verify calls with specific parameters
+await verify(mock, times: 1).fetchUser(id: "123")
+await verify(mock, times: 1).fetchUser(id: "456")
 
-let updateInvocations = await verify(mock).updateUser.receivedInvocations
-#expect(updateIInvocations.count == 2)
-#expect(updateInvocations[0].id == user1.id)
-#expect(updateInvocations[1].id == user2.id)
+// Verify calls with any parameters
+await verify(mock, times: 2).fetchUser(id: .any)
+await verify(mock, times: 2).updateUser(.any)
 ```
 
-**Note:** `receivedInvocations` will be an array of tuples with appropriately typed elements labelled according to the function's
-inputs.
+### Multiple Parameters
+
+Verify functions with multiple parameters:
 
 ```swift
 await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
+await mock.searchUsers(query: "jane", limit: 5, includeInactive: true)
 
-let invocations = await verify(mock).searchUsers_query_limit_includeInactive.receivedInvocations
-#expect(invocations.count == 1)
+// Verify specific parameter combinations
+await verify(mock, times: 1).searchUsers(
+    query: "john", 
+    limit: 10, 
+    includeInactive: false
+)
 
-let firstCall = invocations[0]
-#expect(firstCall.query == "john")
-#expect(firstCall.limit == 10)
-#expect(!firstCall.includeInactive)
+// Verify with mixed matchers
+await verify(mock, times: 2).searchUsers(
+    query: .any, 
+    limit: 1...20, 
+    includeInactive: .any
+)
 ```
 
 ### Verifying No Calls
@@ -78,11 +86,51 @@ Ensure certain methods were never called:
 await mock.fetchUser(id: "123")
 
 // Verify other methods weren't called
-let updateCount = await verify(mock).updateUser.callCount
-let deleteCount = await verify(mock).deleteUser_id.callCount
+await verify(mock, .never).updateUser(.any)
+await verify(mock, .never).deleteUser(id: .any)
 
-#expect(updateCount == 0)
-#expect(deleteCount == 0)
+// Verify specific parameters were never used
+await verify(mock, .never).fetchUser(id: "nonexistent")
+```
+
+## Verification Modes
+
+Smockable provides several verification modes for different testing scenarios:
+
+### Exact Count Verification
+
+```swift
+// Verify exact number of calls
+await verify(mock, times: 3).fetchUser(id: .any)
+await verify(mock, times: 0).deleteUser(id: .any)  // Same as .never
+```
+
+### Boundary Verification
+
+```swift
+// At least N times
+await verify(mock, atLeast: 1).fetchUser(id: .any)
+await verify(mock, .atLeastOnce).initialize()  // Shorthand for atLeast: 1
+
+// At most N times
+await verify(mock, atMost: 5).logMessage(.any)
+await verify(mock, atMost: 0).criticalError(.any)  // Same as .never
+```
+
+### Range Verification
+
+```swift
+// Within a specific range
+await verify(mock, times: 2...5).processItem(.any)
+await verify(mock, times: 0...1).optionalOperation(.any)
+```
+
+### Never Called
+
+```swift
+// Verify method was never called
+await verify(mock, .never).dangerousOperation(.any)
+await verify(mock, .never).fetchUser(id: "admin")
 ```
 
 ## Working with Complex Parameters
@@ -94,13 +142,15 @@ of inputs - stored by the mock. The documentation [here](https://docs.swift.org/
 explains the rules for Sendable types. Some types are always sendable, like structures that have only sendable properties and enumerations that have only sendable 
 associated values.
 
-Additionally while not required making any custom type conform to `Equatable` will allow for for easy verification:
+For custom types that conform to `Comparable`, you can use exact value matching and range matching:
 
 ```swift
-struct SearchCriteria: Equatable {
+struct SearchCriteria: Comparable, Sendable {
     let query: String
     let filters: [String]
     let sortOrder: SortOrder
+    
+    // Implement Comparable requirements...
 }
 
 // In your test
@@ -112,22 +162,38 @@ let criteria = SearchCriteria(
 
 await mock.searchWithCriteria(criteria)
 
-let invocations = await verify(mock).searchWithCriteria.receivedInvocations
-#expect(invocations[0].criteria == criteria)
+// Verify with exact matching
+await verify(mock, times: 1).searchWithCriteria(criteria)
+
+// Verify with any matching
+await verify(mock, .atLeastOnce).searchWithCriteria(.any)
+```
+
+For non-comparable custom types, you can only use `.any` matching:
+
+```swift
+struct NonComparableData: Sendable {
+    let data: Data
+    let metadata: [String: Any]
+}
+
+await mock.processData(nonComparableData)
+
+// Only .any matching is available for non-comparable types
+await verify(mock, times: 1).processData(.any)
 ```
 
 ### Collections
 
-Verify collection parameters:
+Verify collection parameters using `.any` matching (collections are typically non-comparable):
 
 ```swift
 await mock.batchUpdateUsers([user1, user2, user3])
+await mock.batchUpdateUsers([user4, user5])
 
-let invocations = await verify(mock).batchUpdateUsers.receivedInvocations
-#expect(invocations[0].count == 3)
-#expect(invocations[0].contains(user1))
-#expect(invocations[0].contains(user2))
-#expect(invocations[0].contains(user3))
+// Verify calls were made
+await verify(mock, times: 2).batchUpdateUsers(.any)
+await verify(mock, atLeast: 1).batchUpdateUsers(.any)
 ```
 
 ### Optional Parameters
@@ -138,17 +204,34 @@ Handle optional parameters in verification:
 await mock.fetchUser(id: "123", includeDetails: true)
 await mock.fetchUser(id: "456", includeDetails: nil)
 
-let invocations = await verify(mock).fetchUser_id_includeDetails.receivedInvocations
-#expect(invocations.count == 2)
-#expect(invocations[0].includeDetails == true)
-#expect(invocations[1].includeDetails == nil)
+// Verify calls with specific optional values
+await verify(mock, times: 1).fetchUser(id: "123", includeDetails: true)
+await verify(mock, times: 1).fetchUser(id: "456", includeDetails: nil)
+
+// Verify total calls regardless of optional parameter values
+await verify(mock, times: 2).fetchUser(id: .any, includeDetails: .any)
 ```
 
-## Async Verification
+## Advanced Verification Patterns
+
+### Parameter Range Matching
+
+Use range matching for comparable types:
+
+```swift
+await mock.processValue(42)
+await mock.processValue(15)
+await mock.processValue(88)
+
+// Verify calls within specific ranges
+await verify(mock, times: 2).processValue(10...50)
+await verify(mock, times: 1).processValue(80...100)
+await verify(mock, times: 3).processValue(1...100)
+```
 
 ### Concurrent Access
 
-Special care needs when dealing with concurrency to account for the inherent uncertainty in these scenarios.
+When testing concurrent code, verify the total number of calls:
 
 ```swift
 // Multiple concurrent calls
@@ -160,17 +243,26 @@ await withTaskGroup(of: Void.self) { group in
     }
 }
 
-// Verify total calls
-let callCount = await verify(mock).fetchUser_id.callCount
-#expect(callCount == 10)
-
-// Verify all IDs were received
-let invocations = await verify(mock).fetchUser_id.receivedInvocations
-let receivedIds = Set(invocations.map { $0.id })
-let expectedIds = Set((0..<10).map { "\($0)" })
-#expect(receivedIds == expectedIds)
+// Verify total calls (order is not guaranteed in concurrent scenarios)
+await verify(mock, times: 10).fetchUser(id: .any)
+await verify(mock, atLeast: 5).fetchUser(id: "0"..."9")
 ```
 
-In the case above, `receivedInvocations` has no guaranteed order as its ordering is dependant on how the executing machine happened to schedule threads. One method
-to ensure a unit test is robust against this uncertainty is shown above - using a set to ensure all expected calls where made while ignoring the order they happened
-to be processed by the mock.
+### Progressive Verification
+
+Verify mock state at different points during your test:
+
+```swift
+// Initial state
+await verify(mock, .never).fetchUser(id: .any)
+
+// After first operation
+await mock.fetchUser(id: "123")
+await verify(mock, times: 1).fetchUser(id: .any)
+
+// After batch operation
+await mock.fetchUser(id: "456")
+await mock.fetchUser(id: "789")
+await verify(mock, times: 3).fetchUser(id: .any)
+await verify(mock, times: 1).fetchUser(id: "123")
+```
