@@ -112,7 +112,7 @@ func userFetching() async throws {
 }
 ```
 
-### 3. Advanced Expectations
+### 3. Set Expectations
 
 ```swift
 // Range-based parameter matching for functions with return values
@@ -149,10 +149,6 @@ when(expectations.getUserProfile(name: "A"..."Z", age: 18...65), return: profile
 when(expectations.getUserProfile(name: "John", age: 25), return: johnProfile)
 when(expectations.getUserProfile(name: "Jane", age: nil), return: janeProfile)
 
-// Explicit value matchers for complex scenarios
-when(expectations.fetchUser(id: "100"..."999"), return: user1)
-when(expectations.fetchUser(id: .any), return: user2)
-
 // Custom logic with closures
 when(expectations.fetchUser(id: "A"..."Z"), times: .unbounded) { id in
     return User(id: id, name: "Generated User")
@@ -163,6 +159,35 @@ when(expectations.fetchUser(id: "A"..."Z"), times: 3, use: myClosure)
 
 // Error handling for functions with no return type
 when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
+```
+
+### 4. Verify mock interactions
+
+![Smockable provides detailed error messages in test cases](https://github.com/tachyonics/smockable/blob/main/expectation_example.pngraw=true)
+
+```swift
+// Range-based parameter matching and verification of exact, 
+// range, at least and at most invocation counts
+verify(mock, times: 6).fetchUser(id: "100"..."999")
+verify(mock, times: 3...10).fetchUser(id: "100"..."999")
+verify(mock, atLeast: 4).fetchUser(id: "A"..."Z")
+verify(mock, atMost: 2).fetchUser(id: .any)
+
+// Exact value matching with verification of no or at least one invocation
+verify(mock, .never).fetchUser(id: "user123")
+verify(mock, .atLeastOnce).fetchUser(id: "admin")
+
+// Mix exact values with ranges
+verify(mock, times: 2).processData(input: "exact", count: 1...10)
+verify(mock, .never).processData(input: "A"..."Z", count: 42)
+
+// Optional parameter matching
+verify(mock, times: 2...18).getUserProfile(name: "A"..."Z", age: nil)
+verify(mock, atMost: 2).getUserProfile(name: "A"..."Z", age: 18...65)
+
+// Exact value matching with optionals
+verify(mock, times: 1).getUserProfile(name: "John", age: 25)
+verify(mock, atMost: 5).getUserProfile(name: "Jane", age: nil)
 ```
 
 ## Documentation
