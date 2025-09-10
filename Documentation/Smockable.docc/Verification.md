@@ -10,7 +10,8 @@ global `verify()` function with verification modes, allowing you to assert call 
 The `verify()` function mirrors the `when()` function pattern, providing a consistent API for both setting expectations and verifying behavior. You can 
 verify mock interactions at any point during your test, making it easy to test complex scenarios.
 
-The `verify()` functions integrate with SwiftTesting to provide appropriate error messages when the verification fails. These functions to not track 
+The `verify()` functions integrate with SwiftTesting to provide appropriate error messages when the verification fails. These functions do not take into 
+account any previous verifcation calls and so each `verify()` call is considering the full history of the mock.
 
 ## Basic Verification
 
@@ -30,7 +31,8 @@ await verify(mock, times: 2).fetchUser(id: .any)
 
 await mock.fetchUser(id: "789")
 
-// Verify updated call count
+// Verify updated call count - takes into account the full history of the mock
+// and doesn't consider any previous verify calls
 await verify(mock, times: 3).fetchUser(id: .any)
 ```
 
