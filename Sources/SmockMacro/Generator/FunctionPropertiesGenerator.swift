@@ -154,7 +154,7 @@ enum FunctionPropertiesGenerator {
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    private let storage: Storage
+                    private let state: State
                     """
                 )
 
@@ -171,9 +171,9 @@ enum FunctionPropertiesGenerator {
                 )
 
                 try InitializerDeclSyntax(
-                    "init(storage: Storage, mode: VerificationMode, sourceLocation: SourceLocation) {"
+                    "init(state: State, mode: VerificationMode, sourceLocation: SourceLocation) {"
                 ) {
-                    ExprSyntax("self.storage = storage")
+                    ExprSyntax("self.state = state")
                     ExprSyntax("self.mode = mode")
                     ExprSyntax("self.sourceLocation = sourceLocation")
                 }
@@ -195,8 +195,10 @@ enum FunctionPropertiesGenerator {
                         // Function with no parameters
                         try FunctionDeclSyntax(
                             """
-                            public func \(raw: functionName)() async {
-                                let matchingCount = await storage.receivedInvocations.\(raw: variablePrefix).count
+                            public func \(raw: functionName)() {
+                                let matchingCount = self.state.mutex.withLock { storage in
+                                    return storage.receivedInvocations.\(raw: variablePrefix)
+                                }.count
                                 
                                 VerificationHelper.performVerification(
                                     mode: mode,
@@ -331,31 +333,85 @@ enum FunctionPropertiesGenerator {
         if !allParametersAreMatchers {
             return try FunctionDeclSyntax(
                 """
-                public func \(raw: functionName)(\(raw: methodSignature)) async {
-                    return await \(raw: functionName)(\(raw: matcherInit))
+                public func \(raw: functionName)(\(raw: methodSignature)) {
+                    return \(raw: functionName)(\(raw: matcherInit))
                 }
                 """
             )
         }
 
-        // Function with parameters
-        return try FunctionDeclSyntax(
-            """
-            public func \(raw: functionName)(\(raw: methodSignature)) async {
+        let lockProtectedStatements = CodeBlockItemListSyntax([
+            CodeBlockItemSyntax(
+                item: .stmt(
+                    StmtSyntax(
+                        ReturnStmtSyntax(
+                            expression: ExprSyntax("storage.receivedInvocations.\(raw: variablePrefix)")
+                        )
+                    )
+                )
+            )
+        ])
+
+        let lockClosure = ClosureExprSyntax(
+            signature: ClosureSignatureSyntax(
+                parameterClause: .simpleInput(
+                    ClosureShorthandParameterListSyntax([
+                        ClosureShorthandParameterSyntax(name: .identifier("storage"))
+                    ])
+                )
+            ),
+            statements: lockProtectedStatements
+        )
+
+        let withLockCall = FunctionCallExprSyntax(
+            calledExpression: MemberAccessExprSyntax(
+                base: DeclReferenceExprSyntax(baseName: .identifier("self.state.mutex")),
+                declName: DeclReferenceExprSyntax(baseName: .identifier("withLock"))
+            ),
+            arguments: LabeledExprListSyntax([
+                LabeledExprSyntax(expression: ExprSyntax(lockClosure))
+            ])
+        )
+
+        return try FunctionDeclSyntax("public func \(raw: functionName)(\(raw: methodSignature))") {
+            VariableDeclSyntax(
+                bindingSpecifier: .keyword(.let),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("invocations")),
+                        initializer: InitializerClauseSyntax(
+                            equal: .equalToken(),
+                            value: ExprSyntax(withLockCall)
+                        )
+                    )
+                ])
+            )
+
+            DeclSyntax(
+                """
                 let matcher = \(raw: inputMatcherType)(\(raw: matcherInit))
-                let matchingCount = await storage.receivedInvocations.\(raw: variablePrefix).filter { invocation in
+                """
+            )
+
+            DeclSyntax(
+                """
+                let matchingCount = invocations.filter { invocation in
                     matcher.matches(\(raw: matcherCall))
                 }.count
-                
+                """
+            )
+
+            ExprSyntax(
+                """
                 VerificationHelper.performVerification(
                     mode: mode,
                     matchingCount: matchingCount,
                     functionName: "\(raw: functionInterpolationSignature)",
                     sourceLocation: self.sourceLocation
                 )
-            }
-            """
-        )
+                """
+            )
+        }
     }
 }
 

@@ -68,11 +68,11 @@ struct LimitationsTests {
         try await mock.disconnect()
 
         // Verify all methods were called
-        await verify(mock, times: 1).connect()
-        await verify(mock, times: 1).disconnect()
-        await verify(mock, times: 1).getConnectionStatus()
-        await verify(mock, times: 1).fetchData()
-        await verify(mock, times: 1).saveData(.any)
+        verify(mock, times: 1).connect()
+        verify(mock, times: 1).disconnect()
+        verify(mock, times: 1).getConnectionStatus()
+        verify(mock, times: 1).fetchData()
+        verify(mock, times: 1).saveData(.any)
     }
 
     // MARK: - Limitation 2: External Protocol Dependencies Tests
@@ -124,10 +124,10 @@ struct LimitationsTests {
         #expect(data.count > 0)
 
         // Verify all methods were called
-        await verify(mock, times: 1).handleDataReceived(.any)
-        await verify(mock, times: 1).handleRequestCompleted(error: .any)
-        await verify(mock, times: 1).configure(with: .any)
-        await verify(mock, times: 1).performRequest()
+        verify(mock, times: 1).handleDataReceived(.any)
+        verify(mock, times: 1).handleRequestCompleted(error: .any)
+        verify(mock, times: 1).configure(with: .any)
+        verify(mock, times: 1).performRequest()
     }
 
     // MARK: - Limitation 3: Multiple Protocol Inheritance Tests
@@ -178,10 +178,10 @@ struct LimitationsTests {
         #expect(secureData.count > 0)
 
         // Verify all methods were called
-        await verify(mock, times: 1).authenticate(token: .any)
-        await verify(mock, times: 1).cache(key: .any, value: .any)
-        await verify(mock, times: 1).getCached(key: .any)
-        await verify(mock, times: 1).securelyFetchData(id: .any)
+        verify(mock, times: 1).authenticate(token: .any)
+        verify(mock, times: 1).cache(key: .any, value: .any)
+        verify(mock, times: 1).getCached(key: .any)
+        verify(mock, times: 1).securelyFetchData(id: .any)
     }
 
     // MARK: - Best Practice 1: Composition Tests
@@ -260,10 +260,10 @@ struct LimitationsTests {
         #expect(result == "success")
 
         // Verify the transaction workflow
-        await verify(mockConnection, times: 1).connect()
-        await verify(mockConnection, times: 1).disconnect()
-        await verify(mockReader, times: 1).find(id: .any)
-        await verify(mockWriter, times: 1).save(id: .any, data: .any)
+        verify(mockConnection, times: 1).connect()
+        verify(mockConnection, times: 1).disconnect()
+        verify(mockReader, times: 1).find(id: .any)
+        verify(mockWriter, times: 1).save(id: .any, data: .any)
     }
 
     // MARK: - Best Practice 2: Wrapper Protocol Tests
@@ -305,6 +305,6 @@ struct LimitationsTests {
         // Wait until the task has completed
         await adapter.task?.value
 
-        await verify(mockHandler, times: 1).handleReceivedData(.any)
+        verify(mockHandler, times: 1).handleReceivedData(.any)
     }
 }

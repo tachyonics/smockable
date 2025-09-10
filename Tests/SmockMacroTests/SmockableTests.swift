@@ -9,6 +9,11 @@ public protocol Service1Protocol {
     func initialize(name: String, secondName: String?) async -> String
 }
 
+@Smock
+public protocol Service2Protocol {
+    func initialize(name: String, secondName: String?) -> String
+}
+
 struct CompariableInput: Equatable {
     let name: String
     let secondName: String?
@@ -16,7 +21,7 @@ struct CompariableInput: Equatable {
 
 struct SmockableTests {
     @Test
-    func testMacro() async {
+    func protocolWithAsyncFunction() async {
         let expectedReturnValue1 = "ReturnValue1"
         let expectedReturnValue2 = "ReturnValue2"
 
@@ -45,10 +50,53 @@ struct SmockableTests {
         let returnValue5 = await mock.initialize(name: "Name3", secondName: "SecondName3")
 
         // query the current state of the mock
-        await verify(mock, times: 5).initialize(name: .any, secondName: .any)
-        await verify(mock, times: 1).initialize(name: "Name1", secondName: "SecondName1")
-        await verify(mock, times: 1).initialize(name: "Name2", secondName: "SecondName2")
-        await verify(mock, times: 3).initialize(name: "Name3", secondName: "SecondName3")
+        verify(mock, times: 5).initialize(name: .any, secondName: .any)
+        verify(mock, times: 1).initialize(name: "Name1", secondName: "SecondName1")
+        verify(mock, times: 1).initialize(name: "Name2", secondName: "SecondName2")
+        verify(mock, times: 3).initialize(name: "Name3", secondName: "SecondName3")
+
+        // verify that the current state of the mock is as expected
+        #expect(expectedReturnValue1 == returnValue1)
+        #expect("Name2_SecondName2" == returnValue2)
+        #expect("Name3_SecondName3" == returnValue3)
+        #expect(expectedReturnValue2 == returnValue4)
+        #expect(expectedReturnValue2 == returnValue5)
+    }
+
+    @Test
+    func protocolWithSyncFunction() {
+        let expectedReturnValue1 = "ReturnValue1"
+        let expectedReturnValue2 = "ReturnValue2"
+
+        var expectations = MockService2Protocol.Expectations()
+        // expectation for first call
+        when(expectations.initialize(name: .any, secondName: .any), return: expectedReturnValue1)
+        // expectation for next two calls
+        when(expectations.initialize(name: .any, secondName: .any), times: 2) { name, secondName in
+            "\(name)_\(secondName ?? "empty")"
+        }
+        // expectation for final two calls
+        when(
+            expectations.initialize(name: .any, secondName: .any),
+            times: 2,
+            return: expectedReturnValue2
+        )
+
+        // create the mock; no more expectations can be added to the mock
+        let mock = MockService2Protocol(expectations: expectations)
+
+        // perform some operations on the mock
+        let returnValue1 = mock.initialize(name: "Name1", secondName: "SecondName1")
+        let returnValue2 = mock.initialize(name: "Name2", secondName: "SecondName2")
+        let returnValue3 = mock.initialize(name: "Name3", secondName: "SecondName3")
+        let returnValue4 = mock.initialize(name: "Name3", secondName: "SecondName3")
+        let returnValue5 = mock.initialize(name: "Name3", secondName: "SecondName3")
+
+        // query the current state of the mock
+        verify(mock, times: 5).initialize(name: .any, secondName: .any)
+        verify(mock, times: 1).initialize(name: "Name1", secondName: "SecondName1")
+        verify(mock, times: 1).initialize(name: "Name2", secondName: "SecondName2")
+        verify(mock, times: 3).initialize(name: "Name3", secondName: "SecondName3")
 
         // verify that the current state of the mock is as expected
         #expect(expectedReturnValue1 == returnValue1)
@@ -92,8 +140,8 @@ struct SmockableTests {
         #expect(temperature == 22.5)
 
         // 6. Verify the mock was called correctly
-        await verify(mockWeatherService, times: 1).getCurrentTemperature(for: .any)
-        await verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
+        verify(mockWeatherService, times: 1).getCurrentTemperature(for: .any)
+        verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
     }
 
     struct WeatherApp<Service: WeatherService> {
@@ -162,7 +210,7 @@ struct SmockableTests {
         #expect(forecast2[0].temperature == 18.0)
 
         // Verify both calls were made
-        await verify(mockWeatherService, times: 2).getForecast(for: .any, days: .any)
+        verify(mockWeatherService, times: 2).getForecast(for: .any, days: .any)
     }
 
     actor LastCity {
@@ -257,10 +305,10 @@ struct SmockableTests {
         #expect(balance2 == 300)
         #expect(balance3 == 300)
 
-        await verify(mockBank, times: 1).setAccountName("MyAccount")
-        await verify(mockBank, times: 1).withdraw(amount: 500)
-        await verify(mockBank, times: 1).withdraw(amount: 200)
-        await verify(mockBank, times: 1).getBalance()
+        verify(mockBank, times: 1).setAccountName("MyAccount")
+        verify(mockBank, times: 1).withdraw(amount: 500)
+        verify(mockBank, times: 1).withdraw(amount: 200)
+        verify(mockBank, times: 1).getBalance()
 
         // Test error case
         await #expect(throws: BankError.insufficientFunds) {
@@ -286,12 +334,12 @@ struct SmockableTests {
         }
 
         // Verify received inputs (order may vary due to concurrency)
-        await verify(mockBank, times: 5).setAccountName(.any)
-        await verify(mockBank, times: 1).setAccountName("Account1")
-        await verify(mockBank, times: 1).setAccountName("Account2")
-        await verify(mockBank, times: 1).setAccountName("Account3")
-        await verify(mockBank, times: 1).setAccountName("Account4")
-        await verify(mockBank, times: 1).setAccountName("Account5")
+        verify(mockBank, times: 5).setAccountName(.any)
+        verify(mockBank, times: 1).setAccountName("Account1")
+        verify(mockBank, times: 1).setAccountName("Account2")
+        verify(mockBank, times: 1).setAccountName("Account3")
+        verify(mockBank, times: 1).setAccountName("Account4")
+        verify(mockBank, times: 1).setAccountName("Account5")
     }
 
     @Test
@@ -307,8 +355,8 @@ struct SmockableTests {
         let result = await mock.initialize(name: "123", secondName: "test")
 
         // Test the new verify function
-        await verify(mock, times: 1).initialize(name: .any, secondName: .any)
-        await verify(mock, times: 1).initialize(name: "123", secondName: "test")
+        verify(mock, times: 1).initialize(name: .any, secondName: .any)
+        verify(mock, times: 1).initialize(name: "123", secondName: "test")
 
         // Verify results
         #expect(result == "test data")

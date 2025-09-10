@@ -94,7 +94,7 @@ enum ReceivedInvocationsGenerator {
 
         return ExprSyntax(
             """
-            \(identifier).\(raw: variablePrefix).append(\(argument))
+            storage.\(identifier).\(raw: variablePrefix).append(\(argument))
             """
         )
     }
@@ -109,7 +109,7 @@ enum ReceivedInvocationsGenerator {
                 itemsBuilder: {
                     LabeledExprSyntax(
                         expression: DeclReferenceExprSyntax(
-                            baseName: TokenSyntax.identifier("self.combinedCallCount")
+                            baseName: TokenSyntax.identifier("storage.combinedCallCount")
                         )
                     )
 

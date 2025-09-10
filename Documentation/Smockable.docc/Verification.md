@@ -27,13 +27,13 @@ await mock.fetchUser(id: "123")
 await mock.fetchUser(id: "456")
 
 // Verify exact call count
-await verify(mock, times: 2).fetchUser(id: .any)
+verify(mock, times: 2).fetchUser(id: .any)
 
 await mock.fetchUser(id: "789")
 
 // Verify updated call count - takes into account the full history of the mock
 // and doesn't consider any previous verify calls
-await verify(mock, times: 3).fetchUser(id: .any)
+verify(mock, times: 3).fetchUser(id: .any)
 ```
 
 ### Parameter Matching
@@ -48,12 +48,12 @@ await mock.updateUser(user1)
 await mock.updateUser(user2)
 
 // Verify calls with specific parameters
-await verify(mock, times: 1).fetchUser(id: "123")
-await verify(mock, times: 1).fetchUser(id: "456")
+verify(mock, times: 1).fetchUser(id: "123")
+verify(mock, times: 1).fetchUser(id: "456")
 
 // Verify calls with any parameters
-await verify(mock, times: 2).fetchUser(id: .any)
-await verify(mock, times: 2).updateUser(.any)
+verify(mock, times: 2).fetchUser(id: .any)
+verify(mock, times: 2).updateUser(.any)
 ```
 
 ### Multiple Parameters
@@ -65,14 +65,14 @@ await mock.searchUsers(query: "john", limit: 10, includeInactive: false)
 await mock.searchUsers(query: "jane", limit: 5, includeInactive: true)
 
 // Verify specific parameter combinations
-await verify(mock, times: 1).searchUsers(
+verify(mock, times: 1).searchUsers(
     query: "john", 
     limit: 10, 
     includeInactive: false
 )
 
 // Verify with mixed matchers
-await verify(mock, times: 2).searchUsers(
+verify(mock, times: 2).searchUsers(
     query: .any, 
     limit: 1...20, 
     includeInactive: .any
@@ -88,11 +88,11 @@ Ensure certain methods were never called:
 await mock.fetchUser(id: "123")
 
 // Verify other methods weren't called
-await verify(mock, .never).updateUser(.any)
-await verify(mock, .never).deleteUser(id: .any)
+verify(mock, .never).updateUser(.any)
+verify(mock, .never).deleteUser(id: .any)
 
 // Verify specific parameters were never used
-await verify(mock, .never).fetchUser(id: "nonexistent")
+verify(mock, .never).fetchUser(id: "nonexistent")
 ```
 
 ## Verification Modes
@@ -103,36 +103,36 @@ Smockable provides several verification modes for different testing scenarios:
 
 ```swift
 // Verify exact number of calls
-await verify(mock, times: 3).fetchUser(id: .any)
-await verify(mock, times: 0).deleteUser(id: .any)  // Same as .never
+verify(mock, times: 3).fetchUser(id: .any)
+verify(mock, times: 0).deleteUser(id: .any)  // Same as .never
 ```
 
 ### Boundary Verification
 
 ```swift
 // At least N times
-await verify(mock, atLeast: 1).fetchUser(id: .any)
-await verify(mock, .atLeastOnce).initialize()  // Shorthand for atLeast: 1
+verify(mock, atLeast: 1).fetchUser(id: .any)
+verify(mock, .atLeastOnce).initialize()  // Shorthand for atLeast: 1
 
 // At most N times
-await verify(mock, atMost: 5).logMessage(.any)
-await verify(mock, atMost: 0).criticalError(.any)  // Same as .never
+verify(mock, atMost: 5).logMessage(.any)
+verify(mock, atMost: 0).criticalError(.any)  // Same as .never
 ```
 
 ### Range Verification
 
 ```swift
 // Within a specific range
-await verify(mock, times: 2...5).processItem(.any)
-await verify(mock, times: 0...1).optionalOperation(.any)
+verify(mock, times: 2...5).processItem(.any)
+verify(mock, times: 0...1).optionalOperation(.any)
 ```
 
 ### Never Called
 
 ```swift
 // Verify method was never called
-await verify(mock, .never).dangerousOperation(.any)
-await verify(mock, .never).fetchUser(id: "admin")
+verify(mock, .never).dangerousOperation(.any)
+verify(mock, .never).fetchUser(id: "admin")
 ```
 
 ## Working with Complex Parameters
@@ -165,10 +165,10 @@ let criteria = SearchCriteria(
 await mock.searchWithCriteria(criteria)
 
 // Verify with exact matching
-await verify(mock, times: 1).searchWithCriteria(criteria)
+verify(mock, times: 1).searchWithCriteria(criteria)
 
 // Verify with any matching
-await verify(mock, .atLeastOnce).searchWithCriteria(.any)
+verify(mock, .atLeastOnce).searchWithCriteria(.any)
 ```
 
 For non-comparable custom types, you can only use `.any` matching:
@@ -182,7 +182,7 @@ struct NonComparableData: Sendable {
 await mock.processData(nonComparableData)
 
 // Only .any matching is available for non-comparable types
-await verify(mock, times: 1).processData(.any)
+verify(mock, times: 1).processData(.any)
 ```
 
 ### Collections
@@ -194,8 +194,8 @@ await mock.batchUpdateUsers([user1, user2, user3])
 await mock.batchUpdateUsers([user4, user5])
 
 // Verify calls were made
-await verify(mock, times: 2).batchUpdateUsers(.any)
-await verify(mock, atLeast: 1).batchUpdateUsers(.any)
+verify(mock, times: 2).batchUpdateUsers(.any)
+verify(mock, atLeast: 1).batchUpdateUsers(.any)
 ```
 
 ### Optional Parameters
@@ -207,11 +207,11 @@ await mock.fetchUser(id: "123", includeDetails: true)
 await mock.fetchUser(id: "456", includeDetails: nil)
 
 // Verify calls with specific optional values
-await verify(mock, times: 1).fetchUser(id: "123", includeDetails: true)
-await verify(mock, times: 1).fetchUser(id: "456", includeDetails: nil)
+verify(mock, times: 1).fetchUser(id: "123", includeDetails: true)
+verify(mock, times: 1).fetchUser(id: "456", includeDetails: nil)
 
 // Verify total calls regardless of optional parameter values
-await verify(mock, times: 2).fetchUser(id: .any, includeDetails: .any)
+verify(mock, times: 2).fetchUser(id: .any, includeDetails: .any)
 ```
 
 ## Advanced Verification Patterns
@@ -226,9 +226,9 @@ await mock.processValue(15)
 await mock.processValue(88)
 
 // Verify calls within specific ranges
-await verify(mock, times: 2).processValue(10...50)
-await verify(mock, times: 1).processValue(80...100)
-await verify(mock, times: 3).processValue(1...100)
+verify(mock, times: 2).processValue(10...50)
+verify(mock, times: 1).processValue(80...100)
+verify(mock, times: 3).processValue(1...100)
 ```
 
 ### Concurrent Access
@@ -246,8 +246,8 @@ await withTaskGroup(of: Void.self) { group in
 }
 
 // Verify total calls (order is not guaranteed in concurrent scenarios)
-await verify(mock, times: 10).fetchUser(id: .any)
-await verify(mock, atLeast: 5).fetchUser(id: "0"..."9")
+verify(mock, times: 10).fetchUser(id: .any)
+verify(mock, atLeast: 5).fetchUser(id: "0"..."9")
 ```
 
 ### Progressive Verification
@@ -256,15 +256,15 @@ Verify mock state at different points during your test:
 
 ```swift
 // Initial state
-await verify(mock, .never).fetchUser(id: .any)
+verify(mock, .never).fetchUser(id: .any)
 
 // After first operation
 await mock.fetchUser(id: "123")
-await verify(mock, times: 1).fetchUser(id: .any)
+verify(mock, times: 1).fetchUser(id: .any)
 
 // After batch operation
 await mock.fetchUser(id: "456")
 await mock.fetchUser(id: "789")
-await verify(mock, times: 3).fetchUser(id: .any)
-await verify(mock, times: 1).fetchUser(id: "123")
+verify(mock, times: 3).fetchUser(id: .any)
+verify(mock, times: 1).fetchUser(id: "123")
 ```

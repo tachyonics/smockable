@@ -98,13 +98,17 @@ enum MockGenerator {
                 try FunctionDeclSyntax(
                     "public func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation) -> Verifier {"
                 ) {
-                    ExprSyntax("return Verifier(storage: self.storage, mode: mode, sourceLocation: sourceLocation)")
+                    ReturnStmtSyntax(
+                        expression: ExprSyntax(
+                            "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation)"
+                        )
+                    )
                 }
 
                 try InitializerDeclSyntax("public init(expectations: consuming Expectations = .init()) { ") {
                     ExprSyntax(
                         """
-                        self.storage = .init(expectedResponses: .init(expectations: expectations))
+                        self.state = .init(expectedResponses: .init(expectations: expectations))
                         """
                     )
                 }
@@ -128,7 +132,8 @@ enum MockGenerator {
                 try StorageGenerator.receivedInvocationsDeclaration(
                     functionDeclarations: functionDeclarations
                 )
-                try StorageGenerator.actorDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
+                try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.variableDeclaration()
 
                 try FunctionPropertiesGenerator.verifierStructDeclaration(
@@ -158,9 +163,8 @@ enum MockGenerator {
                         inputMatcherStruct
                     }
 
-                    FunctionImplementationGenerator.declaration(
+                    try FunctionImplementationGenerator.storageDeclaration(
                         variablePrefix: variablePrefix,
-                        accessModifier: "public",
                         protocolFunctionDeclaration: functionDeclaration
                     )
                 }

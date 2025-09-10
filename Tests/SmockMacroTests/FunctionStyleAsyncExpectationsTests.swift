@@ -4,7 +4,7 @@ import Testing
 @testable import Smockable
 
 @Smock
-protocol TestService {
+protocol TestAsyncService {
     func fetchUser(id: String) async -> String
     func processData(input: String, count: Int) async -> String
     func simpleFunction() async -> String
@@ -16,14 +16,14 @@ protocol TestService {
     func mixedParams(name: String, data: Data) async -> String
 }
 
-struct FunctionStyleExpectationsTests {
+struct FunctionStyleAsyncExpectationsTests {
 
     @Test
     func testSimpleFunctionWithoutParameters() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.simpleFunction(), return: "test result")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
         let actualResult = await mock.simpleFunction()
 
         #expect(actualResult == "test result")
@@ -31,10 +31,10 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testFunctionWithSingleParameterRange() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.fetchUser(id: "100"..."999"), times: 2, return: "user found")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.fetchUser(id: "500")
         let result2 = await mock.fetchUser(id: "123")
@@ -42,15 +42,15 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "user found")
         #expect(result2 == "user found")
 
-        await verify(mock, times: 2).fetchUser(id: "100"..."999")
+        verify(mock, times: 2).fetchUser(id: "100"..."999")
     }
 
     @Test
     func testFunctionWithMultipleParameterRanges() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.processData(input: "A"..."M", count: 1...10), times: 3, return: "processed")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.processData(input: "B", count: 5)
         let result2 = await mock.processData(input: "K", count: 1)
@@ -60,19 +60,19 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "processed")
         #expect(result3 == "processed")
 
-        await verify(mock, times: 3).processData(input: "A"..."M", count: 1...10)
+        verify(mock, times: 3).processData(input: "A"..."M", count: 1...10)
     }
 
     @Test
     func testOptionalParameterMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.optionalParameter(name: "A"..."Z", age: nil), return: "no age provided")
         when(
             expectations.optionalParameter(name: "A"..."Z", age: .range(18...65)),
             return: "valid age"
         )
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.optionalParameter(name: "John", age: nil)
         let result2 = await mock.optionalParameter(name: "Jane", age: 25)
@@ -83,11 +83,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExplicitValueMatcherUsage() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.fetchUser(id: .range("100"..."999")), return: "explicit range")
         when(expectations.fetchUser(id: .any), return: "any id")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.fetchUser(id: "500")
         let result2 = await mock.fetchUser(id: "abc")
@@ -100,11 +100,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExactStringValueMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.fetchUser(id: "exact123"), return: "exact match found")
         when(expectations.fetchUser(id: "exact456"), return: "another exact match")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.fetchUser(id: "exact123")
         let result2 = await mock.fetchUser(id: "exact456")
@@ -112,19 +112,19 @@ struct FunctionStyleExpectationsTests {
         #expect(result1 == "exact match found")
         #expect(result2 == "another exact match")
 
-        await verify(mock, times: 2).fetchUser(id: .any)
-        await verify(mock, times: 1).fetchUser(id: "exact123")
-        await verify(mock, times: 1).fetchUser(id: "exact456")
+        verify(mock, times: 2).fetchUser(id: .any)
+        verify(mock, times: 1).fetchUser(id: "exact123")
+        verify(mock, times: 1).fetchUser(id: "exact456")
     }
 
     @Test
     func testExactIntegerValueMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.numericFunction(value: 42), return: "answer to everything")
         when(expectations.numericFunction(value: 100), return: "century")
         when(expectations.numericFunction(value: 0), return: "zero")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.numericFunction(value: 42)
         let result2 = await mock.numericFunction(value: 100)
@@ -134,16 +134,16 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "century")
         #expect(result3 == "zero")
 
-        await verify(mock, times: 3).numericFunction(value: .any)
+        verify(mock, times: 3).numericFunction(value: .any)
     }
 
     @Test
     func testExactDoubleValueMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.floatFunction(value: 3.14159), return: "pi")
         when(expectations.floatFunction(value: 2.71828), return: "e")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.floatFunction(value: 3.14159)
         let result2 = await mock.floatFunction(value: 2.71828)
@@ -154,11 +154,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExactCharacterValueMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.characterFunction(char: "A"), return: "letter A")
         when(expectations.characterFunction(char: "1"), return: "digit 1")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.characterFunction(char: "A")
         let result2 = await mock.characterFunction(char: "1")
@@ -169,11 +169,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testMultipleExactValuesInSameFunction() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.multipleComparableParams(id: "user1", count: 5, score: 95.5), return: "perfect match")
         when(expectations.multipleComparableParams(id: "user2", count: 3, score: 87.2), return: "another match")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.multipleComparableParams(id: "user1", count: 5, score: 95.5)
         let result2 = await mock.multipleComparableParams(id: "user2", count: 3, score: 87.2)
@@ -184,13 +184,13 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testMixedExactAndRangeMatching() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         // Exact value for first parameter, range for second
         when(expectations.processData(input: "exact", count: 1...10), return: "exact input with range count")
         // Range for first parameter, exact value for second
         when(expectations.processData(input: "A"..."Z", count: 42), return: "range input with exact count")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.processData(input: "exact", count: 5)
         let result2 = await mock.processData(input: "M", count: 42)
@@ -201,11 +201,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExactValueWithOptionalParameter() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.optionalParameter(name: "John", age: 25), return: "John is 25")
         when(expectations.optionalParameter(name: "Jane", age: nil), return: "Jane has no age")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.optionalParameter(name: "John", age: 25)
         let result2 = await mock.optionalParameter(name: "Jane", age: nil)
@@ -216,12 +216,12 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExactValuePriorityOverRange() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         // the first provided expectation will be used first
         when(expectations.numericFunction(value: 1...100), return: "in range")
         when(expectations.numericFunction(value: 50), return: "exact fifty")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.numericFunction(value: 50)
         let result2 = await mock.numericFunction(value: 50)
@@ -232,11 +232,11 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testNonComparableTypeOnlySupportsAnyMatcher() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         // Data is not Comparable, so only .any matcher should be available
         when(expectations.mixedParams(name: "test", data: .any), return: "mixed params")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
         let testData = Data([1, 2, 3, 4])
 
         let result = await mock.mixedParams(name: "test", data: testData)
@@ -246,10 +246,10 @@ struct FunctionStyleExpectationsTests {
 
     @Test
     func testExactValueMatchingWithMultipleCalls() async {
-        var expectations = MockTestService.Expectations()
+        var expectations = MockTestAsyncService.Expectations()
         when(expectations.fetchUser(id: "user123"), times: 3, return: "repeated exact match")
 
-        let mock = MockTestService(expectations: expectations)
+        let mock = MockTestAsyncService(expectations: expectations)
 
         let result1 = await mock.fetchUser(id: "user123")
         let result2 = await mock.fetchUser(id: "user123")
@@ -259,6 +259,6 @@ struct FunctionStyleExpectationsTests {
         #expect(result2 == "repeated exact match")
         #expect(result3 == "repeated exact match")
 
-        await verify(mock, times: 3).fetchUser(id: .any)
+        verify(mock, times: 3).fetchUser(id: .any)
     }
 }

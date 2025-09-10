@@ -55,7 +55,7 @@ import Smockable
         #expect(temperature == 22.5)
         
         // 6. Verify the mock was called correctly
-        await verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
+        verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
 }
 ```
 
@@ -118,9 +118,9 @@ invocations of the same mocked function for property.
     #expect(forecast2[0].temperature == 18.0)
     
     // Verify both calls were made
-    await verify(mockWeatherService, times: 2).getForecast(for: .any, days: .any)
-    await verify(mockWeatherService, times: 1).getForecast(for: "London", days: 5)
-    await verify(mockWeatherService, times: 1).getForecast(for: "Paris", days: 3)
+    verify(mockWeatherService, times: 2).getForecast(for: .any, days: .any)
+    verify(mockWeatherService, times: 1).getForecast(for: "London", days: 5)
+    verify(mockWeatherService, times: 1).getForecast(for: "Paris", days: 3)
 }
 ```
 

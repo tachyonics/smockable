@@ -73,9 +73,9 @@ struct NonComparableAssociatedTypesTests {
 
         #expect(foundData?.content == "test")
 
-        await verify(mockRepo, times: 1).save(.any)
-        await verify(mockRepo, times: 1).find(id: .any)
-        await verify(mockRepo, times: 1).delete(id: .any)
+        verify(mockRepo, times: 1).save(.any)
+        verify(mockRepo, times: 1).find(id: .any)
+        verify(mockRepo, times: 1).delete(id: .any)
     }
 
     @Test
@@ -128,8 +128,8 @@ struct NonComparableAssociatedTypesTests {
         #expect(result == 42)
         #expect(isValid == true)
 
-        await verify(mockProcessor, times: 1).process(.any)
-        await verify(mockProcessor, times: 1).validate(.any)
+        verify(mockProcessor, times: 1).process(.any)
+        verify(mockProcessor, times: 1).validate(.any)
     }
 
     @Test
@@ -155,7 +155,7 @@ struct NonComparableAssociatedTypesTests {
         #expect(found1?.value == "first")
         #expect(found2?.value == "second")
 
-        await verify(mockRepo, times: 2).save(.any)
+        verify(mockRepo, times: 2).save(.any)
     }
 
     @Test

@@ -2,33 +2,6 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum FunctionImplementationGenerator {
-    static func declaration(
-        variablePrefix: String,
-        accessModifier: String?,
-        protocolFunctionDeclaration: FunctionDeclSyntax
-    ) -> FunctionDeclSyntax {
-        var mockFunctionDeclaration = protocolFunctionDeclaration
-
-        mockFunctionDeclaration.modifiers =
-            protocolFunctionDeclaration.modifiers.removingMutatingKeyword
-        mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
-
-        if let accessModifier {
-            mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "\(raw: accessModifier)")]
-        }
-
-        mockFunctionDeclaration.body = CodeBlockSyntax {
-            ClosureGenerator.callExpression(
-                baseName: "self.storage.\(protocolFunctionDeclaration.name.text)",
-                variablePrefix: variablePrefix,
-                needsLabels: true,
-                functionSignature: protocolFunctionDeclaration.signature
-            )
-        }
-
-        return mockFunctionDeclaration
-    }
-
     static func storageDeclaration(
         variablePrefix: String,
         protocolFunctionDeclaration: FunctionDeclSyntax
@@ -37,6 +10,7 @@ enum FunctionImplementationGenerator {
 
         mockFunctionDeclaration.modifiers =
             protocolFunctionDeclaration.modifiers.removingMutatingKeyword
+        mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "public")]
         mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
         let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
@@ -46,41 +20,103 @@ enum FunctionImplementationGenerator {
         mockFunctionDeclaration.body = try CodeBlockSyntax {
             let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
 
-            ExprSyntax(
-                """
-                self.combinedCallCount += 1
-                """
+            let lockProtectedStatements = CodeBlockItemListSyntax([
+                CodeBlockItemSyntax(
+                    item: .expr(
+                        ExprSyntax(
+                            """
+                            storage.combinedCallCount += 1
+                            """
+                        )
+                    )
+                ),
+                CodeBlockItemSyntax(
+                    item: .expr(
+                        ReceivedInvocationsGenerator.appendValueToVariableExpression(
+                            variablePrefix: variablePrefix,
+                            parameterList: parameterList
+                        )
+                    )
+                ),
+                CodeBlockItemSyntax(
+                    item: .decl(
+                        DeclSyntax(
+                            try VariableDeclSyntax(
+                                """
+                                var responseProvider: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
+                                """
+                            )
+                        )
+                    )
+                ),
+                CodeBlockItemSyntax(
+                    item: .stmt(
+                        StmtSyntax(
+                            try ForStmtSyntax(
+                                "for (index, expectedResponse) in storage.expectedResponses.\(raw: variablePrefix).enumerated()"
+                            ) {
+                                ExprSyntax(
+                                    """
+                                    if expectedResponse.2.matches(\(raw: matcherCall)) {
+                                      if expectedResponse.0 == 1 {
+                                        storage.expectedResponses.\(raw: variablePrefix).remove(at: index)
+                                      } else if let currentCount = expectedResponse.0 {
+                                        storage.expectedResponses.\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
+                                      }
+                                      
+                                      responseProvider = expectedResponse.1
+                                      break
+                                    }
+                                    """
+                                )
+                            }
+                        )
+                    )
+                ),
+                CodeBlockItemSyntax(
+                    item: .stmt(
+                        StmtSyntax(
+                            ReturnStmtSyntax(
+                                expression: DeclReferenceExprSyntax(baseName: .identifier("responseProvider"))
+                            )
+                        )
+                    )
+                ),
+            ])
+
+            let lockClosure = ClosureExprSyntax(
+                signature: ClosureSignatureSyntax(
+                    parameterClause: .simpleInput(
+                        ClosureShorthandParameterListSyntax([
+                            ClosureShorthandParameterSyntax(name: .identifier("storage"))
+                        ])
+                    )
+                ),
+                statements: lockProtectedStatements
             )
 
-            ReceivedInvocationsGenerator.appendValueToVariableExpression(
-                variablePrefix: variablePrefix,
-                parameterList: parameterList
+            let withLockCall = FunctionCallExprSyntax(
+                calledExpression: MemberAccessExprSyntax(
+                    base: DeclReferenceExprSyntax(baseName: .identifier("self.state.mutex")),
+                    declName: DeclReferenceExprSyntax(baseName: .identifier("withLock"))
+                ),
+                arguments: LabeledExprListSyntax([
+                    LabeledExprSyntax(expression: ExprSyntax(lockClosure))
+                ])
             )
 
-            try VariableDeclSyntax(
-                """
-                var responseProvider: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
-                """
+            VariableDeclSyntax(
+                bindingSpecifier: .keyword(.let),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("responseProvider")),
+                        initializer: InitializerClauseSyntax(
+                            equal: .equalToken(),
+                            value: ExprSyntax(withLockCall)
+                        )
+                    )
+                ])
             )
-
-            try ForStmtSyntax(
-                "for (index, expectedResponse) in self.expectedResponses.\(raw: variablePrefix).enumerated()"
-            ) {
-                ExprSyntax(
-                    """
-                    if expectedResponse.2.matches(\(raw: matcherCall)) {
-                      if expectedResponse.0 == 1 {
-                        self.expectedResponses.\(raw: variablePrefix).remove(at: index)
-                      } else if let currentCount = expectedResponse.0 {
-                        self.expectedResponses.\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
-                      }
-                      
-                      responseProvider = expectedResponse.1
-                      break
-                    }
-                    """
-                )
-            }
 
             self.switchExpression(
                 variablePrefix: variablePrefix,
