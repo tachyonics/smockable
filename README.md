@@ -163,7 +163,7 @@ when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
 
 ### 4. Verify mock interactions
 
-![Smockable provides detailed error messages in test cases](https://github.com/tachyonics/smockable/blob/main/expectation_example.pngraw=true)
+![Smockable provides detailed error messages in test cases](https://github.com/tachyonics/smockable/blob/main/expectation_example.png?raw=true)
 
 ```swift
 // Range-based parameter matching and verification of exact, 
