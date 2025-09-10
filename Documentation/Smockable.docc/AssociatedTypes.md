@@ -275,8 +275,7 @@ func testUserEventHandler() async throws {
     
     try await mockHandler.handle(event)
     
-    let handleCount = await verify(mockHandler).handle.callCount
-    #expect(handleCount == 1)
+    await verify(mockHandler, times: 1).handle(.any)
 }
 ```
 

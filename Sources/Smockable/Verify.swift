@@ -85,7 +85,7 @@ public protocol VerifiableSmock {
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, .times(3)).fetchUser(id: .any)
+/// await verify(mock, times: 3).fetchUser(id: .any)
 /// await verify(mock, .never).deleteUser(id: .any)
 /// await verify(mock, .atLeastOnce).initialize()
 /// ```
