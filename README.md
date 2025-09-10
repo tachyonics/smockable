@@ -163,6 +163,8 @@ when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
 
 ### 4. Verify mock interactions
 
+Smockable's verifications integrate with Swift Testing to provide detailed error messages about failures. 
+
 ![Smockable provides detailed error messages in test cases](https://github.com/tachyonics/smockable/blob/main/expectation_example.png?raw=true)
 
 ```swift
