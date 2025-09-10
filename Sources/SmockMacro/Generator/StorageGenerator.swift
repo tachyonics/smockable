@@ -54,7 +54,7 @@ enum StorageGenerator {
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
-                    try FunctionPropertiesGenerator.expectedResponseVariableDeclaration(
+                    try ExpectedResponseGenerator.expectedResponseVariableDeclaration(
                         variablePrefix: variablePrefix,
                         functionDeclaration: functionDeclaration,
                         accessModifier: "",
@@ -134,8 +134,8 @@ enum StorageGenerator {
         )
     }
 
-    static func actorDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> ActorDeclSyntax {
-        try ActorDeclSyntax(
+    static func storageDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
+        try StructDeclSyntax(
             name: "Storage",
             memberBlockBuilder: {
                 try VariableDeclSyntax(
@@ -163,13 +163,30 @@ enum StorageGenerator {
                         """
                     )
                 }
+            }
+        )
+    }
 
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+    static func stateDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> ClassDeclSyntax {
+        try ClassDeclSyntax(
+            name: "State",
+            inheritanceClause: InheritanceClauseSyntax {
+                InheritedTypeSyntax(
+                    type: IdentifierTypeSyntax(name: "@unchecked Sendable")
+                )
+            },
+            memberBlockBuilder: {
+                try VariableDeclSyntax(
+                    """
+                    let mutex: Mutex<Storage>
+                    """
+                )
 
-                    try FunctionImplementationGenerator.storageDeclaration(
-                        variablePrefix: variablePrefix,
-                        protocolFunctionDeclaration: functionDeclaration
+                try InitializerDeclSyntax("init(expectedResponses: consuming ExpectedResponses) {") {
+                    ExprSyntax(
+                        """
+                        self.mutex = Mutex(.init(expectedResponses: expectedResponses))
+                        """
                     )
                 }
             }
@@ -179,7 +196,7 @@ enum StorageGenerator {
     static func variableDeclaration() throws -> VariableDeclSyntax {
         try VariableDeclSyntax(
             """
-            private let storage: Storage
+            private let state: State
             """
         )
     }

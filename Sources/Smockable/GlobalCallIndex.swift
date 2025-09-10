@@ -3,7 +3,7 @@
 //  smockable
 //
 
-import Synchronization
+@_exported import Synchronization
 
 public struct GlobalCallIndex: ~Copyable, Sendable {
     private let value = Atomic<UInt32>(0)

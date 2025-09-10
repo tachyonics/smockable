@@ -85,9 +85,9 @@ public protocol VerifiableSmock {
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, times: 3).fetchUser(id: .any)
-/// await verify(mock, .never).deleteUser(id: .any)
-/// await verify(mock, .atLeastOnce).initialize()
+/// verify(mock, times: 3).fetchUser(id: .any)
+/// verify(mock, .never).deleteUser(id: .any)
+/// verify(mock, .atLeastOnce).initialize()
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,
@@ -104,7 +104,7 @@ public func verify<T: VerifiableSmock>(
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, times: 3)).fetchUser(id: .any)
+/// verify(mock, times: 3)).fetchUser(id: .any)
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,
@@ -121,7 +121,7 @@ public func verify<T: VerifiableSmock>(
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, atLeast: 3)).fetchUser(id: .any)
+/// verify(mock, atLeast: 3)).fetchUser(id: .any)
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,
@@ -138,7 +138,7 @@ public func verify<T: VerifiableSmock>(
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, atMost: 3)).fetchUser(id: .any)
+/// verify(mock, atMost: 3)).fetchUser(id: .any)
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,
@@ -155,7 +155,7 @@ public func verify<T: VerifiableSmock>(
 ///
 /// Example usage:
 /// ```swift
-/// await verify(mock, times: 3...10)).fetchUser(id: .any)
+/// verify(mock, times: 3...10)).fetchUser(id: .any)
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,

@@ -24,7 +24,7 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 - ✅ **Thread-safe** mock implementations with Sendable conformance
 - ✅ **Flexible expectations** supporting multiple calls, unbounded calls, and custom logic
 - ✅ **Protocol inheritance** and associated types support
-- ✅ **Async/await** and throwing function support
+- ✅ **Async/await**, sync and throwing function support
 
 ## Requirements
 
@@ -105,8 +105,8 @@ func userFetching() async throws {
     try await codeUnderTest.updateUser(user)
     
     // Verify behavior
-    await verify(mockService, times: 1).fetchUser(id: .any)
-    await verify(mockService, times: 1).updateUser(.any)
+    verify(mockService, times: 1).fetchUser(id: .any)
+    verify(mockService, times: 1).updateUser(.any)
     
     #expect(user.id == "123")
 }

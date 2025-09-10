@@ -193,9 +193,9 @@ struct AssociatedTypesTests {
         #expect(foundUser?.name == "John Doe")
 
         // Verify call counts
-        await verify(mockRepo, times: 1).save(.any)
-        await verify(mockRepo, times: 1).find(id: .any)
-        await verify(mockRepo, times: 1).delete(id: .any)
+        verify(mockRepo, times: 1).save(.any)
+        verify(mockRepo, times: 1).find(id: .any)
+        verify(mockRepo, times: 1).delete(id: .any)
     }
 
     @Test
@@ -253,8 +253,8 @@ struct AssociatedTypesTests {
         #expect(deserialized.name == "John")
 
         // Verify call counts
-        await verify(mockSerializer, times: 1).serialize(.any)
-        await verify(mockSerializer, times: 1).deserialize(.any)
+        verify(mockSerializer, times: 1).serialize(.any)
+        verify(mockSerializer, times: 1).deserialize(.any)
     }
 
     @Test
@@ -274,7 +274,7 @@ struct AssociatedTypesTests {
 
         try await mockHandler.handle(event)
 
-        await verify(mockHandler, times: 1).handle(.any)
+        verify(mockHandler, times: 1).handle(.any)
     }
 
     // MARK: - Complex Generic Scenarios Tests
@@ -313,9 +313,9 @@ struct AssociatedTypesTests {
         #expect(result.tags == ["test"])
 
         // Verify call counts
-        await verify(mockTransformer, times: 1).validateInput(.any)
-        await verify(mockTransformer, times: 1).createDefaultConfig()
-        await verify(mockTransformer, times: 1).transform(.any, config: .any)
+        verify(mockTransformer, times: 1).validateInput(.any)
+        verify(mockTransformer, times: 1).createDefaultConfig()
+        verify(mockTransformer, times: 1).transform(.any, config: .any)
     }
 
     @Test
@@ -342,9 +342,9 @@ struct AssociatedTypesTests {
         try await mockService.update(id: "123", item: updatedUser)
 
         // Verify all operations
-        await verify(mockService, times: 1).read(id: "100"..."999")
-        await verify(mockService, times: 1).write(id: "400"..."499", item: .any)
-        await verify(mockService, times: 1).update(id: "100"..."199", item: .any)
+        verify(mockService, times: 1).read(id: "100"..."999")
+        verify(mockService, times: 1).write(id: "400"..."499", item: .any)
+        verify(mockService, times: 1).update(id: "100"..."199", item: .any)
     }
 
     // MARK: - Best Practices Tests
@@ -359,7 +359,7 @@ struct AssociatedTypesTests {
         let user = User(id: "123", name: "John")
         try await userRepo.save(user)
 
-        await verify(userRepo, times: 1).save(.any)
+        verify(userRepo, times: 1).save(.any)
 
         // Test with Product type
         var productExpectations = MockRepository<Product>.Expectations()
@@ -369,7 +369,7 @@ struct AssociatedTypesTests {
         let product = Product(id: "456", name: "Widget")
         try await productRepo.save(product)
 
-        await verify(productRepo, times: 1).save(.any)
+        verify(productRepo, times: 1).save(.any)
     }
 
     @Test
@@ -387,8 +387,8 @@ struct AssociatedTypesTests {
 
         #expect(retrievedUser?.name == "John")
 
-        await verify(mockCache, times: 1).store(key: "user_100"..."user_999", value: .any)
-        await verify(mockCache, times: 1).retrieve(key: "user_100"..."user_999")
+        verify(mockCache, times: 1).store(key: "user_100"..."user_999", value: .any)
+        verify(mockCache, times: 1).retrieve(key: "user_100"..."user_999")
     }
 
     @Test
@@ -406,8 +406,8 @@ struct AssociatedTypesTests {
 
         try await mockSerializable.deserialize(userData)
 
-        await verify(mockSerializable, times: 1).serialize()
-        await verify(mockSerializable, times: 1).deserialize(.any)
+        verify(mockSerializable, times: 1).serialize()
+        verify(mockSerializable, times: 1).deserialize(.any)
     }
 
     @Test
@@ -421,6 +421,6 @@ struct AssociatedTypesTests {
         let result = try await mockProcessor.process("test")
         #expect(result == 42)
 
-        await verify(mockProcessor, times: 1).process(.any)
+        verify(mockProcessor, times: 1).process(.any)
     }
 }

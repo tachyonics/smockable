@@ -274,7 +274,8 @@ when(expectations.getCurrentTemperature(for: .any), times: .unbounded) { city in
 }
 ```
 
-Instead you will need to serial access to any state you want to use within your mock-
+Instead you will need to serial access to any state you want to use within your mock. If the mocked functions are async,
+one option is to use actor-
 
 ```swift
 actor LastCity {

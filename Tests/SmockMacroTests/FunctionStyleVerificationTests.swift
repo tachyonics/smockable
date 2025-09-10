@@ -27,13 +27,13 @@ struct FunctionStyleVerificationTests {
         _ = try await mock.fetchUser(id: "789")
 
         // Verify - should pass
-        await verify(mock, times: 3).fetchUser(id: .any)
+        verify(mock, times: 3).fetchUser(id: .any)
 
         // Verify with specific parameter - should pass
-        await verify(mock, times: 1).fetchUser(id: "123")
+        verify(mock, times: 1).fetchUser(id: "123")
 
         // Verify with non-matching parameter - should pass (0 times)
-        await verify(mock, times: 0).fetchUser(id: "nonexistent")
+        verify(mock, times: 0).fetchUser(id: "nonexistent")
     }
 
     @Test
@@ -50,9 +50,9 @@ struct FunctionStyleVerificationTests {
         _ = try await mock.fetchUser(id: "789")
 
         // Verify - should pass
-        await verify(mock, atLeast: 1).fetchUser(id: .any)
-        await verify(mock, atLeast: 3).fetchUser(id: .any)
-        await verify(mock, atLeast: 1).fetchUser(id: "123")
+        verify(mock, atLeast: 1).fetchUser(id: .any)
+        verify(mock, atLeast: 3).fetchUser(id: .any)
+        verify(mock, atLeast: 1).fetchUser(id: "123")
     }
 
     @Test
@@ -68,9 +68,9 @@ struct FunctionStyleVerificationTests {
         _ = try await mock.fetchUser(id: "456")
 
         // Verify - should pass
-        await verify(mock, atMost: 5).fetchUser(id: .any)
-        await verify(mock, atMost: 2).fetchUser(id: .any)
-        await verify(mock, atMost: 1).fetchUser(id: "123")
+        verify(mock, atMost: 5).fetchUser(id: .any)
+        verify(mock, atMost: 2).fetchUser(id: .any)
+        verify(mock, atMost: 1).fetchUser(id: "123")
     }
 
     @Test
@@ -85,8 +85,8 @@ struct FunctionStyleVerificationTests {
         _ = try await mock.fetchUser(id: "123")
 
         // Verify - should pass
-        await verify(mock, .never).fetchUser(id: "nonexistent")
-        await verify(mock, .never).deleteUser(id: .any)
+        verify(mock, .never).fetchUser(id: "nonexistent")
+        verify(mock, .never).deleteUser(id: .any)
     }
 
     @Test
@@ -103,9 +103,9 @@ struct FunctionStyleVerificationTests {
         await mock.initialize()
 
         // Verify - should pass
-        await verify(mock, .atLeastOnce).fetchUser(id: .any)
-        await verify(mock, .atLeastOnce).fetchUser(id: "123")
-        await verify(mock, .atLeastOnce).initialize()
+        verify(mock, .atLeastOnce).fetchUser(id: .any)
+        verify(mock, .atLeastOnce).fetchUser(id: "123")
+        verify(mock, .atLeastOnce).initialize()
     }
 
     @Test
@@ -122,9 +122,9 @@ struct FunctionStyleVerificationTests {
         _ = try await mock.fetchUser(id: "789")
 
         // Verify - should pass
-        await verify(mock, times: 1...5).fetchUser(id: .any)
-        await verify(mock, times: 3...3).fetchUser(id: .any)
-        await verify(mock, times: 0...1).fetchUser(id: "123")
+        verify(mock, times: 1...5).fetchUser(id: .any)
+        verify(mock, times: 3...3).fetchUser(id: .any)
+        verify(mock, times: 0...1).fetchUser(id: "123")
     }
 
     @Test
@@ -140,11 +140,11 @@ struct FunctionStyleVerificationTests {
         await mock.initialize()
 
         // Verify - should pass
-        await verify(mock, times: 2).initialize()
-        await verify(mock, atLeast: 1).initialize()
-        await verify(mock, atMost: 5).initialize()
-        await verify(mock, .atLeastOnce).initialize()
-        await verify(mock, times: 2...2).initialize()
+        verify(mock, times: 2).initialize()
+        verify(mock, atLeast: 1).initialize()
+        verify(mock, atMost: 5).initialize()
+        verify(mock, .atLeastOnce).initialize()
+        verify(mock, times: 2...2).initialize()
     }
 
     @Test
@@ -161,11 +161,11 @@ struct FunctionStyleVerificationTests {
         _ = await mock.processData(input: "test1", count: 3)
 
         // Verify - should pass
-        await verify(mock, times: 3).processData(input: .any, count: .any)
-        await verify(mock, times: 2).processData(input: "test1", count: .any)
-        await verify(mock, times: 1).processData(input: .any, count: 2)
-        await verify(mock, times: 1).processData(input: "test1", count: 1)
-        await verify(mock, .never).processData(input: "nonexistent", count: .any)
+        verify(mock, times: 3).processData(input: .any, count: .any)
+        verify(mock, times: 2).processData(input: "test1", count: .any)
+        verify(mock, times: 1).processData(input: .any, count: 2)
+        verify(mock, times: 1).processData(input: "test1", count: 1)
+        verify(mock, .never).processData(input: "nonexistent", count: .any)
     }
 
     @Test
@@ -182,8 +182,8 @@ struct FunctionStyleVerificationTests {
         _ = await mock.processData(input: "cherry", count: 15)
 
         // Verify with range matchers - should pass
-        await verify(mock, times: 3).processData(input: "a"..."z", count: 1...20)
-        await verify(mock, times: 2).processData(input: "a"..."c", count: .any)
-        await verify(mock, times: 2).processData(input: .any, count: 10...15)
+        verify(mock, times: 3).processData(input: "a"..."z", count: 1...20)
+        verify(mock, times: 2).processData(input: "a"..."c", count: .any)
+        verify(mock, times: 2).processData(input: .any, count: 10...15)
     }
 }

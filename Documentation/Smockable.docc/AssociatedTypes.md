@@ -275,7 +275,7 @@ func testUserEventHandler() async throws {
     
     try await mockHandler.handle(event)
     
-    await verify(mockHandler, times: 1).handle(.any)
+    verify(mockHandler, times: 1).handle(.any)
 }
 ```
 
