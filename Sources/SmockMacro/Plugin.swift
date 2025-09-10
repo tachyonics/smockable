@@ -6,7 +6,6 @@ import SwiftSyntaxMacros
 struct SmockCompilerPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         SmockMacro.self,
-        StringifyMacro.self,
     ]
 }
 #endif

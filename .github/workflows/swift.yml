@@ -11,7 +11,7 @@ jobs:
     name: Image ${{ matrix.image }}
     strategy:
       matrix:
-        image: ["swift:6.1.2-noble", "swift:6.1.2-jammy", "swift:6.0.3-noble", "swiftlang/swift:nightly-6.2-noble"]
+        image: ["swift:6.1.2-noble", "swift:6.1.2-jammy", "swift:6.0.3-noble"]
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.image }}
