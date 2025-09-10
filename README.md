@@ -112,7 +112,7 @@ func userFetching() async throws {
 }
 ```
 
-### 3. Set Expectations
+### 3. Set more Expectations
 
 ```swift
 // Range-based parameter matching for functions with return values
@@ -161,7 +161,7 @@ when(expectations.fetchUser(id: "A"..."Z"), times: 3, use: myClosure)
 when(expectations.saveData(data: "invalid"), throw: ValidationError.invalidData)
 ```
 
-### 4. Verify mock interactions
+### 4. Verify more mock interactions
 
 Smockable's verifications integrate with Swift Testing to provide detailed error messages about failures. 
 
