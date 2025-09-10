@@ -136,7 +136,7 @@ enum MockGenerator {
                 try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.variableDeclaration()
 
-                try FunctionPropertiesGenerator.verifierStructDeclaration(
+                try VerifierGenerator.verifierStructDeclaration(
                     functionDeclarations: functionDeclarations,
                     isComparableProvider: isComparableProvider
                 )
@@ -145,11 +145,11 @@ enum MockGenerator {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-                    try FunctionPropertiesGenerator.expectationsOptionsClassDeclaration(
+                    try FieldOptionsGenerator.expectationsOptionsClassDeclaration(
                         variablePrefix: variablePrefix,
                         functionSignature: functionDeclaration.signature
                     )
-                    try FunctionPropertiesGenerator.expectedResponseEnumDeclaration(
+                    try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                         variablePrefix: variablePrefix,
                         functionSignature: functionDeclaration.signature
                     )

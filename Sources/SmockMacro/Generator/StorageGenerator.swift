@@ -54,7 +54,7 @@ enum StorageGenerator {
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
-                    try FunctionPropertiesGenerator.expectedResponseVariableDeclaration(
+                    try ExpectedResponseGenerator.expectedResponseVariableDeclaration(
                         variablePrefix: variablePrefix,
                         functionDeclaration: functionDeclaration,
                         accessModifier: "",
