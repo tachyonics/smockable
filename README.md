@@ -186,8 +186,8 @@ verify(mock, times: 2...18).getUserProfile(name: "A"..."Z", age: nil)
 verify(mock, atMost: 2).getUserProfile(name: "A"..."Z", age: 18...65)
 
 // Exact value matching with optionals
-verify(mock, times: 1).getUserProfile(name: "John", age: 25), return: johnProfile)
-verify(mock, atMost: 5).getUserProfile(name: "Jane", age: nil), return: janeProfile)
+verify(mock, times: 1).getUserProfile(name: "John", age: 25)
+verify(mock, atMost: 5).getUserProfile(name: "Jane", age: nil)
 ```
 
 ## Documentation
