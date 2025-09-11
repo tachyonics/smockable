@@ -5,11 +5,12 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate function-style expectation methods for a given function declaration
     static func generateExpectationMethods(
         for functionDeclaration: FunctionDeclSyntax,
+        typePrefix: String,
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
         let parameterList = functionDeclaration.signature.parameterClause.parameters
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-        let expectationClassName = "\(variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions"
+        let expectationClassName = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions"
 
         // If function has no parameters, generate a simple method
         if parameterList.isEmpty {
@@ -27,6 +28,7 @@ enum FunctionStyleExpectationsGenerator {
             functionDeclaration: functionDeclaration,
             parameterList: parameterList,
             expectationClassName: expectationClassName,
+            typePrefix: typePrefix,
             variablePrefix: variablePrefix,
             isComparableProvider: isComparableProvider
         )
@@ -56,6 +58,7 @@ enum FunctionStyleExpectationsGenerator {
         functionDeclaration: FunctionDeclSyntax,
         parameterList: FunctionParameterListSyntax,
         expectationClassName: String,
+        typePrefix: String,
         variablePrefix: String,
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
@@ -73,6 +76,7 @@ enum FunctionStyleExpectationsGenerator {
                 functionDeclaration: functionDeclaration,
                 parameterSequence: parameterSequence,
                 expectationClassName: expectationClassName,
+                typePrefix: typePrefix,
                 variablePrefix: variablePrefix
             )
             methods.append(method)
@@ -86,6 +90,7 @@ enum FunctionStyleExpectationsGenerator {
         functionDeclaration: FunctionDeclSyntax,
         parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
         expectationClassName: String,
+        typePrefix: String,
         variablePrefix: String
     ) throws -> FunctionDeclSyntax {
         var methodParameters: [String] = []
@@ -99,7 +104,7 @@ enum FunctionStyleExpectationsGenerator {
             } else {
                 paramNameForSignature = parameter.firstName.text
             }
-            let paramType = parameter.type.description
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let isOptional = paramType.hasSuffix("?")
 
             switch form {
@@ -130,7 +135,7 @@ enum FunctionStyleExpectationsGenerator {
 
         let methodSignature = methodParameters.joined(separator: ", ")
         let matcherInit = matcherInitializers.joined(separator: ", ")
-        let inputMatcherType = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let inputMatcherType = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
         let functionName = functionDeclaration.name.text
 

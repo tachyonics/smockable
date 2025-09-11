@@ -75,7 +75,7 @@ enum VariablesImplementationGenerator {
     {
         try VariableDeclSyntax(
             """
-            var \(binding.pattern.trimmed)\(binding.typeAnnotation!.trimmed) {
+            public var \(binding.pattern.trimmed)\(binding.typeAnnotation!.trimmed) {
                 get { \(raw: self.underlyingVariableName(binding: binding)) }
                 set { \(raw: self.underlyingVariableName(binding: binding)) = newValue }
             }
@@ -90,7 +90,7 @@ enum VariablesImplementationGenerator {
     {
         try VariableDeclSyntax(
             """
-            var \(raw: self.underlyingVariableName(binding: binding)): (\(binding.typeAnnotation!.type.trimmed))!
+            public var \(raw: self.underlyingVariableName(binding: binding)): (\(binding.typeAnnotation!.type.trimmed))!
             """
         )
     }

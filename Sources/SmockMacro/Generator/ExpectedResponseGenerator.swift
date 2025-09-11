@@ -3,12 +3,13 @@ import SwiftSyntaxBuilder
 
 enum ExpectedResponseGenerator {
     static func expectedResponseEnumDeclaration(
+        typePrefix: String = "",
         variablePrefix: String,
         functionSignature: FunctionSignatureSyntax
     ) throws -> EnumDeclSyntax {
         try EnumDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
-            name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
+            name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {
                 try EnumCaseDeclSyntax(
@@ -43,18 +44,19 @@ enum ExpectedResponseGenerator {
     }
 
     static func expectedResponseVariableDeclaration(
+        typePrefix: String,
         variablePrefix: String,
         functionDeclaration: FunctionDeclSyntax,
         accessModifier: String,
         staticName: Bool
     ) throws -> VariableDeclSyntax {
         let expectedResponseType =
-            "\(variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse"
+            "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse"
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
         let parameterList = functionDeclaration.signature.parameterClause.parameters
         let inputMatcherType =
             parameterList.count > 0
-            ? "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
+            ? "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
 
         return try VariableDeclSyntax(
             """

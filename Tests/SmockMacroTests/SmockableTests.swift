@@ -6,6 +6,7 @@ import Testing
 
 @Smock
 public protocol Service1Protocol {
+    var property: Int { get set }
     func initialize(name: String, secondName: String?) async -> String
 }
 
@@ -38,6 +39,9 @@ struct SmockableTests {
             times: 2,
             return: expectedReturnValue2
         )
+        
+        when(expectations.property.get(), return: 3)
+        when(expectations.property.set(.any), complete: .withSuccess)
 
         // create the mock; no more expectations can be added to the mock
         let mock = MockService1Protocol(expectations: expectations)
@@ -54,6 +58,9 @@ struct SmockableTests {
         verify(mock, times: 1).initialize(name: "Name1", secondName: "SecondName1")
         verify(mock, times: 1).initialize(name: "Name2", secondName: "SecondName2")
         verify(mock, times: 3).initialize(name: "Name3", secondName: "SecondName3")
+        
+        verify(mock, times: 8).property.get()
+        verify(mock, times: 3).property.set(.any)
 
         // verify that the current state of the mock is as expected
         #expect(expectedReturnValue1 == returnValue1)

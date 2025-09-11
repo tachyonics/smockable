@@ -6,12 +6,13 @@ enum InputMatcherGenerator {
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
+        typePrefix: String = "",
         isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
 
-        let structName = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let structName = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let parameters = Array(parameterList)
 
         return try StructDeclSyntax(
@@ -41,7 +42,7 @@ enum InputMatcherGenerator {
         let paramType = parameter.type.description
         let isOptional = paramType.hasSuffix("?")
 
-        let baseType = isOptional ? String(paramType.dropLast()) : paramType
+        let baseType = (isOptional ? String(paramType.dropLast()) : paramType).trimmingCharacters(in: .whitespacesAndNewlines)
         let typePrefix = isComparableProvider(baseType) ? "" : "NonComparable"
 
         if isOptional {

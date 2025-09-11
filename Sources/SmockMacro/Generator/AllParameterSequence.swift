@@ -20,7 +20,7 @@ enum AllParameterSequenceGenerator {
         if let firstParameter = parameters.first {
             let firstParamType = firstParameter.type.description
             let firstIsOptional = firstParamType.hasSuffix("?")
-            let firstBaseType = firstIsOptional ? String(firstParamType.dropLast()) : firstParamType
+            let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType).trimmingCharacters(in: .whitespacesAndNewlines)
             let firstIsComparable = isComparableProvider(firstBaseType)
 
             if parameters.count == 1 {

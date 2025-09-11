@@ -1,19 +1,37 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
 
+struct PropertyDeclaration {
+    let name: String
+    let typePrefix: String
+    let variable: VariableDeclSyntax
+    let getterFunction: FunctionDeclSyntax
+    let setterFunction: FunctionDeclSyntax
+}
+
 enum StorageGenerator {
     static func expectationsDeclaration(
         functionDeclarations: [FunctionDeclSyntax],
+        typePrefix: String = "",
+        propertyDeclarations: [PropertyDeclaration] = [],
         isComparableProvider: (String) -> Bool
     ) throws
         -> StructDeclSyntax
     {
         return try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
-            name: "Expectations",
+            name: "\(raw: typePrefix)Expectations",
             memberBlockBuilder: {
                 try InitializerDeclSyntax("public init() {") {
                     // nothing
+                }
+                
+                for propertyDeclaration in propertyDeclarations {
+                    try VariableDeclSyntax(
+                        """
+                        var \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Expectations = .init()
+                        """
+                    )
                 }
 
                 for functionDeclaration in functionDeclarations {
@@ -21,11 +39,11 @@ enum StorageGenerator {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let inputMatcherType =
                         parameterList.count > 0
-                        ? "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
+                    ? "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
 
                     try VariableDeclSyntax(
                         """
-                        var _\(raw: variablePrefix): [(\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions, \(raw: inputMatcherType))] = []
+                        var _\(raw: variablePrefix): [(\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions, \(raw: inputMatcherType))] = []
                         """
                     )
                 }
@@ -33,6 +51,7 @@ enum StorageGenerator {
                 for functionDeclaration in functionDeclarations {
                     let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
                         for: functionDeclaration,
+                        typePrefix: typePrefix,
                         isComparableProvider: isComparableProvider
                     )
                     for method in methods {
@@ -44,17 +63,28 @@ enum StorageGenerator {
     }
 
     static func expectedResponsesDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
+        functionDeclarations: [FunctionDeclSyntax],
+        propertyDeclarations: [PropertyDeclaration] = [],
+        typePrefix: String = ""
     ) throws
         -> StructDeclSyntax
     {
         try StructDeclSyntax(
-            name: "ExpectedResponses",
+            name: "\(raw: typePrefix)ExpectedResponses",
             memberBlockBuilder: {
+                for propertyDeclaration in propertyDeclarations {
+                    try VariableDeclSyntax(
+                        """
+                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ExpectedResponses
+                        """
+                    )
+                }
+                
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
                     try ExpectedResponseGenerator.expectedResponseVariableDeclaration(
+                        typePrefix: typePrefix,
                         variablePrefix: variablePrefix,
                         functionDeclaration: functionDeclaration,
                         accessModifier: "",
@@ -62,7 +92,14 @@ enum StorageGenerator {
                     )
                 }
 
-                try InitializerDeclSyntax("init(expectations: borrowing Expectations) {") {
+                try InitializerDeclSyntax("init(expectations: \(raw: typePrefix)Expectations) {") {
+                    for propertyDeclaration in propertyDeclarations {
+                        ExprSyntax(
+                            """
+                            self.\(raw: propertyDeclaration.name) = .init(expectations: expectations.\(raw: propertyDeclaration.name))
+                            """
+                        )
+                    }
                     for functionDeclaration in functionDeclarations {
                         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
@@ -83,44 +120,24 @@ enum StorageGenerator {
         )
     }
 
-    static func expectationMatchersDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
-    ) throws
-        -> StructDeclSyntax
-    {
-        try StructDeclSyntax(
-            name: "ExpectationMatchers",
-            inheritanceClause: InheritanceClauseSyntax {
-                InheritedTypeSyntax(type: IdentifierTypeSyntax(name: "Sendable"))
-            },
-            memberBlockBuilder: {
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-                    let parameterList = functionDeclaration.signature.parameterClause.parameters
-
-                    // Only generate matcher storage for functions with parameters
-                    if !parameterList.isEmpty {
-                        let inputMatcherType =
-                            "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
-                        try VariableDeclSyntax(
-                            """
-                            var \(raw: variablePrefix): [\(raw: inputMatcherType)] = []
-                            """
-                        )
-                    }
-                }
-            }
-        )
-    }
-
     static func receivedInvocationsDeclaration(
-        functionDeclarations: [FunctionDeclSyntax]
+        functionDeclarations: [FunctionDeclSyntax],
+        propertyDeclarations: [PropertyDeclaration] = [],
+        typePrefix: String = ""
     ) throws
         -> StructDeclSyntax
     {
         try StructDeclSyntax(
-            name: "ReceivedInvocations",
+            name: "\(raw: typePrefix)ReceivedInvocations",
             memberBlockBuilder: {
+                for propertyDeclaration in propertyDeclarations {
+                    try VariableDeclSyntax(
+                        """
+                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ReceivedInvocations = .init()
+                        """
+                    )
+                }
+                
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters

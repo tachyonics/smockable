@@ -4,11 +4,14 @@ import SwiftSyntaxBuilder
 enum VerifierGenerator {
     static func verifierStructDeclaration(
         functionDeclarations: [FunctionDeclSyntax],
+        propertyDeclarations: [PropertyDeclaration] = [],
+        typePrefix: String = "",
+        storagePrefix: String = "",
         isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax {
         try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
-            name: "Verifier",
+            name: "\(raw: typePrefix)Verifier",
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
@@ -27,6 +30,14 @@ enum VerifierGenerator {
                     private let sourceLocation: SourceLocation
                     """
                 )
+                
+                for propertyDeclaration in propertyDeclarations {
+                    try VariableDeclSyntax(
+                        """
+                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Verifier
+                        """
+                    )
+                }
 
                 try InitializerDeclSyntax(
                     "init(state: State, mode: VerificationMode, sourceLocation: SourceLocation) {"
@@ -34,6 +45,10 @@ enum VerifierGenerator {
                     ExprSyntax("self.state = state")
                     ExprSyntax("self.mode = mode")
                     ExprSyntax("self.sourceLocation = sourceLocation")
+                    
+                    for propertyDeclaration in propertyDeclarations {
+                        ExprSyntax("self.\(raw: propertyDeclaration.name) = .init(state: state, mode: mode, sourceLocation: sourceLocation)")
+                    }
                 }
 
                 // Generate verifier methods for each function
@@ -55,13 +70,13 @@ enum VerifierGenerator {
                             """
                             public func \(raw: functionName)() {
                                 let matchingCount = self.state.mutex.withLock { storage in
-                                    return storage.receivedInvocations.\(raw: variablePrefix)
+                                    return storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)
                                 }.count
                                 
                                 VerificationHelper.performVerification(
                                     mode: mode,
                                     matchingCount: matchingCount,
-                                    functionName: "\(raw: functionSignature)",
+                                    functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
                                     sourceLocation: self.sourceLocation
                                 )
                             }
@@ -72,7 +87,9 @@ enum VerifierGenerator {
                         for parameterSequence in allParameterSequences {
                             try generateMethodForCombination(
                                 functionDeclaration: functionDeclaration,
-                                parameterSequence: parameterSequence
+                                parameterSequence: parameterSequence,
+                                typePrefix: typePrefix,
+                                storagePrefix: storagePrefix
                             )
                         }
                     }
@@ -153,13 +170,13 @@ enum VerifierGenerator {
         return (methodParameters, methodInterpolationParameters, matcherInitializers)
     }
 
-    private static func getWithLockCall(variablePrefix: String) -> FunctionCallExprSyntax {
+    private static func getWithLockCall(variablePrefix: String, storagePrefix: String) -> FunctionCallExprSyntax {
         let lockProtectedStatements = CodeBlockItemListSyntax([
             CodeBlockItemSyntax(
                 item: .stmt(
                     StmtSyntax(
                         ReturnStmtSyntax(
-                            expression: ExprSyntax("storage.receivedInvocations.\(raw: variablePrefix)")
+                            expression: ExprSyntax("storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)")
                         )
                     )
                 )
@@ -191,7 +208,9 @@ enum VerifierGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)]
+        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        typePrefix: String,
+        storagePrefix: String,
     ) throws -> FunctionDeclSyntax {
         let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
             if case .explicitMatcher = entry.2 {
@@ -218,7 +237,7 @@ enum VerifierGenerator {
         )
 
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-        let inputMatcherType = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let inputMatcherType = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let functionName = functionDeclaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
@@ -241,7 +260,7 @@ enum VerifierGenerator {
                         pattern: IdentifierPatternSyntax(identifier: .identifier("invocations")),
                         initializer: InitializerClauseSyntax(
                             equal: .equalToken(),
-                            value: ExprSyntax(getWithLockCall(variablePrefix: variablePrefix))
+                            value: ExprSyntax(getWithLockCall(variablePrefix: variablePrefix, storagePrefix: storagePrefix))
                         )
                     )
                 ])
@@ -266,7 +285,7 @@ enum VerifierGenerator {
                 VerificationHelper.performVerification(
                     mode: mode,
                     matchingCount: matchingCount,
-                    functionName: "\(raw: functionInterpolationSignature)",
+                    functionName: "\(raw: storagePrefix)\(raw: functionInterpolationSignature)",
                     sourceLocation: self.sourceLocation
                 )
                 """
