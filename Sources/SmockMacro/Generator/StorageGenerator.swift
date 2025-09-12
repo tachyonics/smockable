@@ -1,14 +1,6 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
 
-struct PropertyDeclaration {
-    let name: String
-    let typePrefix: String
-    let variable: VariableDeclSyntax
-    let getterFunction: FunctionDeclSyntax
-    let setterFunction: FunctionDeclSyntax
-}
-
 enum StorageGenerator {
     static func expectationsDeclaration(
         functionDeclarations: [FunctionDeclSyntax],
@@ -25,7 +17,7 @@ enum StorageGenerator {
                 try InitializerDeclSyntax("public init() {") {
                     // nothing
                 }
-                
+
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
@@ -39,7 +31,8 @@ enum StorageGenerator {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let inputMatcherType =
                         parameterList.count > 0
-                    ? "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher" : "AlwaysMatcher"
+                        ? "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+                        : "AlwaysMatcher"
 
                     try VariableDeclSyntax(
                         """
@@ -75,11 +68,11 @@ enum StorageGenerator {
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
-                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ExpectedResponses
+                        var \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ExpectedResponses
                         """
                     )
                 }
-                
+
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
 
@@ -133,11 +126,11 @@ enum StorageGenerator {
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
-                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ReceivedInvocations = .init()
+                        var \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)ReceivedInvocations = .init()
                         """
                     )
                 }
-                
+
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters

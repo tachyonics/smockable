@@ -30,7 +30,7 @@ enum VerifierGenerator {
                     private let sourceLocation: SourceLocation
                     """
                 )
-                
+
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
@@ -45,57 +45,74 @@ enum VerifierGenerator {
                     ExprSyntax("self.state = state")
                     ExprSyntax("self.mode = mode")
                     ExprSyntax("self.sourceLocation = sourceLocation")
-                    
+
                     for propertyDeclaration in propertyDeclarations {
-                        ExprSyntax("self.\(raw: propertyDeclaration.name) = .init(state: state, mode: mode, sourceLocation: sourceLocation)")
-                    }
-                }
-
-                // Generate verifier methods for each function
-                for functionDeclaration in functionDeclarations {
-                    let parameterList = functionDeclaration.signature.parameterClause.parameters
-                    let parameters = Array(parameterList)
-                    let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
-                        parameters: parameters[...],
-                        isComparableProvider: isComparableProvider
-                    )
-
-                    if parameters.isEmpty {
-                        let functionName = functionDeclaration.name.text
-                        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-                        let functionSignature = "\(functionName)()"
-
-                        // Function with no parameters
-                        try FunctionDeclSyntax(
-                            """
-                            public func \(raw: functionName)() {
-                                let matchingCount = self.state.mutex.withLock { storage in
-                                    return storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)
-                                }.count
-                                
-                                VerificationHelper.performVerification(
-                                    mode: mode,
-                                    matchingCount: matchingCount,
-                                    functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
-                                    sourceLocation: self.sourceLocation
-                                )
-                            }
-                            """
+                        ExprSyntax(
+                            "self.\(raw: propertyDeclaration.name) = .init(state: state, mode: mode, sourceLocation: sourceLocation)"
                         )
-                    } else {
-                        // Generate all combinations where each parameter can be either explicit matcher or range
-                        for parameterSequence in allParameterSequences {
-                            try generateMethodForCombination(
-                                functionDeclaration: functionDeclaration,
-                                parameterSequence: parameterSequence,
-                                typePrefix: typePrefix,
-                                storagePrefix: storagePrefix
-                            )
-                        }
                     }
                 }
+
+                try verifierFunctions(
+                    functionDeclarations: functionDeclarations,
+                    typePrefix: typePrefix,
+                    storagePrefix: storagePrefix,
+                    isComparableProvider: isComparableProvider
+                )
             }
         )
+    }
+
+    @MemberBlockItemListBuilder
+    private static func verifierFunctions(
+        functionDeclarations: [FunctionDeclSyntax],
+        typePrefix: String,
+        storagePrefix: String,
+        isComparableProvider: (String) -> Bool
+    ) throws -> MemberBlockItemListSyntax {
+        // Generate verifier methods for each function
+        for functionDeclaration in functionDeclarations {
+            let parameterList = functionDeclaration.signature.parameterClause.parameters
+            let parameters = Array(parameterList)
+            let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
+                parameters: parameters[...],
+                isComparableProvider: isComparableProvider
+            )
+
+            if parameters.isEmpty {
+                let functionName = functionDeclaration.name.text
+                let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                let functionSignature = "\(functionName)()"
+
+                // Function with no parameters
+                try FunctionDeclSyntax(
+                    """
+                    public func \(raw: functionName)() {
+                        let matchingCount = self.state.mutex.withLock { storage in
+                            return storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)
+                        }.count
+                        
+                        VerificationHelper.performVerification(
+                            mode: mode,
+                            matchingCount: matchingCount,
+                            functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
+                            sourceLocation: self.sourceLocation
+                        )
+                    }
+                    """
+                )
+            } else {
+                // Generate all combinations where each parameter can be either explicit matcher or range
+                for parameterSequence in allParameterSequences {
+                    try generateMethodForCombination(
+                        functionDeclaration: functionDeclaration,
+                        parameterSequence: parameterSequence,
+                        typePrefix: typePrefix,
+                        storagePrefix: storagePrefix
+                    )
+                }
+            }
+        }
     }
 
     private static func getParameters(
@@ -176,7 +193,9 @@ enum VerifierGenerator {
                 item: .stmt(
                     StmtSyntax(
                         ReturnStmtSyntax(
-                            expression: ExprSyntax("storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)")
+                            expression: ExprSyntax(
+                                "storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)"
+                            )
                         )
                     )
                 )
@@ -260,7 +279,9 @@ enum VerifierGenerator {
                         pattern: IdentifierPatternSyntax(identifier: .identifier("invocations")),
                         initializer: InitializerClauseSyntax(
                             equal: .equalToken(),
-                            value: ExprSyntax(getWithLockCall(variablePrefix: variablePrefix, storagePrefix: storagePrefix))
+                            value: ExprSyntax(
+                                getWithLockCall(variablePrefix: variablePrefix, storagePrefix: storagePrefix)
+                            )
                         )
                     )
                 ])

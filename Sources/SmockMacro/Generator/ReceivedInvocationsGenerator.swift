@@ -87,6 +87,7 @@ enum ReceivedInvocationsGenerator {
 
     static func appendValueToVariableExpression(
         variablePrefix: String,
+        storagePrefix: String,
         parameterList: FunctionParameterListSyntax
     ) -> ExprSyntax {
         let identifier = self.variableIdentifier()
@@ -94,7 +95,7 @@ enum ReceivedInvocationsGenerator {
 
         return ExprSyntax(
             """
-            storage.\(identifier).\(raw: variablePrefix).append(\(argument))
+            storage.\(identifier).\(raw: storagePrefix)\(raw: variablePrefix).append(\(argument))
             """
         )
     }

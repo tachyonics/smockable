@@ -42,7 +42,9 @@ enum InputMatcherGenerator {
         let paramType = parameter.type.description
         let isOptional = paramType.hasSuffix("?")
 
-        let baseType = (isOptional ? String(paramType.dropLast()) : paramType).trimmingCharacters(in: .whitespacesAndNewlines)
+        let baseType = (isOptional ? String(paramType.dropLast()) : paramType).trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
         let typePrefix = isComparableProvider(baseType) ? "" : "NonComparable"
 
         if isOptional {
