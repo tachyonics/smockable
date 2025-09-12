@@ -203,6 +203,22 @@ func testMultipleInheritanceWorkaround() async throws {
 }
 ```
 
+## Limitation 4: Static Function and Property Restrictions
+
+### Static Properties Not Supported
+
+Smockable does not support static functions or properties. Only instance functions and properties can be mocked.
+
+```swift
+@Smock
+protocol ConfigService {
+    var instanceProperty: String { get set }  // ✅ Supported
+    func instanceFunction()  // ✅ Supported
+    static var staticProperty: String { get } // ❌ Not supported
+    static func staticFunction()  // ❌ Not supported
+}
+```
+
 ## Next Steps
 
 - Learn about <doc:AssociatedTypes> for generic protocol support

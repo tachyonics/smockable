@@ -15,6 +15,11 @@ import Smockable
 protocol WeatherService {
     func getCurrentTemperature(for city: String) async throws -> Double
     func getForecast(for city: String, days: Int) async throws -> [WeatherDay]
+    
+    // Properties
+    var apiKey: String { get set }
+    var isOnline: Bool { get }
+    var lastUpdateTime: Date { get async throws }
 }
 
 enum WeatherError: Error {
@@ -45,17 +50,29 @@ import Smockable
         // Or use exact value matching for specific cities
         when(expectations.getCurrentTemperature(for: "London"), return: 15.0)
         
-        // 3. Create the mock
+        // 3. Configure property expectations
+        when(expectations.apiKey.get(), return: "test-api-key")
+        when(expectations.apiKey.set(to: .any), complete: .withSuccess)
+        when(expectations.isOnline.get(), return: true)
+        when(expectations.lastUpdateTime.get(), return: Date())
+        
+        // 4. Create the mock
         let mockWeatherService = MockWeatherService(expectations: expectations)
         
-        // 4. Use the mock in your code
+        // 5. Use the mock in your code
         let temperature = try await mockWeatherService.getCurrentTemperature(for: "London")
+        let apiKey = mockWeatherService.apiKey
+        let isOnline = mockWeatherService.isOnline
         
-        // 5. Verify the result
+        // 6. Verify the result
         #expect(temperature == 22.5)
+        #expect(apiKey == "test-api-key")
+        #expect(isOnline == true)
         
-        // 6. Verify the mock was called correctly
+        // 7. Verify the mock was called correctly
         verify(mockWeatherService, times: 1).getCurrentTemperature(for: "London")
+        verify(mockWeatherService, times: 1).apiKey.get()
+        verify(mockWeatherService, times: 1).isOnline.get()
 }
 ```
 
@@ -79,11 +96,19 @@ Building on our previous example, you can also set expectations that are errors,
     var expectations = MockWeatherService.Expectations()
     when(expectations.getCurrentTemperature(for: .any), throw: WeatherError.serviceUnavailable)
     
+    // Configure property to throw an error (only read-only properties can throw)
+    when(expectations.lastUpdateTime.get(), throw: WeatherError.serviceUnavailable)
+    
     let mockWeatherService = MockWeatherService(expectations: expectations)
     
-    // Verify error is thrown
+    // Verify error is thrown for function
     await #expect(throws: WeatherError.self) {
         try await mockWeatherService.getCurrentTemperature(for: "London")
+    }
+    
+    // Verify error is thrown for property
+    await #expect(throws: WeatherError.self) {
+        try await mockWeatherService.lastUpdateTime
     }
 }
 ```
