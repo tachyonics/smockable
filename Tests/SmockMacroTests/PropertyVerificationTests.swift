@@ -291,7 +291,7 @@ struct PropertyVerificationTests {
         try #require(throws: NSError.self) {
             _ = try mock.throwingName  // Throws
         }
-        
+
         // Verify - should pass (both successful and failed calls are counted)
         verify(mock, times: 2).throwingName.get()
     }
