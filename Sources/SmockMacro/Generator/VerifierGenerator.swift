@@ -116,7 +116,10 @@ enum VerifierGenerator {
     }
 
     private static func getParameters(
-        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(
+            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
+            AllParameterSequenceGenerator.ParameterForm
+        )],
         allParametersAreMatchers: Bool
     )
         -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
@@ -181,7 +184,9 @@ enum VerifierGenerator {
                     genericPostfix = ""
                 }
                 if isOptional {
-                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)")
+                    methodParameters.append(
+                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)"
+                    )
                     matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
                 } else {
                     methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
@@ -236,7 +241,10 @@ enum VerifierGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(
+            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
+            AllParameterSequenceGenerator.ParameterForm
+        )],
         typePrefix: String,
         storagePrefix: String,
     ) throws -> FunctionDeclSyntax {

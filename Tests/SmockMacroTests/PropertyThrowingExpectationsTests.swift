@@ -56,7 +56,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingOptionalValue.get(), return: "throwing optional value")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let value = try mock.throwingOptionalValue
         #expect(value == "throwing optional value")
     }
@@ -67,7 +67,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingOptionalValue.get(), return: nil)
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let value = try mock.throwingOptionalValue
         #expect(value == nil)
     }
@@ -78,7 +78,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), throw: PropertyError.getterFailed)
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         #expect(throws: PropertyError.getterFailed) {
             _ = try mock.throwingName
         }
@@ -92,11 +92,11 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), return: "third throwing")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let first = try mock.throwingName
         let second = try mock.throwingName
         let third = try mock.throwingName
-        
+
         #expect(first == "first throwing")
         #expect(second == "second throwing")
         #expect(third == "third throwing")
@@ -108,15 +108,15 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), times: 3, return: "repeated throwing value")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let first = try mock.throwingName
         let second = try mock.throwingName
         let third = try mock.throwingName
-        
+
         #expect(first == "repeated throwing value")
         #expect(second == "repeated throwing value")
         #expect(third == "repeated throwing value")
-        
+
         verify(mock, times: 3).throwingName.get()
     }
 
@@ -128,10 +128,10 @@ struct PropertyThrowingExpectationsTests {
         }
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let first = try mock.throwingName
         let second = try mock.throwingName
-        
+
         #expect(first == "dynamic throwing value")
         #expect(second == "dynamic throwing value")
     }
@@ -144,11 +144,11 @@ struct PropertyThrowingExpectationsTests {
         }
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         #expect(throws: PropertyError.networkError) {
             _ = try mock.throwingName
         }
-        
+
         #expect(throws: PropertyError.networkError) {
             _ = try mock.throwingName
         }
@@ -160,7 +160,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingIsActive.get(), return: true)
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let isActive = try mock.throwingIsActive
         #expect(isActive == true)
     }
@@ -172,7 +172,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingConfiguration.get(), return: testConfig)
 
         let mock = MockTestThrowingComplexPropertyService(expectations: expectations)
-        
+
         let config = try mock.throwingConfiguration
         #expect(config["key1"] as? String == "value1")
         #expect(config["key2"] as? String == "value2")
@@ -184,7 +184,7 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingNumbers.get(), return: [1, 2, 3])
 
         let mock = MockTestThrowingComplexPropertyService(expectations: expectations)
-        
+
         let numbers = try mock.throwingNumbers
         #expect(numbers == [1, 2, 3])
     }
@@ -198,17 +198,17 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingOptionalValue.get(), return: "throwing optional")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         let name = try mock.throwingName
         let count = try mock.throwingCount
         let isActive = try mock.throwingIsActive
         let optional = try mock.throwingOptionalValue
-        
+
         #expect(name == "throwing string value")
         #expect(count == 100)
         #expect(isActive == false)
         #expect(optional == "throwing optional")
-        
+
         verify(mock, times: 1).throwingName.get()
         verify(mock, times: 1).throwingCount.get()
         verify(mock, times: 1).throwingIsActive.get()
@@ -223,16 +223,16 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), return: "success again")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         // First call succeeds
         let first = try mock.throwingName
         #expect(first == "success")
-        
+
         // Second call throws
         #expect(throws: PropertyError.getterFailed) {
             _ = try mock.throwingName
         }
-        
+
         // Third call succeeds
         let third = try mock.throwingName
         #expect(third == "success again")
@@ -246,15 +246,15 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), throw: PropertyError.invalidValue)
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         #expect(throws: PropertyError.getterFailed) {
             _ = try mock.throwingName
         }
-        
+
         #expect(throws: NSError.self) {
             _ = try mock.throwingName
         }
-        
+
         #expect(throws: PropertyError.invalidValue) {
             _ = try mock.throwingName
         }
@@ -266,16 +266,16 @@ struct PropertyThrowingExpectationsTests {
         when(expectations.throwingName.get(), times: .unbounded, return: "unbounded throwing")
 
         let mock = MockTestThrowingPropertyService(expectations: expectations)
-        
+
         // Multiple gets
         let value1 = try mock.throwingName
         let value2 = try mock.throwingName
         let value3 = try mock.throwingName
-        
+
         #expect(value1 == "unbounded throwing")
         #expect(value2 == "unbounded throwing")
         #expect(value3 == "unbounded throwing")
-        
+
         verify(mock, times: 3).throwingName.get()
     }
 }

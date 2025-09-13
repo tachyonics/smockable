@@ -312,8 +312,6 @@ struct PropertyVerificationTests {
         verify(mock, times: 3).asyncThrowingName.get()
     }
 
-
-
     @Test
     func testVerifyAsyncThrowingPropertyWithErrors() async {
         var expectations = MockTestAsyncThrowingPropertyVerificationService.Expectations()

@@ -88,7 +88,10 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(
+            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
+            AllParameterSequenceGenerator.ParameterForm
+        )],
         expectationClassName: String,
         typePrefix: String,
         variablePrefix: String
@@ -130,7 +133,9 @@ enum FunctionStyleExpectationsGenerator {
                     genericPostfix = ""
                 }
                 if isOptional {
-                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)")
+                    methodParameters.append(
+                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)"
+                    )
                     matcherInitializers.append("\(paramName): \(paramName)")
                 } else {
                     methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")

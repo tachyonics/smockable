@@ -101,11 +101,21 @@ enum MockGenerator {
 
         let getter =
             hasGetter
-        ? try getPropertyFunction(propertyFunctionType: .get, propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
+            ? try getPropertyFunction(
+                propertyFunctionType: .get,
+                propertyType: propertyType,
+                isAsync: isAsync,
+                isThrowing: isThrowing
+            )
             : nil
         let setter =
             hasSetter
-        ? try getPropertyFunction(propertyFunctionType: .set, propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
+            ? try getPropertyFunction(
+                propertyFunctionType: .set,
+                propertyType: propertyType,
+                isAsync: isAsync,
+                isThrowing: isThrowing
+            )
             : nil
 
         let typePrefix = "\(propertyName.capitalizingComponentsFirstLetter())_"
@@ -147,7 +157,7 @@ enum MockGenerator {
             set: set
         )
     }
-    
+
     enum PropertyFunctionType {
         case get
         case set
@@ -160,7 +170,7 @@ enum MockGenerator {
         isThrowing: Bool
     ) throws -> FunctionDeclSyntax {
         var signature = "func "
-        
+
         switch propertyFunctionType {
         case .get:
             signature += "get()"

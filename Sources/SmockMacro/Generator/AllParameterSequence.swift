@@ -12,7 +12,7 @@ enum AllParameterSequenceGenerator {
         case range
         case exact
     }
-    
+
     enum ParameterType {
         case comparable
         case notComparable
@@ -54,10 +54,15 @@ enum AllParameterSequenceGenerator {
             return dropFirstParameterSequences.flatMap { partialParameterSequence in
                 if !firstIsComparable {
                     // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence]
+                    return [
+                        [(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence
+                    ]
                 } else if firstBaseType == "Bool" {
-                    return [[(firstParameter, ParameterType.bool, ParameterForm.explicitMatcher)] + partialParameterSequence,
-                            [(firstParameter, ParameterType.bool, ParameterForm.exact)] + partialParameterSequence]
+                    return [
+                        [(firstParameter, ParameterType.bool, ParameterForm.explicitMatcher)]
+                            + partialParameterSequence,
+                        [(firstParameter, ParameterType.bool, ParameterForm.exact)] + partialParameterSequence,
+                    ]
                 } else {
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in

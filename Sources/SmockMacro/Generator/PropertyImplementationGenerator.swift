@@ -29,12 +29,12 @@ enum PropertyImplementationGenerator {
             //if binding.typeAnnotation?.type.is(OptionalTypeSyntax.self) == true {
             //    let accessorRemovalVisitor = AccessorRemovalVisitor()
 
-             //   accessorRemovalVisitor.visit(propertyDeclaration.variable)
+            //   accessorRemovalVisitor.visit(propertyDeclaration.variable)
             //} else {
-                try self.propertyDeclarationWithGetterAndSetter(
-                    binding: binding,
-                    propertyDeclaration: propertyDeclaration
-                )
+            try self.propertyDeclarationWithGetterAndSetter(
+                binding: binding,
+                propertyDeclaration: propertyDeclaration
+            )
             //}
         } else {
             // As far as I know variable declaration in a protocol should have exactly one binding.

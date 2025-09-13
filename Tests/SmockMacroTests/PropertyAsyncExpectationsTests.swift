@@ -49,7 +49,7 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncOptionalValue.get(), return: "async optional value")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let value = await mock.asyncOptionalValue
         #expect(value == "async optional value")
     }
@@ -60,7 +60,7 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncOptionalValue.get(), return: nil)
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let value = await mock.asyncOptionalValue
         #expect(value == nil)
     }
@@ -73,11 +73,11 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncName.get(), return: "third async")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let first = await mock.asyncName
         let second = await mock.asyncName
         let third = await mock.asyncName
-        
+
         #expect(first == "first async")
         #expect(second == "second async")
         #expect(third == "third async")
@@ -89,15 +89,15 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncName.get(), times: 3, return: "repeated async value")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let first = await mock.asyncName
         let second = await mock.asyncName
         let third = await mock.asyncName
-        
+
         #expect(first == "repeated async value")
         #expect(second == "repeated async value")
         #expect(third == "repeated async value")
-        
+
         verify(mock, times: 3).asyncName.get()
     }
 
@@ -109,10 +109,10 @@ struct PropertyAsyncExpectationsTests {
         }
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let first = await mock.asyncName
         let second = await mock.asyncName
-        
+
         #expect(first == "dynamic async value")
         #expect(second == "dynamic async value")
     }
@@ -123,7 +123,7 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncIsActive.get(), return: true)
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let isActive = await mock.asyncIsActive
         #expect(isActive == true)
     }
@@ -135,7 +135,7 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncConfiguration.get(), return: testConfig)
 
         let mock = MockTestAsyncComplexPropertyService(expectations: expectations)
-        
+
         let config = await mock.asyncConfiguration
         #expect(config["key1"] as? String == "value1")
         #expect(config["key2"] as? String == "value2")
@@ -147,7 +147,7 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncNumbers.get(), return: [1, 2, 3])
 
         let mock = MockTestAsyncComplexPropertyService(expectations: expectations)
-        
+
         let numbers = await mock.asyncNumbers
         #expect(numbers == [1, 2, 3])
     }
@@ -161,17 +161,17 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncOptionalValue.get(), return: "async optional")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         let name = await mock.asyncName
         let count = await mock.asyncCount
         let isActive = await mock.asyncIsActive
         let optional = await mock.asyncOptionalValue
-        
+
         #expect(name == "async string value")
         #expect(count == 100)
         #expect(isActive == false)
         #expect(optional == "async optional")
-        
+
         verify(mock, times: 1).asyncName.get()
         verify(mock, times: 1).asyncCount.get()
         verify(mock, times: 1).asyncIsActive.get()
@@ -184,16 +184,16 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncName.get(), times: .unbounded, return: "unbounded async")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         // Multiple gets
         let value1 = await mock.asyncName
         let value2 = await mock.asyncName
         let value3 = await mock.asyncName
-        
+
         #expect(value1 == "unbounded async")
         #expect(value2 == "unbounded async")
         #expect(value3 == "unbounded async")
-        
+
         verify(mock, times: 3).asyncName.get()
     }
 
@@ -203,16 +203,16 @@ struct PropertyAsyncExpectationsTests {
         when(expectations.asyncName.get(), times: .unbounded, return: "concurrent async value")
 
         let mock = MockTestAsyncPropertyService(expectations: expectations)
-        
+
         // Test concurrent access
         async let get1 = mock.asyncName
         async let get2 = mock.asyncName
         async let get3 = mock.asyncName
-        
+
         let results = await [get1, get2, get3]
-        
+
         #expect(results.allSatisfy { $0 == "concurrent async value" })
-        
+
         verify(mock, times: 3).asyncName.get()
     }
 }
