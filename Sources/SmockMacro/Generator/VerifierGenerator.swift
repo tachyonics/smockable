@@ -246,7 +246,7 @@ enum VerifierGenerator {
             AllParameterSequenceGenerator.ParameterForm
         )],
         typePrefix: String,
-        storagePrefix: String,
+        storagePrefix: String
     ) throws -> FunctionDeclSyntax {
         let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
             if case .explicitMatcher = entry.2 {
