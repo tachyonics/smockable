@@ -53,6 +53,7 @@ enum MockGenerator {
         }
     }
 
+    // swiftlint:disable function_body_length
     static func createGetterSetterPropertyDeclaration(for variable: VariableDeclSyntax) throws -> PropertyDeclaration {
         guard let binding = variable.bindings.first,
             let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,
