@@ -33,6 +33,8 @@ import Smockable
 protocol WeatherService {
     func getCurrentTemperature(for city: String) async throws -> Double
     func getForecast(for city: String, days: Int) async throws -> [WeatherDay]
+    
+    var apiKey: String { get set }
 }
 
 struct WeatherDay {
@@ -76,6 +78,10 @@ struct WeatherApp<Service: WeatherService> {
     
     // Or use exact value matching for specific cities
     when(expectations.getCurrentTemperature(for: "London"), return: 15.0)
+    
+    // Configure property expectations
+    when(expectations.apiKey.get(), return: "test-api-key")
+    when(expectations.apiKey.set(.any), complete: .withSuccess)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)

@@ -59,6 +59,30 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConver
     }
 }
 
+public enum BoolValueMatcher: Sendable, CustomStringConvertible {
+    case any  // Matches any value
+    case exact(Bool)
+
+    /// Check if the given value matches this matcher
+    public func matches(_ value: Bool) -> Bool {
+        switch self {
+        case .any:
+            return true
+        case .exact(let match):
+            return value == match
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        case .exact(let match):
+            return "\(match)"
+        }
+    }
+}
+
 /// A matcher for optional parameters with support for nil matching
 public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value (nil or non-nil)
@@ -109,6 +133,34 @@ public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStri
         switch self {
         case .any:
             return "any"
+        }
+    }
+}
+
+public enum OptionalBoolValueMatcher: Sendable, CustomStringConvertible {
+    case any  // Matches any value (nil or non-nil)
+    case exact(Bool?)
+
+    /// Check if the given optional value matches this matcher
+    public func matches(_ value: Bool?) -> Bool {
+        switch self {
+        case .any:
+            return true
+        case .exact(let match):
+            return value == match
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        case .exact(let match):
+            if let match {
+                return "\(match)"
+            } else {
+                return "nil"
+            }
         }
     }
 }

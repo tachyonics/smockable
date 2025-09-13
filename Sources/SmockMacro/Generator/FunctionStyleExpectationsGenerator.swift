@@ -5,11 +5,12 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate function-style expectation methods for a given function declaration
     static func generateExpectationMethods(
         for functionDeclaration: FunctionDeclSyntax,
+        typePrefix: String,
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
         let parameterList = functionDeclaration.signature.parameterClause.parameters
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-        let expectationClassName = "\(variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions"
+        let expectationClassName = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions"
 
         // If function has no parameters, generate a simple method
         if parameterList.isEmpty {
@@ -27,6 +28,7 @@ enum FunctionStyleExpectationsGenerator {
             functionDeclaration: functionDeclaration,
             parameterList: parameterList,
             expectationClassName: expectationClassName,
+            typePrefix: typePrefix,
             variablePrefix: variablePrefix,
             isComparableProvider: isComparableProvider
         )
@@ -56,6 +58,7 @@ enum FunctionStyleExpectationsGenerator {
         functionDeclaration: FunctionDeclSyntax,
         parameterList: FunctionParameterListSyntax,
         expectationClassName: String,
+        typePrefix: String,
         variablePrefix: String,
         isComparableProvider: (String) -> Bool
     ) throws -> [FunctionDeclSyntax] {
@@ -73,6 +76,7 @@ enum FunctionStyleExpectationsGenerator {
                 functionDeclaration: functionDeclaration,
                 parameterSequence: parameterSequence,
                 expectationClassName: expectationClassName,
+                typePrefix: typePrefix,
                 variablePrefix: variablePrefix
             )
             methods.append(method)
@@ -84,14 +88,18 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(
+            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
+            AllParameterSequenceGenerator.ParameterForm
+        )],
         expectationClassName: String,
+        typePrefix: String,
         variablePrefix: String
     ) throws -> FunctionDeclSyntax {
         var methodParameters: [String] = []
         var matcherInitializers: [String] = []
 
-        for (parameter, isComparable, form) in parameterSequence {
+        for (parameter, parameterType, form) in parameterSequence {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
             let paramNameForSignature: String
             if let secondName = parameter.secondName?.text {
@@ -99,7 +107,7 @@ enum FunctionStyleExpectationsGenerator {
             } else {
                 paramNameForSignature = parameter.firstName.text
             }
-            let paramType = parameter.type.description
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let isOptional = paramType.hasSuffix("?")
 
             switch form {
@@ -113,13 +121,24 @@ enum FunctionStyleExpectationsGenerator {
                     matcherInitializers.append("\(paramName): .range(\(paramName))")
                 }
             case .explicitMatcher:
-                let typePrefix = isComparable ? "" : "NonComparable"
+                let typePrefix: String
+                var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
+                switch parameterType {
+                case .comparable:
+                    typePrefix = ""
+                case .notComparable:
+                    typePrefix = "NonComparable"
+                case .bool:
+                    typePrefix = "Bool"
+                    genericPostfix = ""
+                }
                 if isOptional {
-                    let baseType = String(paramType.dropLast())  // Remove '?'
-                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(baseType)>")
+                    methodParameters.append(
+                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)"
+                    )
                     matcherInitializers.append("\(paramName): \(paramName)")
                 } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
                     matcherInitializers.append("\(paramName): \(paramName)")
                 }
             case .exact:
@@ -130,7 +149,7 @@ enum FunctionStyleExpectationsGenerator {
 
         let methodSignature = methodParameters.joined(separator: ", ")
         let matcherInit = matcherInitializers.joined(separator: ", ")
-        let inputMatcherType = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let inputMatcherType = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
         let functionName = functionDeclaration.name.text
 

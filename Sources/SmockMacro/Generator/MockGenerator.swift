@@ -2,6 +2,10 @@ import Foundation
 import SwiftSyntax
 import SwiftSyntaxBuilder
 
+enum MacroError: Error {
+    case invalidPropertyDeclaration
+}
+
 enum MockGenerator {
     static func getGenericParameterClause(
         associatedTypes: [AssociatedTypeDeclSyntax]
@@ -50,11 +54,152 @@ enum MockGenerator {
     }
 
     // swiftlint:disable function_body_length
+    static func createGetterSetterPropertyDeclaration(for variable: VariableDeclSyntax) throws -> PropertyDeclaration {
+        guard let binding = variable.bindings.first,
+            let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,
+            let type = binding.typeAnnotation?.type
+        else {
+            throw MacroError.invalidPropertyDeclaration
+        }
+
+        let propertyName = identifier.text
+        let propertyType = type
+
+        // Parse accessor block to determine async/throws modifiers
+        var isAsync = false
+        var isThrowing = false
+        var hasGetter = false
+        var hasSetter = false
+        var effectSpecifiers: AccessorEffectSpecifiersSyntax?
+
+        if let accessorBlock = binding.accessorBlock {
+            switch accessorBlock.accessors {
+            case .accessors(let accessorList):
+                for accessor in accessorList {
+                    switch accessor.accessorSpecifier.tokenKind {
+                    case .keyword(.get):
+                        hasGetter = true
+                        isAsync = accessor.effectSpecifiers?.asyncSpecifier != nil
+                        isThrowing = accessor.effectSpecifiers?.throwsClause != nil
+
+                        effectSpecifiers = accessor.effectSpecifiers
+                    case .keyword(.set):
+                        hasSetter = true
+                    // Setters inherit async/throws from getters in property declarations
+                    default:
+                        break
+                    }
+                }
+            case .getter:
+                hasGetter = true
+            // For computed properties with just a getter block
+            }
+        } else {
+            // If no accessor block, it's a stored property (get/set)
+            hasGetter = true
+            hasSetter = true
+        }
+
+        let getter =
+            hasGetter
+            ? try getPropertyFunction(
+                propertyFunctionType: .get,
+                propertyType: propertyType,
+                isAsync: isAsync,
+                isThrowing: isThrowing
+            )
+            : nil
+        let setter =
+            hasSetter
+            ? try getPropertyFunction(
+                propertyFunctionType: .set,
+                propertyType: propertyType,
+                isAsync: isAsync,
+                isThrowing: isThrowing
+            )
+            : nil
+
+        let typePrefix = "\(propertyName.capitalizingComponentsFirstLetter())_"
+
+        let get: PropertyFunction?
+        if let getter {
+            let getterVariablePrefix = VariablePrefixGenerator.text(for: getter)
+            get = PropertyFunction(
+                function: getter,
+                variablePrefix: getterVariablePrefix,
+                parameterList: [],
+                effectSpecifiers: effectSpecifiers
+            )
+        } else {
+            get = nil
+        }
+
+        let set: PropertyFunction?
+        if let setter {
+            let setterVariablePrefix = VariablePrefixGenerator.text(for: setter)
+            let setterParameterList = setter.signature.parameterClause.parameters
+
+            set = PropertyFunction(
+                function: setter,
+                variablePrefix: setterVariablePrefix,
+                parameterList: setterParameterList,
+                effectSpecifiers: nil
+            )
+        } else {
+            set = nil
+        }
+
+        return PropertyDeclaration(
+            name: propertyName,
+            typePrefix: typePrefix,
+            storagePrefix: "\(propertyName).",
+            variable: variable,
+            get: get,
+            set: set
+        )
+    }
+
+    enum PropertyFunctionType {
+        case get
+        case set
+    }
+
+    private static func getPropertyFunction(
+        propertyFunctionType: PropertyFunctionType,
+        propertyType: TypeSyntax,
+        isAsync: Bool,
+        isThrowing: Bool
+    ) throws -> FunctionDeclSyntax {
+        var signature = "func "
+
+        switch propertyFunctionType {
+        case .get:
+            signature += "get()"
+        case .set:
+            signature += "set(_ newValue: \(propertyType)"
+        }
+
+        if isAsync {
+            signature += " async"
+        }
+        if isThrowing {
+            signature += " throws"
+        }
+
+        if case .get = propertyFunctionType {
+            signature += " -> \(propertyType)"
+        }
+
+        return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
+    }
+
+    // swiftlint:disable function_body_length
     static func declaration(for protocolDeclaration: ProtocolDeclSyntax) throws -> StructDeclSyntax {
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
 
-        let variableDeclarations = protocolDeclaration.memberBlock.members
+        let propertyDeclarations = try protocolDeclaration.memberBlock.members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+            .map(createGetterSetterPropertyDeclaration)
 
         let functionDeclarations = protocolDeclaration.memberBlock.members
             .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
@@ -113,24 +258,88 @@ enum MockGenerator {
                     )
                 }
 
-                for variableDeclaration in variableDeclarations {
-                    try VariablesImplementationGenerator.variablesDeclarations(
-                        protocolVariableDeclaration: variableDeclaration
+                for propertyDeclaration in propertyDeclarations {
+                    let propertyFunctionDeclarations = [
+                        propertyDeclaration.get?.function, propertyDeclaration.set?.function,
+                    ].compactMap { $0 }
+
+                    try StorageGenerator.expectationsDeclaration(
+                        functionDeclarations: propertyFunctionDeclarations,
+                        typePrefix: propertyDeclaration.typePrefix,
+                        isComparableProvider: isComparableProvider
+                    )
+
+                    try StorageGenerator.expectedResponsesDeclaration(
+                        functionDeclarations: propertyFunctionDeclarations,
+                        typePrefix: propertyDeclaration.typePrefix
+                    )
+
+                    try StorageGenerator.receivedInvocationsDeclaration(
+                        functionDeclarations: propertyFunctionDeclarations,
+                        typePrefix: propertyDeclaration.typePrefix
+                    )
+
+                    try VerifierGenerator.verifierStructDeclaration(
+                        functionDeclarations: propertyFunctionDeclarations,
+                        typePrefix: propertyDeclaration.typePrefix,
+                        storagePrefix: propertyDeclaration.storagePrefix,
+                        isComparableProvider: isComparableProvider
+                    )
+
+                    if let get = propertyDeclaration.get {
+                        try FieldOptionsGenerator.fieldOptionsClassDeclaration(
+                            variablePrefix: get.variablePrefix,
+                            functionSignature: get.function.signature,
+                            typePrefix: propertyDeclaration.typePrefix
+                        )
+
+                        try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
+                            typePrefix: propertyDeclaration.typePrefix,
+                            variablePrefix: get.variablePrefix,
+                            functionSignature: get.function.signature
+                        )
+                    }
+
+                    if let set = propertyDeclaration.set {
+                        try FieldOptionsGenerator.fieldOptionsClassDeclaration(
+                            variablePrefix: set.variablePrefix,
+                            functionSignature: set.function.signature,
+                            typePrefix: propertyDeclaration.typePrefix
+                        )
+
+                        try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
+                            typePrefix: propertyDeclaration.typePrefix,
+                            variablePrefix: set.variablePrefix,
+                            functionSignature: set.function.signature
+                        )
+
+                        if let setterInputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
+                            variablePrefix: set.variablePrefix,
+                            parameterList: set.parameterList,
+                            typePrefix: propertyDeclaration.typePrefix,
+                            isComparableProvider: isComparableProvider
+                        ) {
+                            setterInputMatcherStruct
+                        }
+                    }
+
+                    try PropertyImplementationGenerator.propertyDeclaration(
+                        propertyDeclaration: propertyDeclaration
                     )
                 }
 
                 try StorageGenerator.expectationsDeclaration(
                     functionDeclarations: functionDeclarations,
+                    propertyDeclarations: propertyDeclarations,
                     isComparableProvider: isComparableProvider
                 )
                 try StorageGenerator.expectedResponsesDeclaration(
-                    functionDeclarations: functionDeclarations
-                )
-                try StorageGenerator.expectationMatchersDeclaration(
-                    functionDeclarations: functionDeclarations
+                    functionDeclarations: functionDeclarations,
+                    propertyDeclarations: propertyDeclarations
                 )
                 try StorageGenerator.receivedInvocationsDeclaration(
-                    functionDeclarations: functionDeclarations
+                    functionDeclarations: functionDeclarations,
+                    propertyDeclarations: propertyDeclarations
                 )
                 try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
@@ -138,6 +347,7 @@ enum MockGenerator {
 
                 try VerifierGenerator.verifierStructDeclaration(
                     functionDeclarations: functionDeclarations,
+                    propertyDeclarations: propertyDeclarations,
                     isComparableProvider: isComparableProvider
                 )
 
@@ -145,7 +355,7 @@ enum MockGenerator {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-                    try FieldOptionsGenerator.expectationsOptionsClassDeclaration(
+                    try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                         variablePrefix: variablePrefix,
                         functionSignature: functionDeclaration.signature
                     )
@@ -163,9 +373,9 @@ enum MockGenerator {
                         inputMatcherStruct
                     }
 
-                    try FunctionImplementationGenerator.storageDeclaration(
+                    try FunctionImplementationGenerator.functionDeclaration(
                         variablePrefix: variablePrefix,
-                        protocolFunctionDeclaration: functionDeclaration
+                        functionDeclaration: functionDeclaration
                     )
                 }
             }

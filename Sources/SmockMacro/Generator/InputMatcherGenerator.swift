@@ -6,12 +6,13 @@ enum InputMatcherGenerator {
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
+        typePrefix: String = "",
         isComparableProvider: (String) -> Bool
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
 
-        let structName = "\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
+        let structName = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let parameters = Array(parameterList)
 
         return try StructDeclSyntax(
@@ -38,23 +39,30 @@ enum InputMatcherGenerator {
         isComparableProvider: (String) -> Bool
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
-        let paramType = parameter.type.description
+        let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let isOptional = paramType.hasSuffix("?")
-
-        let baseType = isOptional ? String(paramType.dropLast()) : paramType
-        let typePrefix = isComparableProvider(baseType) ? "" : "NonComparable"
+        let baseType = (isOptional ? String(paramType.dropLast()) : paramType)
+        var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
+        let typePrefix: String
+        if baseType == "Bool" {
+            typePrefix = "Bool"
+            genericPostfix = ""
+        } else if isComparableProvider(baseType) {
+            typePrefix = ""
+        } else {
+            typePrefix = "NonComparable"
+        }
 
         if isOptional {
-            let baseType = String(paramType.dropLast())  // Remove '?'
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher<\(raw: baseType)>
+                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher\(raw: genericPostfix)
                 """
             )
         } else {
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): \(raw: typePrefix)ValueMatcher<\(raw: paramType)>
+                let \(raw: paramName): \(raw: typePrefix)ValueMatcher\(raw: genericPostfix)
                 """
             )
         }

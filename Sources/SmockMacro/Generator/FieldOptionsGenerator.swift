@@ -2,9 +2,10 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum FieldOptionsGenerator {
-    static func expectationsOptionsClassDeclaration(
+    static func fieldOptionsClassDeclaration(
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax
+        functionSignature: FunctionSignatureSyntax,
+        typePrefix: String = ""
     ) throws -> ClassDeclSyntax {
 
         var genericParameterClauseElements: [String] = []
@@ -20,13 +21,13 @@ enum FieldOptionsGenerator {
 
         return try ClassDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
-            name: "\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions",
+            name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions",
             genericParameterClause: genericParameterClauseElements.count > 0
                 ? ": \(raw: genericParameterClauseElements.joined(separator: ", ")) " : nil,
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    var expectedResponse: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
+                    var expectedResponse: \(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
                     """
                 )
 

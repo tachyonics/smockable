@@ -2,21 +2,42 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum FunctionImplementationGenerator {
-    static func storageDeclaration(
+    static func functionDeclaration(
         variablePrefix: String,
-        protocolFunctionDeclaration: FunctionDeclSyntax
+        functionDeclaration: FunctionDeclSyntax
     ) throws -> FunctionDeclSyntax {
-        var mockFunctionDeclaration = protocolFunctionDeclaration
+        var mockFunctionDeclaration = functionDeclaration
 
         mockFunctionDeclaration.modifiers =
-            protocolFunctionDeclaration.modifiers.removingMutatingKeyword
+            functionDeclaration.modifiers.removingMutatingKeyword
         mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "public")]
         mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
-        let parameterList = protocolFunctionDeclaration.signature.parameterClause.parameters
+        let parameterList = functionDeclaration.signature.parameterClause.parameters
 
-        mockFunctionDeclaration.body = try CodeBlockSyntax {
-            let withLockCall = try getWithLockCall(variablePrefix: variablePrefix, parameterList: parameterList)
+        mockFunctionDeclaration.body = try getFunctionBody(
+            variablePrefix: variablePrefix,
+            functionDeclaration: functionDeclaration,
+            parameterList: parameterList
+        )
+
+        return mockFunctionDeclaration
+    }
+
+    static func getFunctionBody(
+        variablePrefix: String,
+        typePrefix: String = "",
+        storagePrefix: String = "",
+        functionDeclaration: FunctionDeclSyntax,
+        parameterList: FunctionParameterListSyntax
+    ) throws -> CodeBlockSyntax {
+        try CodeBlockSyntax {
+            let withLockCall = try getWithLockCall(
+                variablePrefix: variablePrefix,
+                typePrefix: typePrefix,
+                storagePrefix: storagePrefix,
+                parameterList: parameterList
+            )
 
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
@@ -33,15 +54,15 @@ enum FunctionImplementationGenerator {
 
             self.switchExpression(
                 variablePrefix: variablePrefix,
-                protocolFunctionDeclaration: protocolFunctionDeclaration
+                functionDeclaration: functionDeclaration
             )
         }
-
-        return mockFunctionDeclaration
     }
 
     private static func getLockProtectedStatements(
         variablePrefix: String,
+        typePrefix: String,
+        storagePrefix: String,
         parameterList: FunctionParameterListSyntax
     ) throws -> CodeBlockItemListSyntax {
         let parameters = Array(parameterList)
@@ -61,6 +82,7 @@ enum FunctionImplementationGenerator {
                 item: .expr(
                     ReceivedInvocationsGenerator.appendValueToVariableExpression(
                         variablePrefix: variablePrefix,
+                        storagePrefix: storagePrefix,
                         parameterList: parameterList
                     )
                 )
@@ -70,7 +92,7 @@ enum FunctionImplementationGenerator {
                     DeclSyntax(
                         try VariableDeclSyntax(
                             """
-                            var responseProvider: \(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
+                            var responseProvider: \(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse?
                             """
                         )
                     )
@@ -80,15 +102,15 @@ enum FunctionImplementationGenerator {
                 item: .stmt(
                     StmtSyntax(
                         try ForStmtSyntax(
-                            "for (index, expectedResponse) in storage.expectedResponses.\(raw: variablePrefix).enumerated()"
+                            "for (index, expectedResponse) in storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).enumerated()"
                         ) {
                             ExprSyntax(
                                 """
                                 if expectedResponse.2.matches(\(raw: matcherCall)) {
                                   if expectedResponse.0 == 1 {
-                                    storage.expectedResponses.\(raw: variablePrefix).remove(at: index)
+                                    storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).remove(at: index)
                                   } else if let currentCount = expectedResponse.0 {
-                                    storage.expectedResponses.\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
+                                    storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
                                   }
                                   
                                   responseProvider = expectedResponse.1
@@ -114,10 +136,14 @@ enum FunctionImplementationGenerator {
 
     private static func getWithLockCall(
         variablePrefix: String,
+        typePrefix: String,
+        storagePrefix: String,
         parameterList: FunctionParameterListSyntax
     ) throws -> FunctionCallExprSyntax {
         let lockProtectedStatements = try getLockProtectedStatements(
             variablePrefix: variablePrefix,
+            typePrefix: typePrefix,
+            storagePrefix: storagePrefix,
             parameterList: parameterList
         )
 
@@ -145,7 +171,7 @@ enum FunctionImplementationGenerator {
 
     private static func switchExpression(
         variablePrefix: String,
-        protocolFunctionDeclaration: FunctionDeclSyntax
+        functionDeclaration: FunctionDeclSyntax
     ) -> SwitchExprSyntax {
         SwitchExprSyntax(
             subject: ExprSyntax(stringLiteral: "responseProvider"),
@@ -159,13 +185,13 @@ enum FunctionImplementationGenerator {
                                     baseName: "closure",
                                     variablePrefix: variablePrefix,
                                     needsLabels: false,
-                                    functionSignature: protocolFunctionDeclaration.signature
+                                    functionSignature: functionDeclaration.signature
                                 )
                         )
                     }
                 )
 
-                if protocolFunctionDeclaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier
+                if functionDeclaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier
                     != nil
                 {
                     SwitchCaseSyntax(
@@ -176,7 +202,7 @@ enum FunctionImplementationGenerator {
                     )
                 }
 
-                if (protocolFunctionDeclaration.signature.returnClause?.type) != nil {
+                if (functionDeclaration.signature.returnClause?.type) != nil {
                     SwitchCaseSyntax(
                         """
                         case .value(let value):
