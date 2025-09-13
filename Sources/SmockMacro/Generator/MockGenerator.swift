@@ -335,11 +335,11 @@ enum MockGenerator {
                 )
                 try StorageGenerator.expectedResponsesDeclaration(
                     functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations,
+                    propertyDeclarations: propertyDeclarations
                 )
                 try StorageGenerator.receivedInvocationsDeclaration(
                     functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations,
+                    propertyDeclarations: propertyDeclarations
                 )
                 try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
                 try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
