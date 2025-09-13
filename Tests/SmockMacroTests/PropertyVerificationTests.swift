@@ -279,7 +279,7 @@ struct PropertyVerificationTests {
     }
 
     @Test
-    func testVerifyThrowingPropertyWithErrors() {
+    func testVerifyThrowingPropertyWithErrors() throws {
         var expectations = MockTestThrowingPropertyVerificationService.Expectations()
         when(expectations.throwingName.get(), return: "success")
         when(expectations.throwingName.get(), throw: NSError(domain: "test", code: 1))
@@ -287,9 +287,11 @@ struct PropertyVerificationTests {
         let mock = MockTestThrowingPropertyVerificationService(expectations: expectations)
 
         // Execute
-        _ = try? mock.throwingName  // Success
-        _ = try? mock.throwingName  // Throws
-
+        _ = try mock.throwingName  // Success
+        try #require(throws: NSError.self) {
+            _ = try mock.throwingName  // Throws
+        }
+        
         // Verify - should pass (both successful and failed calls are counted)
         verify(mock, times: 2).throwingName.get()
     }
@@ -313,7 +315,7 @@ struct PropertyVerificationTests {
     }
 
     @Test
-    func testVerifyAsyncThrowingPropertyWithErrors() async {
+    func testVerifyAsyncThrowingPropertyWithErrors() async throws {
         var expectations = MockTestAsyncThrowingPropertyVerificationService.Expectations()
         when(expectations.asyncThrowingName.get(), return: "async success")
         when(expectations.asyncThrowingName.get(), throw: NSError(domain: "async test", code: 1))
@@ -321,8 +323,10 @@ struct PropertyVerificationTests {
         let mock = MockTestAsyncThrowingPropertyVerificationService(expectations: expectations)
 
         // Execute
-        _ = try? await mock.asyncThrowingName  // Success
-        _ = try? await mock.asyncThrowingName  // Throws
+        _ = try await mock.asyncThrowingName  // Success
+        try await #require(throws: NSError.self) {
+            _ = try await mock.asyncThrowingName  // Throws
+        }
 
         // Verify - should pass (both successful and failed calls are counted)
         verify(mock, times: 2).asyncThrowingName.get()

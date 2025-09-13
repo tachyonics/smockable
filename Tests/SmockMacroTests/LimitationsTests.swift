@@ -224,7 +224,7 @@ struct LimitationsTests {
         func performTransaction<T>(operation: () async throws -> T) async throws -> T {
             try await connectionManager.connect()
             let result = try await operation()
-            try? await connectionManager.disconnect()
+            try await connectionManager.disconnect()
             return result
         }
     }

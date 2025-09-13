@@ -26,16 +26,10 @@ enum PropertyImplementationGenerator {
     {
         let bindings = propertyDeclaration.variable.bindings
         if let binding = bindings.first, bindings.count == 1 {
-            //if binding.typeAnnotation?.type.is(OptionalTypeSyntax.self) == true {
-            //    let accessorRemovalVisitor = AccessorRemovalVisitor()
-
-            //   accessorRemovalVisitor.visit(propertyDeclaration.variable)
-            //} else {
             try self.propertyDeclarationWithGetterAndSetter(
                 binding: binding,
                 propertyDeclaration: propertyDeclaration
             )
-            //}
         } else {
             // As far as I know variable declaration in a protocol should have exactly one binding.
             throw SmockDiagnostic.variableDeclInProtocolWithNotSingleBinding
@@ -93,12 +87,5 @@ enum PropertyImplementationGenerator {
                 )
             ]
         )
-    }
-}
-
-private class AccessorRemovalVisitor: SyntaxRewriter {
-    override func visit(_ node: PatternBindingSyntax) -> PatternBindingSyntax {
-        let superResult = super.visit(node)
-        return superResult.with(\.accessorBlock, nil)
     }
 }
