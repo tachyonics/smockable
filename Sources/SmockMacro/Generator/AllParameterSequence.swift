@@ -12,27 +12,34 @@ enum AllParameterSequenceGenerator {
         case range
         case exact
     }
+    
+    enum ParameterType {
+        case comparable
+        case notComparable
+        case bool
+    }
 
-    public static func getAllParameterSequences(
+    static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
         isComparableProvider: (String) -> Bool
-    ) -> [[(FunctionParameterSyntax, Bool, ParameterForm)]] {
+    ) -> [[(FunctionParameterSyntax, ParameterType, ParameterForm)]] {
         if let firstParameter = parameters.first {
-            let firstParamType = firstParameter.type.description
+            let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let firstIsOptional = firstParamType.hasSuffix("?")
             let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
             let firstIsComparable = isComparableProvider(firstBaseType)
 
             if parameters.count == 1 {
-                if !firstIsComparable {
+                if firstBaseType == "Bool" {
+                    return [[(firstParameter, .bool, .explicitMatcher)], [(firstParameter, .bool, .exact)]]
+                } else if !firstIsComparable {
                     // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, false, ParameterForm.explicitMatcher)]]
+                    return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)]]
                 } else {
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each form
-                        return [(firstParameter, true, parameterForm)]
+                        return [(firstParameter, .comparable, parameterForm)]
                     }
                 }
             }
@@ -47,12 +54,15 @@ enum AllParameterSequenceGenerator {
             return dropFirstParameterSequences.flatMap { partialParameterSequence in
                 if !firstIsComparable {
                     // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, false, ParameterForm.explicitMatcher)] + partialParameterSequence]
+                    return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence]
+                } else if firstBaseType == "Bool" {
+                    return [[(firstParameter, ParameterType.bool, ParameterForm.explicitMatcher)] + partialParameterSequence,
+                            [(firstParameter, ParameterType.bool, ParameterForm.exact)] + partialParameterSequence]
                 } else {
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each type
-                        return [(firstParameter, true, parameterForm)] + partialParameterSequence
+                        return [(firstParameter, .comparable, parameterForm)] + partialParameterSequence
                     }
                 }
             }

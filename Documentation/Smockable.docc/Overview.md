@@ -52,7 +52,7 @@ import Smockable
         
         // 3. Configure property expectations
         when(expectations.apiKey.get(), return: "test-api-key")
-        when(expectations.apiKey.set(to: .any), complete: .withSuccess)
+        when(expectations.apiKey.set(.any), complete: .withSuccess)
         when(expectations.isOnline.get(), return: true)
         when(expectations.lastUpdateTime.get(), return: Date())
         

@@ -101,11 +101,11 @@ enum MockGenerator {
 
         let getter =
             hasGetter
-            ? try getPropertyFunction(name: "get", propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
+        ? try getPropertyFunction(propertyFunctionType: .get, propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
             : nil
         let setter =
             hasSetter
-            ? try getPropertyFunction(name: "set", propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
+        ? try getPropertyFunction(propertyFunctionType: .set, propertyType: propertyType, isAsync: isAsync, isThrowing: isThrowing)
             : nil
 
         let typePrefix = "\(propertyName.capitalizingComponentsFirstLetter())_"
@@ -147,25 +147,37 @@ enum MockGenerator {
             set: set
         )
     }
+    
+    enum PropertyFunctionType {
+        case get
+        case set
+    }
 
     private static func getPropertyFunction(
-        name: String,
+        propertyFunctionType: PropertyFunctionType,
         propertyType: TypeSyntax,
         isAsync: Bool,
         isThrowing: Bool
     ) throws -> FunctionDeclSyntax {
-        // Create getter function: func get() async throws -> PropertyType
-        var signature = "func \(name)()"
+        var signature = "func "
+        
+        switch propertyFunctionType {
+        case .get:
+            signature += "get()"
+        case .set:
+            signature += "set(_ newValue: \(propertyType)"
+        }
 
-        if isAsync && isThrowing {
-            signature += " async throws"
-        } else if isAsync {
+        if isAsync {
             signature += " async"
-        } else if isThrowing {
+        }
+        if isThrowing {
             signature += " throws"
         }
 
-        signature += " -> \(propertyType)"
+        if case .get = propertyFunctionType {
+            signature += " -> \(propertyType)"
+        }
 
         return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
     }

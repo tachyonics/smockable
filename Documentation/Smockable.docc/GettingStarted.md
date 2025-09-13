@@ -81,7 +81,7 @@ struct WeatherApp<Service: WeatherService> {
     
     // Configure property expectations
     when(expectations.apiKey.get(), return: "test-api-key")
-    when(expectations.apiKey.set(to: .any), complete: .withSuccess)
+    when(expectations.apiKey.set(.any), complete: .withSuccess)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)

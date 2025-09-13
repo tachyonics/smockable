@@ -88,7 +88,7 @@ enum FunctionStyleExpectationsGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
         expectationClassName: String,
         typePrefix: String,
         variablePrefix: String
@@ -96,7 +96,7 @@ enum FunctionStyleExpectationsGenerator {
         var methodParameters: [String] = []
         var matcherInitializers: [String] = []
 
-        for (parameter, isComparable, form) in parameterSequence {
+        for (parameter, parameterType, form) in parameterSequence {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
             let paramNameForSignature: String
             if let secondName = parameter.secondName?.text {
@@ -118,13 +118,22 @@ enum FunctionStyleExpectationsGenerator {
                     matcherInitializers.append("\(paramName): .range(\(paramName))")
                 }
             case .explicitMatcher:
-                let typePrefix = isComparable ? "" : "NonComparable"
+                let typePrefix: String
+                var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
+                switch parameterType {
+                case .comparable:
+                    typePrefix = ""
+                case .notComparable:
+                    typePrefix = "NonComparable"
+                case .bool:
+                    typePrefix = "Bool"
+                    genericPostfix = ""
+                }
                 if isOptional {
-                    let baseType = String(paramType.dropLast())  // Remove '?'
-                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(baseType)>")
+                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)")
                     matcherInitializers.append("\(paramName): \(paramName)")
                 } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
                     matcherInitializers.append("\(paramName): \(paramName)")
                 }
             case .exact:

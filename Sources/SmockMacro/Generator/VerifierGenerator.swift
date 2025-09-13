@@ -116,7 +116,7 @@ enum VerifierGenerator {
     }
 
     private static func getParameters(
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
         allParametersAreMatchers: Bool
     )
         -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
@@ -125,7 +125,7 @@ enum VerifierGenerator {
         var methodInterpolationParameters: [String] = []
         var matcherInitializers: [String] = []
 
-        for (parameter, isComparable, form) in parameterSequence {
+        for (parameter, parameterType, form) in parameterSequence {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
             let paramNameForSignature: String
             let paramNameForCall: String
@@ -136,7 +136,7 @@ enum VerifierGenerator {
                 paramNameForSignature = parameter.firstName.text
                 paramNameForCall = parameter.firstName.text
             }
-            let paramType = parameter.type.description
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let isOptional = paramType.hasSuffix("?")
 
             var matcherInitializerPrefix: String
@@ -169,13 +169,22 @@ enum VerifierGenerator {
                     matcherInitializers.append("\(matcherInitializerPrefix).range(\(paramName))")
                 }
             case .explicitMatcher:
-                let typePrefix = isComparable ? "" : "NonComparable"
+                let typePrefix: String
+                var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
+                switch parameterType {
+                case .comparable:
+                    typePrefix = ""
+                case .notComparable:
+                    typePrefix = "NonComparable"
+                case .bool:
+                    typePrefix = "Bool"
+                    genericPostfix = ""
+                }
                 if isOptional {
-                    let baseType = String(paramType.dropLast())  // Remove '?'
-                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(baseType)>")
+                    methodParameters.append("\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)")
                     matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
                 } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
                     matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
                 }
             case .exact:
@@ -227,7 +236,7 @@ enum VerifierGenerator {
     /// Generate a specific method for a parameter type combination
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
-        parameterSequence: [(FunctionParameterSyntax, Bool, AllParameterSequenceGenerator.ParameterForm)],
+        parameterSequence: [(FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType, AllParameterSequenceGenerator.ParameterForm)],
         typePrefix: String,
         storagePrefix: String,
     ) throws -> FunctionDeclSyntax {
