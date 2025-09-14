@@ -6,6 +6,38 @@ import Testing
 
 // MARK: - Test Data Structures
 
+// Equatable-only types (not Comparable)
+struct EquatableOnlyData: Equatable, Sendable {
+    let id: UUID
+    let enabled: Bool
+    let metadata: Data
+}
+
+struct BooleanConfig: Equatable, Sendable {
+    let debug: Bool
+    let verbose: Bool
+    let autoSave: Bool
+}
+
+struct IdentifierData: Equatable, Sendable {
+    let primaryId: UUID
+    let secondaryId: UUID
+    let isActive: Bool
+}
+
+struct NetworkConfig: Equatable, Sendable {
+    let baseURL: URL
+    let timeout: Bool  // Simplified for testing
+    let retryEnabled: Bool
+}
+
+// Mix of Comparable and Equatable-only
+struct MixedTypeData: Equatable, Sendable {
+    let name: String  // Comparable
+    let isEnabled: Bool  // Equatable-only
+    let identifier: UUID  // Equatable-only
+}
+
 struct User: Codable, Equatable, Sendable, Comparable {
     static func < (lhs: User, rhs: User) -> Bool {
         return lhs.id < rhs.id
@@ -167,6 +199,58 @@ public protocol Processor {
     associatedtype Output: Sendable & Comparable
 
     func process(_ input: Input) async throws -> Output
+}
+
+// MARK: - Equatable-Only Associated Type Protocols
+
+@Smock
+public protocol BooleanConfigRepository {
+    associatedtype ConfigType: Equatable & Sendable
+
+    func save(_ config: ConfigType) async throws
+    func load() async throws -> ConfigType?
+    func update(_ config: ConfigType) async throws
+    func reset() async throws
+}
+
+@Smock
+public protocol IdentifierService {
+    associatedtype IDType: Equatable & Sendable
+
+    func generate() async -> IDType
+    func validate(_ id: IDType) async -> Bool
+    func store(_ id: IDType) async throws
+    func retrieve() async throws -> [IDType]
+}
+
+@Smock
+public protocol EquatableDataProcessor {
+    associatedtype InputData: Equatable & Sendable
+    associatedtype OutputData: Equatable & Sendable
+
+    func process(_ input: InputData) async throws -> OutputData
+    func canProcess(_ input: InputData) async -> Bool
+    func getLastProcessed() async -> OutputData?
+}
+
+@Smock
+public protocol NetworkManager {
+    associatedtype ConfigType: Equatable & Sendable
+    associatedtype ResponseType: Equatable & Sendable
+
+    func configure(_ config: ConfigType) async throws
+    func request() async throws -> ResponseType
+    func isConfigured() async -> Bool
+}
+
+@Smock
+public protocol MixedTypeService {
+    associatedtype ComparableType: Comparable & Sendable
+    associatedtype EquatableType: Equatable & Sendable
+
+    func processComparable(_ data: ComparableType) async throws
+    func processEquatable(_ data: EquatableType) async throws
+    func combine(_ comparable: ComparableType, _ equatable: EquatableType) async throws -> String
 }
 
 // MARK: - Test Cases
@@ -422,5 +506,231 @@ struct AssociatedTypesTests {
         #expect(result == 42)
 
         verify(mockProcessor, times: 1).process(.any)
+    }
+
+    // MARK: - Equatable-Only Associated Types Tests
+
+    @Test
+    func testBooleanConfigRepository() async throws {
+        var expectations = MockBooleanConfigRepository<BooleanConfig>.Expectations()
+
+        let config = BooleanConfig(debug: true, verbose: false, autoSave: true)
+        let updatedConfig = BooleanConfig(debug: false, verbose: true, autoSave: true)
+
+        // Test with exact matching (only .any and .exact available for Equatable-only)
+        when(expectations.save(config), complete: .withSuccess)
+        when(expectations.load(), return: config)
+        when(expectations.update(.any), complete: .withSuccess)
+        when(expectations.reset(), complete: .withSuccess)
+
+        let mockRepo = MockBooleanConfigRepository<BooleanConfig>(expectations: expectations)
+
+        // Test save with exact config
+        try await mockRepo.save(config)
+
+        // Test load
+        let loadedConfig = try await mockRepo.load()
+        #expect(loadedConfig?.debug == true)
+        #expect(loadedConfig?.verbose == false)
+
+        // Test update with any config
+        try await mockRepo.update(updatedConfig)
+
+        // Test reset
+        try await mockRepo.reset()
+
+        // Verify calls
+        verify(mockRepo, times: 1).save(config)
+        verify(mockRepo, times: 1).load()
+        verify(mockRepo, times: 1).update(.any)
+        verify(mockRepo, times: 1).reset()
+    }
+
+    @Test
+    func testIdentifierServiceWithUUID() async throws {
+        var expectations = MockIdentifierService<UUID>.Expectations()
+
+        let testUUID = UUID()
+        let anotherUUID = UUID()
+
+        when(expectations.generate(), return: testUUID)
+        when(expectations.validate(testUUID), return: true)
+        when(expectations.validate(.any), return: false)  // Default for non-matching UUIDs
+        when(expectations.store(.any), complete: .withSuccess)
+        when(expectations.retrieve(), return: [testUUID, anotherUUID])
+
+        let mockService = MockIdentifierService<UUID>(expectations: expectations)
+
+        // Test generate
+        let generatedID = await mockService.generate()
+        #expect(generatedID == testUUID)
+
+        // Test validate with exact match
+        let isValidExact = await mockService.validate(testUUID)
+        #expect(isValidExact == true)
+
+        // Test validate with different UUID
+        let isValidOther = await mockService.validate(anotherUUID)
+        #expect(isValidOther == false)
+
+        // Test store
+        try await mockService.store(testUUID)
+
+        // Test retrieve
+        let storedIDs = try await mockService.retrieve()
+        #expect(storedIDs.count == 2)
+        #expect(storedIDs.contains(testUUID))
+
+        // Verify calls
+        verify(mockService, times: 1).generate()
+        verify(mockService, times: 1).validate(testUUID)
+        verify(mockService, times: 2).validate(.any)
+        verify(mockService, times: 1).store(.any)
+        verify(mockService, times: 1).retrieve()
+    }
+
+    @Test
+    func testDataProcessorWithEquatableData() async throws {
+        var expectations = MockEquatableDataProcessor<EquatableOnlyData, IdentifierData>.Expectations()
+
+        let inputData = EquatableOnlyData(
+            id: UUID(),
+            enabled: true,
+            metadata: Data("test".utf8)
+        )
+        let outputData = IdentifierData(
+            primaryId: UUID(),
+            secondaryId: UUID(),
+            isActive: true
+        )
+
+        when(expectations.process(.any), return: outputData)
+        when(expectations.canProcess(inputData), return: true)
+        when(expectations.canProcess(.any), return: false)  // Default for other inputs
+        when(expectations.getLastProcessed(), return: outputData)
+
+        let mockProcessor = MockEquatableDataProcessor<EquatableOnlyData, IdentifierData>(expectations: expectations)
+
+        // Test can process with exact match
+        let canProcessExact = await mockProcessor.canProcess(inputData)
+        #expect(canProcessExact == true)
+
+        // Test can process with different data
+        let differentData = EquatableOnlyData(
+            id: UUID(),
+            enabled: false,
+            metadata: Data("different".utf8)
+        )
+        let canProcessDifferent = await mockProcessor.canProcess(differentData)
+        #expect(canProcessDifferent == false)
+
+        // Test process
+        let result = try await mockProcessor.process(inputData)
+        #expect(result.isActive == true)
+
+        // Test get last processed
+        let lastProcessed = await mockProcessor.getLastProcessed()
+        #expect(lastProcessed?.isActive == true)
+
+        // Verify calls
+        verify(mockProcessor, times: 1).canProcess(inputData)
+        verify(mockProcessor, times: 2).canProcess(.any)
+        verify(mockProcessor, times: 1).process(.any)
+        verify(mockProcessor, times: 1).getLastProcessed()
+    }
+
+    @Test
+    func testNetworkManagerWithURL() async throws {
+        var expectations = MockNetworkManager<NetworkConfig, BooleanConfig>.Expectations()
+
+        let networkConfig = NetworkConfig(
+            baseURL: URL(string: "https://api.example.com")!,
+            timeout: true,
+            retryEnabled: false
+        )
+        let response = BooleanConfig(debug: false, verbose: true, autoSave: false)
+
+        when(expectations.configure(networkConfig), complete: .withSuccess)
+        when(expectations.request(), return: response)
+        when(expectations.isConfigured(), return: true)
+
+        let mockManager = MockNetworkManager<NetworkConfig, BooleanConfig>(expectations: expectations)
+
+        // Test configure
+        try await mockManager.configure(networkConfig)
+
+        // Test is configured
+        let isConfigured = await mockManager.isConfigured()
+        #expect(isConfigured == true)
+
+        // Test request
+        let requestResponse = try await mockManager.request()
+        #expect(requestResponse.verbose == true)
+        #expect(requestResponse.debug == false)
+
+        // Verify calls
+        verify(mockManager, times: 1).configure(networkConfig)
+        verify(mockManager, times: 1).isConfigured()
+        verify(mockManager, times: 1).request()
+    }
+
+    @Test
+    func testMixedTypeServiceComparableAndEquatable() async throws {
+        var expectations = MockMixedTypeService<String, BooleanConfig>.Expectations()
+
+        let comparableData = "test string"
+        let equatableData = BooleanConfig(debug: true, verbose: false, autoSave: true)
+        let combinedResult = "processed: test string with config"
+
+        // Comparable type supports ranges
+        when(expectations.processComparable("a"..."z"), complete: .withSuccess)
+
+        // Equatable-only type supports exact and .any only
+        when(expectations.processEquatable(equatableData), complete: .withSuccess)
+
+        when(expectations.combine(.any, .any), return: combinedResult)
+
+        let mockService = MockMixedTypeService<String, BooleanConfig>(expectations: expectations)
+
+        // Test comparable with range
+        try await mockService.processComparable(comparableData)
+
+        // Test equatable with exact match
+        try await mockService.processEquatable(equatableData)
+
+        // Test combine
+        let result = try await mockService.combine(comparableData, equatableData)
+        #expect(result == combinedResult)
+
+        // Verify calls
+        verify(mockService, times: 1).processComparable("a"..."z")
+        verify(mockService, times: 1).processEquatable(equatableData)
+        verify(mockService, times: 1).combine(.any, .any)
+    }
+
+    @Test
+    func testEquatableOnlyAnyMatching() async throws {
+        var expectations = MockBooleanConfigRepository<BooleanConfig>.Expectations()
+
+        let config1 = BooleanConfig(debug: true, verbose: false, autoSave: true)
+        let config2 = BooleanConfig(debug: false, verbose: true, autoSave: false)
+
+        // Test .any matching works for any Equatable-only type
+        when(expectations.save(.any), times: 2, complete: .withSuccess)
+        when(expectations.update(.any), times: 2, complete: .withSuccess)
+
+        let mockRepo = MockBooleanConfigRepository<BooleanConfig>(expectations: expectations)
+
+        // Save different configs - both should match .any
+        try await mockRepo.save(config1)
+        try await mockRepo.save(config2)
+
+        // Update different configs - both should match .any
+        try await mockRepo.update(config1)
+        try await mockRepo.update(config2)
+
+        // Verify that .any matched all calls
+        verify(mockRepo, times: 2).save(.any)
+        verify(mockRepo, times: 2).update(.any)
     }
 }
