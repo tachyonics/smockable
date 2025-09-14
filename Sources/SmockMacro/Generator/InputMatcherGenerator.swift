@@ -7,7 +7,7 @@ enum InputMatcherGenerator {
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
         typePrefix: String = "",
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
@@ -24,7 +24,7 @@ enum InputMatcherGenerator {
             memberBlockBuilder: {
                 // Generate properties for each parameter
                 for parameter in parameters {
-                    try generateMatcherProperty(for: parameter, isComparableProvider: isComparableProvider)
+                    try generateMatcherProperty(for: parameter, typeConformanceProvider: typeConformanceProvider)
                 }
 
                 // Generate matches method
@@ -36,33 +36,33 @@ enum InputMatcherGenerator {
     /// Generate a matcher property for a function parameter
     private static func generateMatcherProperty(
         for parameter: FunctionParameterSyntax,
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
         let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let isOptional = paramType.hasSuffix("?")
         let baseType = (isOptional ? String(paramType.dropLast()) : paramType)
-        var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
         let typePrefix: String
-        if baseType == "Bool" {
-            typePrefix = "Bool"
-            genericPostfix = ""
-        } else if isComparableProvider(baseType) {
+        
+        switch typeConformanceProvider(baseType) {
+        case .comparableAndEquatable:
             typePrefix = ""
-        } else {
+        case .onlyEquatable:
+            typePrefix = "OnlyEquatable"
+        case .neitherComparableNorEquatable:
             typePrefix = "NonComparable"
         }
 
         if isOptional {
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher\(raw: genericPostfix)
+                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher<\(raw: paramType.dropLast())>
                 """
             )
         } else {
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): \(raw: typePrefix)ValueMatcher\(raw: genericPostfix)
+                let \(raw: paramName): \(raw: typePrefix)ValueMatcher<\(raw: paramType)>
                 """
             )
         }

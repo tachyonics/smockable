@@ -59,12 +59,12 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConver
     }
 }
 
-public enum BoolValueMatcher: Sendable, CustomStringConvertible {
+public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value
-    case exact(Bool)
+    case exact(T)
 
     /// Check if the given value matches this matcher
-    public func matches(_ value: Bool) -> Bool {
+    public func matches(_ value: T) -> Bool {
         switch self {
         case .any:
             return true
@@ -137,12 +137,12 @@ public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStri
     }
 }
 
-public enum OptionalBoolValueMatcher: Sendable, CustomStringConvertible {
+public enum OptionalOnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value (nil or non-nil)
-    case exact(Bool?)
+    case exact(T?)
 
     /// Check if the given optional value matches this matcher
-    public func matches(_ value: Bool?) -> Bool {
+    public func matches(_ value: T?) -> Bool {
         switch self {
         case .any:
             return true

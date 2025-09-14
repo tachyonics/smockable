@@ -30,26 +30,63 @@ enum MockGenerator {
         return genericParameterClause
     }
 
-    static func getComparableAssociatedTypes(
+    static func getTypeConformanceAssociatedTypes(
         associatedTypes: [AssociatedTypeDeclSyntax]
     )
-        -> [String]
+        -> (comparableAndEquatable: [String], equatableOnly: [String])
     {
         if !associatedTypes.isEmpty {
-            return associatedTypes.filter { associatedType in
-                let filteredAssociatedTypes = associatedType.inheritanceClause?.inheritedTypes.filter { syntax in
+            let mappedAssociatedTypes = associatedTypes.map { associatedType in
+                let typeConformances: [TypeConformance] = associatedType.inheritanceClause?.inheritedTypes.compactMap { syntax in
                     let components = syntax.description.split(separator: "&")
                     let trimmedComponents = components.map {
                         String($0.trimmingCharacters(in: .whitespacesAndNewlines))
                     }
-
-                    return Set(trimmedComponents).contains("Comparable")
+                    
+                    let trimmedComponentsSet = Set(trimmedComponents)
+                    let isComparable = trimmedComponentsSet.contains("Comparable")
+                    let isEquatable = trimmedComponentsSet.contains("Equatable")
+                    
+                    if isComparable {
+                        return .comparableAndEquatable
+                    } else if isEquatable {
+                        return .onlyEquatable
+                    } else {
+                        return .neitherComparableNorEquatable
+                    }
+                } ?? []
+                
+                let typeConformance: TypeConformance = typeConformances.reduce(.neitherComparableNorEquatable) { partialResult, typeConformance in
+                    switch (partialResult, typeConformance) {
+                    case (_, .comparableAndEquatable):
+                        return .comparableAndEquatable
+                    case (.onlyEquatable, _):
+                        return .onlyEquatable
+                    case (_, .onlyEquatable):
+                        return .onlyEquatable
+                    case (_, _):
+                        return .neitherComparableNorEquatable
+                    }
                 }
-
-                return !(filteredAssociatedTypes ?? []).isEmpty
-            }.map { $0.name.description }
+                
+                return (associatedType.name.description, typeConformance)
+            }
+            
+            return mappedAssociatedTypes.reduce(([], [])) { partialResult, mappedAssociatedType in
+                var updated = partialResult
+                switch mappedAssociatedType.1 {
+                case .comparableAndEquatable:
+                    updated.0.append(mappedAssociatedType.0)
+                case .onlyEquatable:
+                    updated.1.append(mappedAssociatedType.0)
+                case .neitherComparableNorEquatable:
+                    break
+                }
+                
+                return updated
+            }
         } else {
-            return []
+            return ([], [])
         }
     }
 
@@ -208,15 +245,28 @@ enum MockGenerator {
             .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
 
         let genericParameterClause = getGenericParameterClause(associatedTypes: associatedTypes)
-        let comparableAssociatedTypes = getComparableAssociatedTypes(associatedTypes: associatedTypes)
+        let (comparableAssociatedTypes, equatableAssociatedTypes) = getTypeConformanceAssociatedTypes(associatedTypes: associatedTypes)
 
-        func isComparableProvider(baseType: String) -> Bool {
+        func typeConformanceProvider(baseType: String) -> TypeConformance {
             let builtInComparableTypes = [
                 "String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64",
                 "Float", "Double", "Character", "Date",
             ]
+            
+            let builtInEquatableOnlyTypes = [
+                "Bool", "UUID"
+            ]
+            
             let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes)
-            return comparableTypes.contains(baseType)
+            let equatableTypes = Set(equatableAssociatedTypes + builtInEquatableOnlyTypes)
+            
+            if comparableTypes.contains(baseType) {
+                return .comparableAndEquatable
+            } else if equatableTypes.contains(baseType) {
+                return .onlyEquatable
+            } else {
+                return .neitherComparableNorEquatable
+            }
         }
 
         return try StructDeclSyntax(
@@ -266,7 +316,7 @@ enum MockGenerator {
                     try StorageGenerator.expectationsDeclaration(
                         functionDeclarations: propertyFunctionDeclarations,
                         typePrefix: propertyDeclaration.typePrefix,
-                        isComparableProvider: isComparableProvider
+                        typeConformanceProvider: typeConformanceProvider
                     )
 
                     try StorageGenerator.expectedResponsesDeclaration(
@@ -283,7 +333,7 @@ enum MockGenerator {
                         functionDeclarations: propertyFunctionDeclarations,
                         typePrefix: propertyDeclaration.typePrefix,
                         storagePrefix: propertyDeclaration.storagePrefix,
-                        isComparableProvider: isComparableProvider
+                        typeConformanceProvider: typeConformanceProvider
                     )
 
                     if let get = propertyDeclaration.get {
@@ -317,7 +367,7 @@ enum MockGenerator {
                             variablePrefix: set.variablePrefix,
                             parameterList: set.parameterList,
                             typePrefix: propertyDeclaration.typePrefix,
-                            isComparableProvider: isComparableProvider
+                            typeConformanceProvider: typeConformanceProvider
                         ) {
                             setterInputMatcherStruct
                         }
@@ -331,7 +381,7 @@ enum MockGenerator {
                 try StorageGenerator.expectationsDeclaration(
                     functionDeclarations: functionDeclarations,
                     propertyDeclarations: propertyDeclarations,
-                    isComparableProvider: isComparableProvider
+                    typeConformanceProvider: typeConformanceProvider
                 )
                 try StorageGenerator.expectedResponsesDeclaration(
                     functionDeclarations: functionDeclarations,
@@ -348,7 +398,7 @@ enum MockGenerator {
                 try VerifierGenerator.verifierStructDeclaration(
                     functionDeclarations: functionDeclarations,
                     propertyDeclarations: propertyDeclarations,
-                    isComparableProvider: isComparableProvider
+                    typeConformanceProvider: typeConformanceProvider
                 )
 
                 for functionDeclaration in functionDeclarations {
@@ -368,7 +418,7 @@ enum MockGenerator {
                     if let inputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
                         variablePrefix: variablePrefix,
                         parameterList: parameterList,
-                        isComparableProvider: isComparableProvider
+                        typeConformanceProvider: typeConformanceProvider
                     ) {
                         inputMatcherStruct
                     }

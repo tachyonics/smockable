@@ -16,26 +16,27 @@ enum AllParameterSequenceGenerator {
     enum ParameterType {
         case comparable
         case notComparable
-        case bool
+        case onlyEquatable
     }
 
     static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) -> [[(FunctionParameterSyntax, ParameterType, ParameterForm)]] {
         if let firstParameter = parameters.first {
             let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let firstIsOptional = firstParamType.hasSuffix("?")
             let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType)
-            let firstIsComparable = isComparableProvider(firstBaseType)
+            let firstTypeConformance = typeConformanceProvider(firstBaseType)
 
             if parameters.count == 1 {
-                if firstBaseType == "Bool" {
-                    return [[(firstParameter, .bool, .explicitMatcher)], [(firstParameter, .bool, .exact)]]
-                } else if !firstIsComparable {
+                switch firstTypeConformance {
+                case .onlyEquatable:
+                    return [[(firstParameter, .onlyEquatable, .explicitMatcher)], [(firstParameter, .onlyEquatable, .exact)]]
+                case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
                     return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)]]
-                } else {
+                case .comparableAndEquatable:
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each form
@@ -47,22 +48,23 @@ enum AllParameterSequenceGenerator {
             // otherwise get the combinations for the parameters array minus the first element
             let dropFirstParameterSequences = getAllParameterSequences(
                 parameters: parameters.dropFirst(),
-                isComparableProvider: isComparableProvider
+                typeConformanceProvider: typeConformanceProvider
             )
 
             // iterate through the remaining cases
             return dropFirstParameterSequences.flatMap { partialParameterSequence in
-                if firstBaseType == "Bool" {
+                switch firstTypeConformance {
+                case .onlyEquatable:
                     return [
-                        [(firstParameter, .bool, .explicitMatcher)] + partialParameterSequence,
-                        [(firstParameter, .bool, .exact)] + partialParameterSequence,
+                        [(firstParameter, .onlyEquatable, .explicitMatcher)] + partialParameterSequence,
+                        [(firstParameter, .onlyEquatable, .exact)] + partialParameterSequence,
                     ]
-                } else if !firstIsComparable {
+                case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
                     return [
                         [(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence
                     ]
-                } else {
+                case .comparableAndEquatable:
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each type
