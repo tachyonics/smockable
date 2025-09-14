@@ -59,7 +59,8 @@ enum AllParameterSequenceGenerator {
                 case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
                     return [
-                        [(firstParameter, .neitherComparableNorEquatable, ParameterForm.explicitMatcher)] + partialParameterSequence
+                        [(firstParameter, .neitherComparableNorEquatable, ParameterForm.explicitMatcher)]
+                            + partialParameterSequence
                     ]
                 case .comparableAndEquatable:
                     // when there is only one parameter
