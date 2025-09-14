@@ -37,26 +37,29 @@ enum MockGenerator {
     {
         if !associatedTypes.isEmpty {
             let mappedAssociatedTypes = associatedTypes.map { associatedType in
-                let typeConformances: [TypeConformance] = associatedType.inheritanceClause?.inheritedTypes.compactMap { syntax in
-                    let components = syntax.description.split(separator: "&")
-                    let trimmedComponents = components.map {
-                        String($0.trimmingCharacters(in: .whitespacesAndNewlines))
-                    }
-                    
-                    let trimmedComponentsSet = Set(trimmedComponents)
-                    let isComparable = trimmedComponentsSet.contains("Comparable")
-                    let isEquatable = trimmedComponentsSet.contains("Equatable")
-                    
-                    if isComparable {
-                        return .comparableAndEquatable
-                    } else if isEquatable {
-                        return .onlyEquatable
-                    } else {
-                        return .neitherComparableNorEquatable
-                    }
-                } ?? []
-                
-                let typeConformance: TypeConformance = typeConformances.reduce(.neitherComparableNorEquatable) { partialResult, typeConformance in
+                let typeConformances: [TypeConformance] =
+                    associatedType.inheritanceClause?.inheritedTypes.compactMap { syntax in
+                        let components = syntax.description.split(separator: "&")
+                        let trimmedComponents = components.map {
+                            String($0.trimmingCharacters(in: .whitespacesAndNewlines))
+                        }
+
+                        let trimmedComponentsSet = Set(trimmedComponents)
+                        let isComparable = trimmedComponentsSet.contains("Comparable")
+                        let isEquatable = trimmedComponentsSet.contains("Equatable")
+
+                        if isComparable {
+                            return .comparableAndEquatable
+                        } else if isEquatable {
+                            return .onlyEquatable
+                        } else {
+                            return .neitherComparableNorEquatable
+                        }
+                    } ?? []
+
+                let typeConformance: TypeConformance = typeConformances.reduce(.neitherComparableNorEquatable) {
+                    partialResult,
+                    typeConformance in
                     switch (partialResult, typeConformance) {
                     case (_, .comparableAndEquatable):
                         return .comparableAndEquatable
@@ -68,10 +71,10 @@ enum MockGenerator {
                         return .neitherComparableNorEquatable
                     }
                 }
-                
+
                 return (associatedType.name.description, typeConformance)
             }
-            
+
             return mappedAssociatedTypes.reduce(([], [])) { partialResult, mappedAssociatedType in
                 var updated = partialResult
                 switch mappedAssociatedType.1 {
@@ -82,7 +85,7 @@ enum MockGenerator {
                 case .neitherComparableNorEquatable:
                     break
                 }
-                
+
                 return updated
             }
         } else {
@@ -245,21 +248,24 @@ enum MockGenerator {
             .compactMap { $0.decl.as(AssociatedTypeDeclSyntax.self) }
 
         let genericParameterClause = getGenericParameterClause(associatedTypes: associatedTypes)
-        let (comparableAssociatedTypes, equatableAssociatedTypes) = getTypeConformanceAssociatedTypes(associatedTypes: associatedTypes)
+        let (comparableAssociatedTypes, equatableAssociatedTypes) = getTypeConformanceAssociatedTypes(
+            associatedTypes: associatedTypes
+        )
 
         func typeConformanceProvider(baseType: String) -> TypeConformance {
             let builtInComparableTypes = [
                 "String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64",
                 "Float", "Double", "Character", "Date",
             ]
-            
+
             let builtInEquatableOnlyTypes = [
-                "Bool", "UUID"
+                "Bool", "UUID", "URL", "Data", "URLComponents",
+                "CGPoint", "CGSize", "CGRect", "CGVector",
             ]
-            
+
             let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes)
             let equatableTypes = Set(equatableAssociatedTypes + builtInEquatableOnlyTypes)
-            
+
             if comparableTypes.contains(baseType) {
                 return .comparableAndEquatable
             } else if equatableTypes.contains(baseType) {

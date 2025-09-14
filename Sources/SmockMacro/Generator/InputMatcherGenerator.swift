@@ -43,7 +43,7 @@ enum InputMatcherGenerator {
         let isOptional = paramType.hasSuffix("?")
         let baseType = (isOptional ? String(paramType.dropLast()) : paramType)
         let typePrefix: String
-        
+
         switch typeConformanceProvider(baseType) {
         case .comparableAndEquatable:
             typePrefix = ""

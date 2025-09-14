@@ -32,7 +32,10 @@ enum AllParameterSequenceGenerator {
             if parameters.count == 1 {
                 switch firstTypeConformance {
                 case .onlyEquatable:
-                    return [[(firstParameter, .onlyEquatable, .explicitMatcher)], [(firstParameter, .onlyEquatable, .exact)]]
+                    return [
+                        [(firstParameter, .onlyEquatable, .explicitMatcher)],
+                        [(firstParameter, .onlyEquatable, .exact)],
+                    ]
                 case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
                     return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)]]
