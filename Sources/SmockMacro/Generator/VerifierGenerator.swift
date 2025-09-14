@@ -117,8 +117,7 @@ enum VerifierGenerator {
 
     private static func getParameters(
         parameterSequence: [(
-            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
-            AllParameterSequenceGenerator.ParameterForm
+            FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
         )],
         allParametersAreMatchers: Bool
     )
@@ -174,9 +173,9 @@ enum VerifierGenerator {
             case .explicitMatcher:
                 let typePrefix: String
                 switch parameterType {
-                case .comparable:
+                case .comparableAndEquatable:
                     typePrefix = ""
-                case .notComparable:
+                case .neitherComparableNorEquatable:
                     typePrefix = "NonComparable"
                 case .onlyEquatable:
                     typePrefix = "OnlyEquatable"
@@ -240,8 +239,7 @@ enum VerifierGenerator {
     private static func generateMethodForCombination(
         functionDeclaration: FunctionDeclSyntax,
         parameterSequence: [(
-            FunctionParameterSyntax, AllParameterSequenceGenerator.ParameterType,
-            AllParameterSequenceGenerator.ParameterForm
+            FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
         )],
         typePrefix: String,
         storagePrefix: String

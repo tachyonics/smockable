@@ -13,16 +13,10 @@ enum AllParameterSequenceGenerator {
         case exact
     }
 
-    enum ParameterType {
-        case comparable
-        case notComparable
-        case onlyEquatable
-    }
-
     static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
         typeConformanceProvider: (String) -> TypeConformance
-    ) -> [[(FunctionParameterSyntax, ParameterType, ParameterForm)]] {
+    ) -> [[(FunctionParameterSyntax, TypeConformance, ParameterForm)]] {
         if let firstParameter = parameters.first {
             let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let firstIsOptional = firstParamType.hasSuffix("?")
@@ -38,12 +32,12 @@ enum AllParameterSequenceGenerator {
                     ]
                 case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
-                    return [[(firstParameter, .notComparable, ParameterForm.explicitMatcher)]]
+                    return [[(firstParameter, .neitherComparableNorEquatable, .explicitMatcher)]]
                 case .comparableAndEquatable:
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each form
-                        return [(firstParameter, .comparable, parameterForm)]
+                        return [(firstParameter, .comparableAndEquatable, parameterForm)]
                     }
                 }
             }
@@ -65,13 +59,14 @@ enum AllParameterSequenceGenerator {
                 case .neitherComparableNorEquatable:
                     // only have the explicitMatcher form for this parameter
                     return [
-                        [(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence
+                        [(firstParameter, .neitherComparableNorEquatable, ParameterForm.explicitMatcher)]
+                            + partialParameterSequence
                     ]
                 case .comparableAndEquatable:
                     // when there is only one parameter
                     return ParameterForm.allCases.map { parameterForm in
                         // parameter combination for each type
-                        return [(firstParameter, .comparable, parameterForm)] + partialParameterSequence
+                        return [(firstParameter, .comparableAndEquatable, parameterForm)] + partialParameterSequence
                     }
                 }
             }
