@@ -52,16 +52,15 @@ enum AllParameterSequenceGenerator {
 
             // iterate through the remaining cases
             return dropFirstParameterSequences.flatMap { partialParameterSequence in
-                if !firstIsComparable {
+                if firstBaseType == "Bool" {
+                    return [
+                        [(firstParameter, .bool, .explicitMatcher)] + partialParameterSequence,
+                        [(firstParameter, .bool, .exact)] + partialParameterSequence,
+                    ]
+                } else if !firstIsComparable {
                     // only have the explicitMatcher form for this parameter
                     return [
                         [(firstParameter, .notComparable, ParameterForm.explicitMatcher)] + partialParameterSequence
-                    ]
-                } else if firstBaseType == "Bool" {
-                    return [
-                        [(firstParameter, ParameterType.bool, ParameterForm.explicitMatcher)]
-                            + partialParameterSequence,
-                        [(firstParameter, ParameterType.bool, ParameterForm.exact)] + partialParameterSequence,
                     ]
                 } else {
                     // when there is only one parameter
