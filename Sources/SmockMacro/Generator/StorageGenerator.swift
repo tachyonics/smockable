@@ -6,7 +6,7 @@ enum StorageGenerator {
         functionDeclarations: [FunctionDeclSyntax],
         typePrefix: String = "",
         propertyDeclarations: [PropertyDeclaration] = [],
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws
         -> StructDeclSyntax
     {
@@ -45,7 +45,7 @@ enum StorageGenerator {
                     let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
                         for: functionDeclaration,
                         typePrefix: typePrefix,
-                        isComparableProvider: isComparableProvider
+                        typeConformanceProvider: typeConformanceProvider
                     )
                     for method in methods {
                         method

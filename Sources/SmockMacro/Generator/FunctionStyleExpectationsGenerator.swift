@@ -6,7 +6,7 @@ enum FunctionStyleExpectationsGenerator {
     static func generateExpectationMethods(
         for functionDeclaration: FunctionDeclSyntax,
         typePrefix: String,
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> [FunctionDeclSyntax] {
         let parameterList = functionDeclaration.signature.parameterClause.parameters
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
@@ -30,7 +30,7 @@ enum FunctionStyleExpectationsGenerator {
             expectationClassName: expectationClassName,
             typePrefix: typePrefix,
             variablePrefix: variablePrefix,
-            isComparableProvider: isComparableProvider
+            typeConformanceProvider: typeConformanceProvider
         )
     }
 
@@ -60,12 +60,12 @@ enum FunctionStyleExpectationsGenerator {
         expectationClassName: String,
         typePrefix: String,
         variablePrefix: String,
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
         let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
             parameters: parameters[...],
-            isComparableProvider: isComparableProvider
+            typeConformanceProvider: typeConformanceProvider
         )
 
         var methods: [FunctionDeclSyntax] = []
@@ -122,23 +122,21 @@ enum FunctionStyleExpectationsGenerator {
                 }
             case .explicitMatcher:
                 let typePrefix: String
-                var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
                 switch parameterType {
                 case .comparable:
                     typePrefix = ""
                 case .notComparable:
                     typePrefix = "NonComparable"
-                case .bool:
-                    typePrefix = "Bool"
-                    genericPostfix = ""
+                case .onlyEquatable:
+                    typePrefix = "OnlyEquatable"
                 }
                 if isOptional {
                     methodParameters.append(
-                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)"
+                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(paramType.dropLast())>"
                     )
                     matcherInitializers.append("\(paramName): \(paramName)")
                 } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
                     matcherInitializers.append("\(paramName): \(paramName)")
                 }
             case .exact:

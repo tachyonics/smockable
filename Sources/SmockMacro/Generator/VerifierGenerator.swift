@@ -7,7 +7,7 @@ enum VerifierGenerator {
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = "",
         storagePrefix: String = "",
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> StructDeclSyntax {
         try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],
@@ -57,7 +57,7 @@ enum VerifierGenerator {
                     functionDeclarations: functionDeclarations,
                     typePrefix: typePrefix,
                     storagePrefix: storagePrefix,
-                    isComparableProvider: isComparableProvider
+                    typeConformanceProvider: typeConformanceProvider
                 )
             }
         )
@@ -68,7 +68,7 @@ enum VerifierGenerator {
         functionDeclarations: [FunctionDeclSyntax],
         typePrefix: String,
         storagePrefix: String,
-        isComparableProvider: (String) -> Bool
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws -> MemberBlockItemListSyntax {
         // Generate verifier methods for each function
         for functionDeclaration in functionDeclarations {
@@ -76,7 +76,7 @@ enum VerifierGenerator {
             let parameters = Array(parameterList)
             let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
                 parameters: parameters[...],
-                isComparableProvider: isComparableProvider
+                typeConformanceProvider: typeConformanceProvider
             )
 
             if parameters.isEmpty {
@@ -173,23 +173,21 @@ enum VerifierGenerator {
                 }
             case .explicitMatcher:
                 let typePrefix: String
-                var genericPostfix: String = isOptional ? "<\(paramType.dropLast())>" : "<\(paramType)>"
                 switch parameterType {
                 case .comparable:
                     typePrefix = ""
                 case .notComparable:
                     typePrefix = "NonComparable"
-                case .bool:
-                    typePrefix = "Bool"
-                    genericPostfix = ""
+                case .onlyEquatable:
+                    typePrefix = "OnlyEquatable"
                 }
                 if isOptional {
                     methodParameters.append(
-                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher\(genericPostfix)"
+                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(paramType.dropLast())>"
                     )
                     matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
                 } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher\(genericPostfix)")
+                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
                     matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
                 }
             case .exact:
