@@ -1,6 +1,6 @@
+import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import SmockableUtils
 
 enum InputMatcherGenerator {
     /// Generate an input matcher struct for a specific function

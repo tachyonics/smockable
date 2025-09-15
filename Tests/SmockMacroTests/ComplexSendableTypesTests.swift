@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import Smockable
+
 @Smock
 protocol TestComplexSendableService {
     // Collection types
@@ -9,7 +10,7 @@ protocol TestComplexSendableService {
     func dictParam(metadata: [String: String]) -> String
     func setParam(numbers: Set<Int>) -> String
 
-    // Optional collection types
+    // Optional collection types.any
     func optionalArrayParam(strings: [String]?) -> String
     func optionalDictParam(metadata: [String: String]?) -> String
 
@@ -125,6 +126,7 @@ struct ComplexSendableTypesTests {
         verify(mock, times: 2).optionalArrayParam(strings: .any)
         verify(mock, times: 1).optionalArrayParam(strings: nil)
         verify(mock, times: 1).optionalDictParam(metadata: .any)
+        verify(mock, times: 1).optionalDictParam(metadata: ["key": "value"])
     }
 
     // MARK: - Nested Collection Tests
@@ -146,6 +148,8 @@ struct ComplexSendableTypesTests {
 
         verify(mock, times: 1).nestedArrayParam(matrix: .any)
         verify(mock, times: 1).arrayOfDictsParam(configs: .any)
+        verify(mock, times: 1).nestedArrayParam(matrix: [[1, 2], [3, 4]])
+        verify(mock, times: 1).arrayOfDictsParam(configs: [["key1": "value1"], ["key2": "value2"]])
     }
 
     // MARK: - Mixed Parameter Type Tests
@@ -154,10 +158,14 @@ struct ComplexSendableTypesTests {
     func testMixedParametersWithCollections() {
         var expectations = MockTestComplexSendableService.Expectations()
 
-        when(expectations.mixedWithArray(name: "test"..."zebra", items: .any, enabled: true),
-             return: "mixed with array matched")
-        when(expectations.mixedWithDict(count: 1...100, config: .any, data: .any),
-             return: "mixed with dict matched")
+        when(
+            expectations.mixedWithArray(name: "test"..."zebra", items: .any, enabled: true),
+            return: "mixed with array matched"
+        )
+        when(
+            expectations.mixedWithDict(count: 1...100, config: .any, data: .any),
+            return: "mixed with dict matched"
+        )
 
         let mock = MockTestComplexSendableService(expectations: expectations)
 
@@ -168,7 +176,9 @@ struct ComplexSendableTypesTests {
         #expect(result2 == "mixed with dict matched")
 
         verify(mock, times: 1).mixedWithArray(name: "test"..."zebra", items: .any, enabled: true)
+        verify(mock, times: 1).mixedWithArray(name: "test"..."zebra", items: ["item1", "item2"], enabled: true)
         verify(mock, times: 1).mixedWithDict(count: 1...100, config: .any, data: .any)
+        verify(mock, times: 1).mixedWithDict(count: 1...100, config: ["setting": "value"], data: .any)
     }
 
     // MARK: - Generic Sendable Tests
@@ -178,7 +188,11 @@ struct ComplexSendableTypesTests {
         var expectations = MockTestComplexSendableService.Expectations()
 
         when(expectations.genericSendableParam(value: .any), times: .unbounded, return: "sendable matched")
-        when(expectations.multipleSendableParams(first: .any, second: .any), times: .unbounded, return: "multiple sendable matched")
+        when(
+            expectations.multipleSendableParams(first: .any, second: .any),
+            times: .unbounded,
+            return: "multiple sendable matched"
+        )
 
         let mock = MockTestComplexSendableService(expectations: expectations)
 
@@ -239,14 +253,17 @@ struct ComplexSendableTypesTests {
     func testComplexMixedParameters() {
         var expectations = MockTestComplexSendableService.Expectations()
 
-        when(expectations.complexMixedParams(
-            name: "test"..."zebra",        // Comparable - range
-            ids: .any,                     // Collection - any
-            config: .any,                  // Collection - any
-            enabled: true,                 // Bool - exact
-            data: .any,                    // Non-comparable - any
-            sendable: .any                 // Generic Sendable - any
-        ), return: "complex mixed matched")
+        when(
+            expectations.complexMixedParams(
+                name: "test"..."zebra",  // Comparable - range
+                ids: .any,  // Collection - any
+                config: .any,  // Collection - any
+                enabled: true,  // Bool - exact
+                data: .any,  // Non-comparable - any
+                sendable: .any  // Generic Sendable - any
+            ),
+            return: "complex mixed matched"
+        )
 
         let mock = MockTestComplexSendableService(expectations: expectations)
 
@@ -278,14 +295,17 @@ struct ComplexSendableTypesTests {
         let specificUUIDs = [UUID(), UUID()]
         let specificConfig = ["setting1": "value1", "setting2": "value2"]
 
-        when(expectations.complexMixedParams(
-            name: "exact",                 // Comparable - exact
-            ids: specificUUIDs,            // Collection - exact
-            config: specificConfig,        // Collection - exact
-            enabled: .any,                 // Bool - any
-            data: .any,                    // Non-comparable - any
-            sendable: .any                 // Generic Sendable - any
-        ), return: "specific complex matched")
+        when(
+            expectations.complexMixedParams(
+                name: "exact",  // Comparable - exact
+                ids: specificUUIDs,  // Collection - exact
+                config: specificConfig,  // Collection - exact
+                enabled: .any,  // Bool - any
+                data: .any,  // Non-comparable - any
+                sendable: .any  // Generic Sendable - any
+            ),
+            return: "specific complex matched"
+        )
 
         let mock = MockTestComplexSendableService(expectations: expectations)
 

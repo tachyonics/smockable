@@ -3,9 +3,9 @@
 //  smockable
 //
 
+import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import SmockableUtils
 
 enum AssociatedTypesGenerator {
     private static func getMappedAssociatedTypes(

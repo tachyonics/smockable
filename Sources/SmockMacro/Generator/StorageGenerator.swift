@@ -1,6 +1,6 @@
+import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import SmockableUtils
 
 enum StorageGenerator {
     static func expectationsDeclaration(

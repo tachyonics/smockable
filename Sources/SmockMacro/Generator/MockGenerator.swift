@@ -1,7 +1,7 @@
 import Foundation
+import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import SmockableUtils
 
 enum MacroError: Error {
     case invalidPropertyDeclaration
