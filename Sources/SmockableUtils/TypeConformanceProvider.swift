@@ -42,7 +42,6 @@ package enum TypeConformanceProvider {
         case dictionaryStart
         case tokenStart
         case confirmedConformance(TypeConformance)
-        //case token(String)
 
         func isDictionaryStartToken(canBeLiteralToken: Bool) -> Bool {
             switch self {
