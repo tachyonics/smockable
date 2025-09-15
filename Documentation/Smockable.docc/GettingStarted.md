@@ -35,6 +35,8 @@ protocol WeatherService {
     func getForecast(for city: String, days: Int) async throws -> [WeatherDay]
     
     var apiKey: String { get set }
+    var isConnected: Bool { get }
+    var lastUpdated: Date { get async throws }
 }
 
 struct WeatherDay {
@@ -56,6 +58,16 @@ struct WeatherApp<Service: WeatherService> {
     
     init(weatherService: Service) {
         self.weatherService = weatherService
+    }
+
+    var isConnected: Bool {
+        return self.weatherService.isConnected
+    }
+
+    var lastUpdated: Bool {
+        get async throws {
+            return self.weatherService.lastUpdated
+        }
     }
     
     func displayCurrentWeather(for city: String) async -> String {
@@ -82,13 +94,26 @@ struct WeatherApp<Service: WeatherService> {
     // Configure property expectations
     when(expectations.apiKey.get(), return: "test-api-key")
     when(expectations.apiKey.set(.any), complete: .withSuccess)
+    when(expectations.isConnected.get(), return: true)
+    when(expectations.lastUpdated.get(), return: dateForTesting)
     
     let mockWeatherService = MockWeatherService(expectations: expectations)
     let weatherApp = WeatherApp(weatherService: mockWeatherService)
     
     let result = await weatherApp.displayCurrentWeather(for: "London")
+    let isConnected = weatherApp.isConnected
+    let lastUpdated = weatherApp.lastUpdated
     
     #expect(result == "Current temperature in London: 22.5°C")
+    #expect(isConnected)
+    #expect(lastUpdated == dateForTesting)
+
+    // Verify calls to mock
+    verify(mockWeatherService).getCurrentTemperature(for: "London")
+    verify(mockWeatherService).apiKey.get()
+    verify(mockWeatherService).apiKey.set(.any)
+    verify(mockWeatherService).isConnected.get()
+    verify(mockWeatherService).lastUpdated.get()
 }
 ```
 
@@ -105,6 +130,9 @@ struct WeatherApp<Service: WeatherService> {
     let result = await weatherApp.displayCurrentWeather(for: "London")
     
     #expect(result == "Unable to fetch weather for London")
+
+    // Verify calls to mock
+    verify(mockWeatherService).getCurrentTemperature(for: "London")
 }
 ```
 

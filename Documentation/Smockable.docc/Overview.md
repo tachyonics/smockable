@@ -190,6 +190,52 @@ function is called.
 }
 ```
 
+## Working with Collections
+
+Smockable provides built-in support for Collection types with smart matching capabilities:
+
+```swift
+@Smock
+protocol DataService {
+    func processItems(_ items: [String]) -> Int
+    func updateConfig(_ config: [String: String]) -> Bool
+    func analyzeNumbers(_ numbers: Set<Int>) -> Double
+}
+
+@Test func testCollectionSupport() async throws {
+    var expectations = MockDataService.Expectations()
+    
+    // Use .any to match any collection content
+    when(expectations.processItems(.any), return: 42)
+    when(expectations.updateConfig(.any), return: true)
+    when(expectations.analyzeNumbers(.any), return: 3.14)
+    
+    // Or use exact matching for specific collections
+    when(expectations.processItems(["exact", "match"]), return: 2)
+    
+    let mock = MockDataService(expectations: expectations)
+    
+    // Test with any collection content
+    let result1 = mock.processItems(["test", "data"])
+    let result2 = mock.updateConfig(["key": "value"])
+    let result3 = mock.analyzeNumbers(Set([1, 2, 3]))
+    
+    // Test with exact collection content
+    let result4 = mock.processItems(["exact", "match"])
+    
+    #expect(result1 == 42)
+    #expect(result2 == true)
+    #expect(result3 == 3.14)
+    #expect(result4 == 2)
+    
+    // Verify collection calls
+    verify(mock, times: 2).processItems(.any)
+    verify(mock, times: 1).processItems(["exact", "match"])
+    verify(mock, times: 1).updateConfig(.any)
+    verify(mock, times: 1).analyzeNumbers(.any)
+}
+```
+
 ## Next Steps
 
 - <doc:GettingStarted> for installing and using Smockable

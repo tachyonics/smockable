@@ -25,6 +25,8 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 - ✅ **Flexible expectations** supporting multiple calls, unbounded calls, and custom logic
 - ✅ **Protocol inheritance** and associated types support
 - ✅ **Async/await**, sync and throwing function support
+- ✅ **Protocol property requirements** with full get/set/async/throws support
+- ✅ **Collection expectations and verification** for Arrays, Dictionaries, and Sets (include Equatable checks when the Collection is Equatable)
 
 ## Requirements
 
@@ -74,7 +76,9 @@ import Smockable
 
 @Smock
 protocol UserService {
+    var apiKey: String { get set }
     func fetchUser(id: String) async throws -> User
+    func fetchUsers(ids: [String]) async throws -> [User]
     func updateUser(_ user: User) async throws
 }
 ```
@@ -89,9 +93,14 @@ func userFetching() async throws {
     // Create expectations
     var expectations = MockUserService.Expectations()
     
+    // Configure property expectations
+    when(expectations.apiKey.get(), return: "test-key")
+    when(expectations.apiKey.set(.any), complete: .withSuccess)
+    
     // Set up expected behavior with range matching with when(:return)
-    let expectedUser = User(id: "123", name: "John Doe")
-    when(expectations.fetchUser(id: "100"..."999"), return: expectedUser)
+    let expectedUser1 = User(id: "123", name: "John Doe")
+    let expectedUser2 = User(id: "456", name: "Mary Jane")
+    when(expectations.fetchUsers(ids: ["user1", "user2"]), return: [expectedUser1, expectedUser2])
     
     // For functions with no return type, use when(:complete)
     when(expectations.updateUser(.any), complete: .withSuccess)
@@ -101,14 +110,22 @@ func userFetching() async throws {
     let codeUnderTest = CodeUnderTest(service: mockService)
     
     // Exercise the code under test
-    let user = try await codeUnderTest.fetchUser(id: "123")
+    let key = codeUnderTest.apiKey
+    codeUnderTest.apiKey = "new-key"
+    let users = try await codeUnderTest.fetchUser(id: ["user1", "user2"])
     try await codeUnderTest.updateUser(user)
     
     // Verify behavior
-    verify(mockService, times: 1).fetchUser(id: .any)
+    verify(mockService, times: 1).fetchUsers(id: ["user1", "user2"])
     verify(mockService, times: 1).updateUser(.any)
     
-    #expect(user.id == "123")
+    // Verify property access
+    verify(mock, times: 1).apiKey.get()
+    verify(mock, times: 1).apiKey.set("new-key")
+    
+    #expect(key == "test-key")
+    #expect(users[0].id == "123")
+    #expect(users[1].id == "456")
 }
 ```
 

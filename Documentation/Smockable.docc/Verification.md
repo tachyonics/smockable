@@ -268,3 +268,102 @@ await mock.fetchUser(id: "789")
 verify(mock, times: 3).fetchUser(id: .any)
 verify(mock, times: 1).fetchUser(id: "123")
 ```
+
+## Property Verification
+
+Smockable provides comprehensive verification for protocol property requirements, supporting all property types:
+
+```swift
+@Smock
+protocol ConfigService {
+    var apiKey: String { get set }
+    var isEnabled: Bool { get }
+    var lastUpdate: Date { get async }
+    var secretKey: String { get throws }
+    var asyncSecretKey: String { get async throws }
+}
+
+@Test func testPropertyVerification() async throws {
+    var expectations = MockConfigService.Expectations()
+    
+    // Setup property expectations
+    when(expectations.apiKey.get(), return: "test-key")
+    when(expectations.apiKey.set(.any), complete: .withSuccess)
+    when(expectations.isEnabled.get(), return: true)
+    when(expectations.lastUpdate.get(), return: Date())
+    when(expectations.secretKey.get(), return: "secret")
+    when(expectations.asyncSecretKey.get(), return: "async-secret")
+    
+    let mock = MockConfigService(expectations: expectations)
+    
+    // Use properties
+    let key = mock.apiKey
+    mock.apiKey = "new-key"
+    let enabled = mock.isEnabled
+    let update = await mock.lastUpdate
+    let secret = try mock.secretKey
+    let asyncSecret = try await mock.asyncSecretKey
+    
+    // Verify property access patterns
+    verify(mock, times: 1).apiKey.get()
+    verify(mock, times: 1).apiKey.set("new-key")
+    verify(mock, times: 1).apiKey.set(.any)
+    verify(mock, times: 1).isEnabled.get()
+    verify(mock, times: 1).lastUpdate.get()
+    verify(mock, times: 1).secretKey.get()
+    verify(mock, times: 1).asyncSecretKey.get()
+    
+    // Verify specific values
+    verify(mock, times: 1).apiKey.set("new-key")
+    verify(mock, .never).apiKey.set("wrong-key")
+}
+```
+
+## Collection Verification
+
+Verify collection parameters with flexible matching strategies:
+Similar to expectations, Smockable you to set verifications for Arrays, Dictionaries, and Sets. Any such
+collection can use wild-card (`.any`) verifications to match any invocations. Collections that conform to the Equatable protocol (because
+there elements conform to this protocol), can use exact verification matching.
+
+```swift
+@Smock
+protocol DataProcessor {
+    func processItems(_ items: [String]) -> Int
+    func mergeConfigs(_ configs: [String: String]) -> Bool
+    func analyzeNumbers(_ numbers: Set<Int>) -> Double
+}
+
+@Test func testCollectionVerification() {
+    var expectations = MockDataProcessor.Expectations()
+    
+    when(expectations.processItems(.any), times: .unbounded, return: 1)
+    when(expectations.mergeConfigs(.any), times: .unbounded, return: true)
+    when(expectations.analyzeNumbers(.any), times: .unbounded, return: 3.14)
+    
+    let mock = MockDataProcessor(expectations: expectations)
+    
+    // Call with different collections
+    _ = mock.processItems(["a", "b"])
+    _ = mock.processItems(["x", "y", "z"])
+    _ = mock.mergeConfigs(["key1": "value1"])
+    _ = mock.mergeConfigs(["key2": "value2", "key3": "value3"])
+    _ = mock.analyzeNumbers(Set([1, 2, 3]))
+    _ = mock.analyzeNumbers(Set([10, 20]))
+    
+    // Verify collection calls with .any matching
+    verify(mock, times: 2).processItems(.any)
+    verify(mock, times: 2).mergeConfigs(.any)
+    verify(mock, times: 2).analyzeNumbers(.any)
+    
+    // Verify specific collection content
+    verify(mock, times: 1).processItems(["a", "b"])
+    verify(mock, times: 1).processItems(["x", "y", "z"])
+    verify(mock, times: 1).mergeConfigs(["key1": "value1"])
+    verify(mock, times: 1).analyzeNumbers(Set([1, 2, 3]))
+    
+    // Verify never called with specific content
+    verify(mock, .never).processItems(["not", "called"])
+    verify(mock, .never).mergeConfigs(["wrong": "config"])
+}
+```
