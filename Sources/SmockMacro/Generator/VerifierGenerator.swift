@@ -1,5 +1,6 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SmockableUtils
 
 enum VerifierGenerator {
     static func verifierStructDeclaration(

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SmockableUtils
 
 enum MacroError: Error {
     case invalidPropertyDeclaration
@@ -190,28 +191,10 @@ enum MockGenerator {
                 associatedTypes: associatedTypes
             )
 
-        func typeConformanceProvider(baseType: String) -> TypeConformance {
-            let builtInComparableTypes = [
-                "String", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64",
-                "Float", "Double", "Character", "Date",
-            ]
-
-            let builtInEquatableOnlyTypes = [
-                "Bool", "UUID", "URL", "Data", "URLComponents",
-                "CGPoint", "CGSize", "CGRect", "CGVector",
-            ]
-
-            let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes)
-            let equatableTypes = Set(equatableAssociatedTypes + builtInEquatableOnlyTypes)
-
-            if comparableTypes.contains(baseType) {
-                return .comparableAndEquatable
-            } else if equatableTypes.contains(baseType) {
-                return .onlyEquatable
-            } else {
-                return .neitherComparableNorEquatable
-            }
-        }
+        let typeConformanceProvider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: comparableAssociatedTypes,
+            equatableAssociatedTypes: equatableAssociatedTypes
+        )
 
         return try StructDeclSyntax(
             modifiers: [DeclModifierSyntax(name: "public")],

@@ -5,6 +5,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SmockableUtils
 
 enum AllParameterSequenceGenerator {
     public enum ParameterForm: CaseIterable {

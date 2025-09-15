@@ -1,5 +1,6 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SmockableUtils
 
 enum FunctionStyleExpectationsGenerator {
     /// Generate function-style expectation methods for a given function declaration

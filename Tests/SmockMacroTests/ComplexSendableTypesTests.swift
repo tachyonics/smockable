@@ -2,7 +2,6 @@ import Foundation
 import Testing
 
 @testable import Smockable
-/*
 @Smock
 protocol TestComplexSendableService {
     // Collection types
@@ -61,7 +60,7 @@ struct ComplexSendableTypesTests {
         #expect(result1 == "array matched")
         #expect(result2 == "specific array matched")
 
-        verify(mock, times: 1).arrayParam(strings: .any)
+        verify(mock, times: 2).arrayParam(strings: .any)
         verify(mock, times: 1).arrayParam(strings: ["specific", "array"])
     }
 
@@ -80,7 +79,7 @@ struct ComplexSendableTypesTests {
         #expect(result1 == "dict matched")
         #expect(result2 == "specific dict matched")
 
-        verify(mock, times: 1).dictParam(metadata: .any)
+        verify(mock, times: 2).dictParam(metadata: .any)
         verify(mock, times: 1).dictParam(metadata: ["key": "value"])
     }
 
@@ -99,7 +98,7 @@ struct ComplexSendableTypesTests {
         #expect(result1 == "set matched")
         #expect(result2 == "specific set matched")
 
-        verify(mock, times: 1).setParam(numbers: .any)
+        verify(mock, times: 2).setParam(numbers: .any)
         verify(mock, times: 1).setParam(numbers: Set([1, 2, 3]))
     }
 
@@ -178,8 +177,8 @@ struct ComplexSendableTypesTests {
     func testGenericSendableParameters() {
         var expectations = MockTestComplexSendableService.Expectations()
 
-        when(expectations.genericSendableParam(value: .any), return: "sendable matched")
-        when(expectations.multipleSendableParams(first: .any, second: .any), return: "multiple sendable matched")
+        when(expectations.genericSendableParam(value: .any), times: .unbounded, return: "sendable matched")
+        when(expectations.multipleSendableParams(first: .any, second: .any), times: .unbounded, return: "multiple sendable matched")
 
         let mock = MockTestComplexSendableService(expectations: expectations)
 
@@ -210,8 +209,6 @@ struct ComplexSendableTypesTests {
         var expectations = MockTestComplexSendableService.Expectations()
 
         let testUUID = UUID()
-        let testURL = URL(string: "https://example.com")!
-        let testDate = Date()
 
         when(expectations.uuidParam(id: .any), return: "uuid matched")
         when(expectations.uuidParam(id: testUUID), return: "specific uuid matched")
@@ -401,4 +398,4 @@ struct ComplexSendableTypesTests {
         verify(mock, times: 1).dictParam(metadata: ["k1": "v1"])
         verify(mock, times: 1).setParam(numbers: Set([1, 2]))
     }
-}*/
+}
