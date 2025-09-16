@@ -146,19 +146,21 @@ package enum TypeConformanceProvider {
             if remainingInput.hasPrefix(arrayStart) {
                 stack.append(.arrayStart)
                 remainingInput = remainingInput.dropFirst(arrayStart.count)
+                return true
             } else if remainingInput.hasPrefix(setStart) {
                 stack.append(.setStart)
                 remainingInput = remainingInput.dropFirst(setStart.count)
+                return true
             } else if remainingInput.hasPrefix(dictionaryStart) {
                 stack.append(.dictionaryStart)
                 remainingInput = remainingInput.dropFirst(dictionaryStart.count)
+                return true
             } else if remainingInput.hasPrefix(tokenStart) {
                 stack.append(.tokenStart)
                 remainingInput = remainingInput.dropFirst(tokenStart.count)
+                return true
 
             }
-
-            return true
         }
 
         return false
