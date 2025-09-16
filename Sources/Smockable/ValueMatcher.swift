@@ -164,19 +164,3 @@ public enum OptionalOnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable
         }
     }
 }
-
-// MARK: - Convenience Extensions
-
-extension ValueMatcher {
-    /// Create a ValueMatcher from a ClosedRange
-    public init(_ range: ClosedRange<T>) {
-        self = .range(range)
-    }
-}
-
-extension OptionalValueMatcher {
-    /// Create an OptionalValueMatcher from a ClosedRange (matches only non-nil values in range)
-    public init(_ range: ClosedRange<T>) {
-        self = .range(range)
-    }
-}

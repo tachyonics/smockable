@@ -372,6 +372,60 @@ when(expectations.fetchDataAsync(from: .any), times: .unbounded) { url in
 }
 ```
 
+## Collection Expectations
+
+Smockable provides support for Collection types, allowing you to set expectations for Arrays, Dictionaries, and Sets. Any such
+collection can use wild-card (`.any`) expectations to match any invocations. Collections that conform to the Equatable protocol (because
+there elements conform to this protocol), can use exact expectation matching.
+
+```swift
+@Smock
+protocol CollectionService {
+    func processStrings(_ items: [String]) -> String
+    func mergeConfigs(_ configs: [String: String]) -> [String: String]
+    func analyzeNumbers(_ numbers: Set<Int>) -> Int
+    func handleOptionalArray(_ items: [String]?) -> Bool
+}
+
+@Test func testCollectionExpectations() {
+    var expectations = MockCollectionService.Expectations()
+    
+    // Array expectations - match any content
+    when(expectations.processStrings(.any), return: "processed")
+    
+    // Dictionary expectations - exact matching (an Equatable Dictionary)
+    let specificConfig = ["env": "test", "debug": "true"]
+    when(expectations.mergeConfigs(specificConfig), return: ["result": "success"])
+    
+    // Set expectations - match any content
+    when(expectations.analyzeNumbers(.any), return: 42)
+    
+    // Optional collection expectations
+    when(expectations.handleOptionalArray(.any), return: true)
+    when(expectations.handleOptionalArray(nil), return: false)
+    
+    let mock = MockCollectionService(expectations: expectations)
+    
+    // Test array with any content
+    let result1 = mock.processStrings(["hello", "world"])
+    #expect(result1 == "processed")
+    
+    // Test dictionary with exact content 
+    let result2 = mock.mergeConfigs(["env": "test", "debug": "true"])
+    #expect(result2 == ["result": "success"])
+    
+    // Test set with any content
+    let result3 = mock.analyzeNumbers(Set([1, 2, 3, 4, 5]))
+    #expect(result3 == 42)
+    
+    // Test optional collections
+    let result4 = mock.handleOptionalArray(["optional"])
+    let result5 = mock.handleOptionalArray(nil)
+    #expect(result4 == true)
+    #expect(result5 == false)
+}
+```
+
 ## Next Steps
 
 - Learn about <doc:Verification> to check how your mocks were used
