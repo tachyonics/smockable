@@ -105,6 +105,13 @@ struct SmockableTests {
         #expect(expectedReturnValue2 == returnValue4)
         #expect(expectedReturnValue2 == returnValue5)
     }
+    
+    @Test
+    func verifyNoInteractionsOnMock() {
+        let mock = MockService1Protocol(expectations: .init())
+        
+        verifyNoInteractions(mock)
+    }
 
     @Smock
     protocol WeatherService {

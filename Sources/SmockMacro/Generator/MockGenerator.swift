@@ -355,6 +355,8 @@ enum MockGenerator {
                         functionDeclaration: functionDeclaration
                     )
                 }
+
+                try StorageGenerator.verifyNoInteractions(mockName: identifier.description)
             }
         )
     }

@@ -211,4 +211,23 @@ enum StorageGenerator {
             """
         )
     }
+
+    static func verifyNoInteractions(mockName: String) throws -> FunctionDeclSyntax {
+        // Function with no parameters
+        try FunctionDeclSyntax(
+            """
+            public func verifyNoInteractions(sourceLocation: SourceLocation) {
+                let combinedCallCount = self.state.mutex.withLock { storage in
+                    return storage.combinedCallCount
+                }
+                
+                VerificationHelper.performNoInteractionVerification(
+                    interactionCount: combinedCallCount,
+                    mockName: "\(raw: mockName)",
+                    sourceLocation: sourceLocation
+                )
+            }
+            """
+        )
+    }
 }

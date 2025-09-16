@@ -95,6 +95,13 @@ verify(mock, .never).deleteUser(id: .any)
 verify(mock, .never).fetchUser(id: "nonexistent")
 ```
 
+You can also easily verify that no interactions occurred with the mock 
+across any of its properties or functions.
+
+```swift
+verifyNoInteractions(mock)
+```
+
 ## Verification Modes
 
 Smockable provides several verification modes for different testing scenarios:
