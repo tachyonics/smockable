@@ -15,7 +15,7 @@ public enum VerificationMode {
     case range(ClosedRange<Int>)  // Within a range
 }
 
-private func times(_ count: Int) -> String {
+private func times<IntegerType: BinaryInteger>(_ count: IntegerType) -> String {
     if count == 1 {
         return "1 time"
     } else {
@@ -24,8 +24,8 @@ private func times(_ count: Int) -> String {
 }
 
 /// Helper for performing verification assertions
-public struct VerificationHelper {
-    public static func performVerification(
+package struct VerificationHelper {
+    package static func performVerification(
         mode: VerificationMode,
         matchingCount: Int,
         functionName: String,
@@ -70,6 +70,18 @@ public struct VerificationHelper {
             )
         }
     }
+
+    package static func performNoInteractionVerification(
+        interactionCount: UInt32,
+        mockName: String,
+        sourceLocation: SourceLocation
+    ) {
+        #expect(
+            interactionCount == 0,
+            "Expected \(mockName) to have no interactions but was called \(times(interactionCount))",
+            sourceLocation: sourceLocation
+        )
+    }
 }
 
 /// Protocol that all generated mocks will conform to for verification access
@@ -77,6 +89,21 @@ public protocol VerifiableSmock {
     associatedtype VerifierType
 
     func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation) -> VerifierType
+    
+    func verifyNoInteractions(sourceLocation: SourceLocation)
+}
+
+/// Global verifyNoInteractions function to confirm no interactions happened on this mock
+///
+/// Example usage:
+/// ```swift
+/// verifyNoInteractions(mock)
+/// ```
+public func verifyNoInteractions<T: VerifiableSmock>(
+    _ mock: T,
+    sourceLocation: SourceLocation = #_sourceLocation
+) {
+    mock.verifyNoInteractions(sourceLocation: sourceLocation)
 }
 
 /// Global verify function that returns verifier for function-style verification
