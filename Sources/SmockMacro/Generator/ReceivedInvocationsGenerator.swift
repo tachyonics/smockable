@@ -59,13 +59,13 @@ enum ReceivedInvocationsGenerator {
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__localCallIndex"),
                 colon: .colonToken(),
-                type: IdentifierTypeSyntax(name: "UInt32")
+                type: IdentifierTypeSyntax(name: "Int")
             )
 
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__globalCallIndex"),
                 colon: .colonToken(),
-                type: IdentifierTypeSyntax(name: "UInt32")
+                type: IdentifierTypeSyntax(name: "Int")
             )
 
             for parameter in parameterList {
@@ -116,7 +116,7 @@ enum ReceivedInvocationsGenerator {
 
                     LabeledExprSyntax(
                         expression: DeclReferenceExprSyntax(
-                            baseName: TokenSyntax.identifier("smockableGlobalCallIndex.getCurrentIndex()")
+                            baseName: TokenSyntax.identifier("globalCallIndex")
                         )
                     )
 

@@ -24,8 +24,8 @@ private func times<IntegerType: BinaryInteger>(_ count: IntegerType) -> String {
 }
 
 /// Helper for performing verification assertions
-package struct VerificationHelper {
-    package static func performVerification(
+public struct VerificationHelper {
+    public static func performVerification(
         mode: VerificationMode,
         matchingCount: Int,
         functionName: String,
@@ -72,7 +72,7 @@ package struct VerificationHelper {
     }
 
     package static func performNoInteractionVerification(
-        interactionCount: UInt32,
+        interactionCount: Int,
         mockName: String,
         sourceLocation: SourceLocation
     ) {
@@ -88,9 +88,11 @@ package struct VerificationHelper {
 public protocol VerifiableSmock {
     associatedtype VerifierType
 
-    func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation) -> VerifierType
-    
+    func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) -> VerifierType
+
     func verifyNoInteractions(sourceLocation: SourceLocation)
+
+    func getObjectIdentifier() -> ObjectIdentifier
 }
 
 /// Global verifyNoInteractions function to confirm no interactions happened on this mock
@@ -121,7 +123,7 @@ public func verify<T: VerifiableSmock>(
     _ mode: VerificationMode,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
-    return mock.getVerifier(mode: mode, sourceLocation: sourceLocation)
+    return mock.getVerifier(mode: mode, sourceLocation: sourceLocation, inOrder: nil)
 }
 
 /// Global verify function that returns verifier for function-style verification, specifying an exact number of invocations
@@ -138,7 +140,7 @@ public func verify<T: VerifiableSmock>(
     times: Int,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
-    return mock.getVerifier(mode: .times(times), sourceLocation: sourceLocation)
+    return mock.getVerifier(mode: VerificationMode.times(times), sourceLocation: sourceLocation, inOrder: nil)
 }
 
 /// Global verify function that returns verifier for function-style verification, specifying a minimum number of invocations
@@ -155,7 +157,7 @@ public func verify<T: VerifiableSmock>(
     atLeast: Int,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
-    return mock.getVerifier(mode: .atLeast(atLeast), sourceLocation: sourceLocation)
+    return mock.getVerifier(mode: VerificationMode.atLeast(atLeast), sourceLocation: sourceLocation, inOrder: nil)
 }
 
 /// Global verify function that returns verifier for function-style verification, specifying a maximum number of invocations
@@ -172,7 +174,7 @@ public func verify<T: VerifiableSmock>(
     atMost: Int,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
-    return mock.getVerifier(mode: .atMost(atMost), sourceLocation: sourceLocation)
+    return mock.getVerifier(mode: VerificationMode.atMost(atMost), sourceLocation: sourceLocation, inOrder: nil)
 }
 
 /// Global verify function that returns verifier for function-style verification, specifying a range of invocation count
@@ -189,5 +191,5 @@ public func verify<T: VerifiableSmock>(
     times: ClosedRange<Int>,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
-    return mock.getVerifier(mode: .range(times), sourceLocation: sourceLocation)
+    return mock.getVerifier(mode: VerificationMode.range(times), sourceLocation: sourceLocation, inOrder: nil)
 }

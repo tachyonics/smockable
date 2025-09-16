@@ -151,7 +151,7 @@ enum StorageGenerator {
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    var combinedCallCount: UInt32 = 0
+                    var combinedCallCount: Int = 0
                     """
                 )
 
@@ -226,6 +226,17 @@ enum StorageGenerator {
                     mockName: "\(raw: mockName)",
                     sourceLocation: sourceLocation
                 )
+            }
+            """
+        )
+    }
+
+    static func getObjectIdentifier() throws -> FunctionDeclSyntax {
+        // Function with no parameters
+        try FunctionDeclSyntax(
+            """
+            public func getObjectIdentifier() -> ObjectIdentifier {
+                return ObjectIdentifier(self.state)
             }
             """
         )

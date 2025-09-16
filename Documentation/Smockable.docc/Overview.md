@@ -239,3 +239,5 @@ protocol DataService {
 ## Next Steps
 
 - <doc:GettingStarted> for installing and using Smockable
+- <doc:Verification> for standard verification techniques
+- <doc:InOrderVerification> for verifying interactions occur in a specific sequence

@@ -79,6 +79,18 @@ enum FunctionImplementationGenerator {
                 )
             ),
             CodeBlockItemSyntax(
+                item: .decl(
+                    DeclSyntax(
+                        try VariableDeclSyntax(
+                            """
+                            let globalCallIndex = smockableGlobalCallIndex.getCurrentIndex(mockIdentifier: ObjectIdentifier(self.state), 
+                                                                                           localCallIndex: storage.combinedCallCount)
+                            """
+                        )
+                    )
+                )
+            ),
+            CodeBlockItemSyntax(
                 item: .expr(
                     ReceivedInvocationsGenerator.appendValueToVariableExpression(
                         variablePrefix: variablePrefix,
@@ -98,29 +110,10 @@ enum FunctionImplementationGenerator {
                     )
                 )
             ),
-            CodeBlockItemSyntax(
-                item: .stmt(
-                    StmtSyntax(
-                        try ForStmtSyntax(
-                            "for (index, expectedResponse) in storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).enumerated()"
-                        ) {
-                            ExprSyntax(
-                                """
-                                if expectedResponse.2.matches(\(raw: matcherCall)) {
-                                  if expectedResponse.0 == 1 {
-                                    storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).remove(at: index)
-                                  } else if let currentCount = expectedResponse.0 {
-                                    storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
-                                  }
-                                  
-                                  responseProvider = expectedResponse.1
-                                  break
-                                }
-                                """
-                            )
-                        }
-                    )
-                )
+            try getExpectedResponsesForStatement(
+                matcherCall: matcherCall,
+                variablePrefix: variablePrefix,
+                storagePrefix: storagePrefix
             ),
             CodeBlockItemSyntax(
                 item: .stmt(
@@ -132,6 +125,37 @@ enum FunctionImplementationGenerator {
                 )
             ),
         ])
+    }
+
+    private static func getExpectedResponsesForStatement(
+        matcherCall: String,
+        variablePrefix: String,
+        storagePrefix: String
+    ) throws -> CodeBlockItemSyntax {
+        CodeBlockItemSyntax(
+            item: .stmt(
+                StmtSyntax(
+                    try ForStmtSyntax(
+                        "for (index, expectedResponse) in storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).enumerated()"
+                    ) {
+                        ExprSyntax(
+                            """
+                            if expectedResponse.2.matches(\(raw: matcherCall)) {
+                              if expectedResponse.0 == 1 {
+                                storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix).remove(at: index)
+                              } else if let currentCount = expectedResponse.0 {
+                                storage.expectedResponses.\(raw: storagePrefix)\(raw: variablePrefix)[index] = (currentCount - 1, expectedResponse.1, expectedResponse.2)
+                              }
+                              
+                              responseProvider = expectedResponse.1
+                              break
+                            }
+                            """
+                        )
+                    }
+                )
+            )
+        )
     }
 
     private static func getWithLockCall(
