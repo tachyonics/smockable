@@ -42,6 +42,7 @@ let package = Package(
             dependencies: [
                 .target(name: "Smockable"),
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+                .target(name: "SmockableUtils"),
             ]
         ),
         .testTarget(

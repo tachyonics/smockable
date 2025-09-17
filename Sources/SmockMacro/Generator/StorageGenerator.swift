@@ -151,7 +151,7 @@ enum StorageGenerator {
             memberBlockBuilder: {
                 try VariableDeclSyntax(
                     """
-                    var combinedCallCount: UInt32 = 0
+                    var combinedCallCount: Int = 0
                     """
                 )
 
@@ -192,11 +192,22 @@ enum StorageGenerator {
                     let mutex: Mutex<Storage>
                     """
                 )
+                
+                try VariableDeclSyntax(
+                    """
+                    let mockIdentifier: String
+                    """
+                )
 
                 try InitializerDeclSyntax("init(expectedResponses: consuming ExpectedResponses) {") {
                     ExprSyntax(
                         """
                         self.mutex = Mutex(.init(expectedResponses: expectedResponses))
+                        """
+                    )
+                    ExprSyntax(
+                        """
+                        self.mockIdentifier = SmockHelper.generateMockIdentifier()
                         """
                     )
                 }
@@ -226,6 +237,17 @@ enum StorageGenerator {
                     mockName: "\(raw: mockName)",
                     sourceLocation: sourceLocation
                 )
+            }
+            """
+        )
+    }
+
+    static func getMockIdentifier() throws -> FunctionDeclSyntax {
+        // Function with no parameters
+        try FunctionDeclSyntax(
+            """
+            public func getMockIdentifier() -> String {
+                return self.state.mockIdentifier
             }
             """
         )

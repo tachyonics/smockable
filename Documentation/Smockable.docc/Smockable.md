@@ -29,6 +29,7 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 - <doc:Expectations>
 - <doc:Verification>
+- <doc:InOrderVerification>
 
 ### Advanced Topics
 

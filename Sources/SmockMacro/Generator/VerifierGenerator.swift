@@ -32,6 +32,12 @@ enum VerifierGenerator {
                     """
                 )
 
+                try VariableDeclSyntax(
+                    """
+                    private let inOrder: InOrder?
+                    """
+                )
+
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
@@ -41,15 +47,16 @@ enum VerifierGenerator {
                 }
 
                 try InitializerDeclSyntax(
-                    "init(state: State, mode: VerificationMode, sourceLocation: SourceLocation) {"
+                    "init(state: State, mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) {"
                 ) {
                     ExprSyntax("self.state = state")
                     ExprSyntax("self.mode = mode")
                     ExprSyntax("self.sourceLocation = sourceLocation")
+                    ExprSyntax("self.inOrder = inOrder")
 
                     for propertyDeclaration in propertyDeclarations {
                         ExprSyntax(
-                            "self.\(raw: propertyDeclaration.name) = .init(state: state, mode: mode, sourceLocation: sourceLocation)"
+                            "self.\(raw: propertyDeclaration.name) = .init(state: state, mode: mode, sourceLocation: sourceLocation, inOrder: inOrder)"
                         )
                     }
                 }
@@ -89,16 +96,26 @@ enum VerifierGenerator {
                 try FunctionDeclSyntax(
                     """
                     public func \(raw: functionName)() {
-                        let matchingCount = self.state.mutex.withLock { storage in
+                        let invocations = self.state.mutex.withLock { storage in
                             return storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)
-                        }.count
+                        }
                         
-                        VerificationHelper.performVerification(
-                            mode: mode,
-                            matchingCount: matchingCount,
-                            functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
-                            sourceLocation: self.sourceLocation
-                        )
+                        if let inOrder = self.inOrder {
+                            inOrder.performVerification(
+                                mockIdentifier: self.state.mockIdentifier,
+                                mode: self.mode,
+                                matchingInvocations: invocations.map { ($0.__localCallIndex, $0.__globalCallIndex) },
+                                functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
+                                sourceLocation: self.sourceLocation
+                            )
+                        } else {
+                            VerificationHelper.performVerification(
+                                mode: mode,
+                                matchingCount: invocations.count,
+                                functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
+                                sourceLocation: self.sourceLocation
+                            )
+                        }
                     }
                     """
                 )
@@ -309,23 +326,41 @@ enum VerifierGenerator {
 
             DeclSyntax(
                 """
-                let matchingCount = invocations.filter { invocation in
+                let matchingInvocations = invocations.filter { invocation in
                     matcher.matches(\(raw: matcherCall))
-                }.count
+                }
                 """
             )
 
-            ExprSyntax(
-                """
-                VerificationHelper.performVerification(
-                    mode: mode,
-                    matchingCount: matchingCount,
+            getVerificationCall(
+                storagePrefix: storagePrefix,
+                functionInterpolationSignature: functionInterpolationSignature
+            )
+        }
+    }
+
+    private static func getVerificationCall(storagePrefix: String, functionInterpolationSignature: String) -> ExprSyntax
+    {
+        ExprSyntax(
+            """
+            if let inOrder = self.inOrder {
+                inOrder.performVerification(
+                    mockIdentifier: self.state.mockIdentifier,
+                    mode: self.mode,
+                    matchingInvocations: matchingInvocations.map { ($0.__localCallIndex, $0.__globalCallIndex) },
                     functionName: "\(raw: storagePrefix)\(raw: functionInterpolationSignature)",
                     sourceLocation: self.sourceLocation
                 )
-                """
-            )
-        }
+            } else {
+                VerificationHelper.performVerification(
+                    mode: mode,
+                    matchingCount: matchingInvocations.count,
+                    functionName: "\(raw: storagePrefix)\(raw: functionInterpolationSignature)",
+                    sourceLocation: self.sourceLocation
+                )
+            }
+            """
+        )
     }
 }
 

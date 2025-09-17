@@ -218,11 +218,11 @@ enum MockGenerator {
                 try TypeAliasDeclSyntax("public typealias VerifierType = Verifier")
 
                 try FunctionDeclSyntax(
-                    "public func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation) -> Verifier {"
+                    "public func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
                 ) {
                     ReturnStmtSyntax(
                         expression: ExprSyntax(
-                            "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation)"
+                            "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation, inOrder: inOrder)"
                         )
                     )
                 }
@@ -357,6 +357,7 @@ enum MockGenerator {
                 }
 
                 try StorageGenerator.verifyNoInteractions(mockName: identifier.description)
+                try StorageGenerator.getMockIdentifier()
             }
         )
     }
