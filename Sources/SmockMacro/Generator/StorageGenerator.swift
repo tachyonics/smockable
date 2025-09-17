@@ -192,11 +192,22 @@ enum StorageGenerator {
                     let mutex: Mutex<Storage>
                     """
                 )
+                
+                try VariableDeclSyntax(
+                    """
+                    let mockIdentifier: String
+                    """
+                )
 
                 try InitializerDeclSyntax("init(expectedResponses: consuming ExpectedResponses) {") {
                     ExprSyntax(
                         """
                         self.mutex = Mutex(.init(expectedResponses: expectedResponses))
+                        """
+                    )
+                    ExprSyntax(
+                        """
+                        self.mockIdentifier = SmockHelper.generateMockIdentifier()
                         """
                     )
                 }
@@ -231,12 +242,12 @@ enum StorageGenerator {
         )
     }
 
-    static func getObjectIdentifier() throws -> FunctionDeclSyntax {
+    static func getMockIdentifier() throws -> FunctionDeclSyntax {
         // Function with no parameters
         try FunctionDeclSyntax(
             """
-            public func getObjectIdentifier() -> ObjectIdentifier {
-                return ObjectIdentifier(self.state)
+            public func getMockIdentifier() -> String {
+                return self.state.mockIdentifier
             }
             """
         )

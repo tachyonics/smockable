@@ -4,6 +4,7 @@
 //
 
 import Testing
+import Foundation
 
 /// Verification modes for function-style verification
 public enum VerificationMode {
@@ -92,7 +93,13 @@ public protocol VerifiableSmock {
 
     func verifyNoInteractions(sourceLocation: SourceLocation)
 
-    func getObjectIdentifier() -> ObjectIdentifier
+    func getMockIdentifier() -> String
+}
+
+public struct SmockHelper {
+    public static func generateMockIdentifier() -> String {
+        return UUID().uuidString
+    }
 }
 
 /// Global verifyNoInteractions function to confirm no interactions happened on this mock

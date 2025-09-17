@@ -102,7 +102,7 @@ enum VerifierGenerator {
                         
                         if let inOrder = self.inOrder {
                             inOrder.performVerification(
-                                mockIdentifier: ObjectIdentifier(self.state),
+                                mockIdentifier: self.state.mockIdentifier,
                                 mode: self.mode,
                                 matchingInvocations: invocations.map { ($0.__localCallIndex, $0.__globalCallIndex) },
                                 functionName: "\(raw: storagePrefix)\(raw: functionSignature)",
@@ -345,7 +345,7 @@ enum VerifierGenerator {
             """
             if let inOrder = self.inOrder {
                 inOrder.performVerification(
-                    mockIdentifier: ObjectIdentifier(self.state),
+                    mockIdentifier: self.state.mockIdentifier,
                     mode: self.mode,
                     matchingInvocations: matchingInvocations.map { ($0.__localCallIndex, $0.__globalCallIndex) },
                     functionName: "\(raw: storagePrefix)\(raw: functionInterpolationSignature)",

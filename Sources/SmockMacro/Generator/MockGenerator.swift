@@ -357,7 +357,7 @@ enum MockGenerator {
                 }
 
                 try StorageGenerator.verifyNoInteractions(mockName: identifier.description)
-                try StorageGenerator.getObjectIdentifier()
+                try StorageGenerator.getMockIdentifier()
             }
         )
     }

@@ -26,7 +26,7 @@ let inOrder = InOrder(strict: false, mockService, mockRepository, mockNotifier)
 ```
 
 The `strict` parameter controls the verification behavior:
-- **`false` (Non-Strict)**: Allows skipping interactions but maintains global ordering
+- **`false` (Non-Strict)**: Allows skipping interactions as long as what is verfied is verified in order
 - **`true` (Strict)**: Every interaction must be verified in exact sequence
 
 ### Simple Verification
@@ -115,7 +115,7 @@ of this function or property as possible, not just the minimum required
 
 ### Non-Strict Mode (Default)
 
-Allows skipping interactions but maintains global ordering:
+Allows skipping interactions as long as what is verfied is verified in order:
 
 ```swift
 @Test

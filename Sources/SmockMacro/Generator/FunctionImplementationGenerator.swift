@@ -83,7 +83,7 @@ enum FunctionImplementationGenerator {
                     DeclSyntax(
                         try VariableDeclSyntax(
                             """
-                            let globalCallIndex = smockableGlobalCallIndex.getCurrentIndex(mockIdentifier: ObjectIdentifier(self.state), 
+                            let globalCallIndex = smockableGlobalCallIndex.getCurrentIndex(mockIdentifier: self.state.mockIdentifier, 
                                                                                            localCallIndex: storage.combinedCallCount)
                             """
                         )

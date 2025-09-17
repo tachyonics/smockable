@@ -35,20 +35,20 @@ public enum InOrderVerificationMode {
 public class InOrder {
     private let strict: Bool
     private var globalIndexProgress: Int = 0
-    private var localIndexProgress: [ObjectIdentifier: Int]
+    private var localIndexProgress: [String: Int]
     private var previousFunctionName: String?
 
     /// Initialize InOrder verification with a set of mocks
     /// - Parameters:
     ///   - strict: If true, verification must account for every interaction with the mocks in order.
-    ///            If false, interactions can be skipped but must maintain global ordering.
+    ///            If false, interactions can be skipped as long as what is verfied is verified in order.
     ///   - mocks: The mocks to track for ordered verification
     public init(strict: Bool, _ mocks: any VerifiableSmock...) {
         self.strict = strict
 
-        var mockDict: [ObjectIdentifier: Int] = [:]
+        var mockDict: [String: Int] = [:]
         for mock in mocks {
-            let id = mock.getObjectIdentifier()
+            let id = mock.getMockIdentifier()
             mockDict[id] = 0
         }
         self.localIndexProgress = mockDict
@@ -69,7 +69,7 @@ public class InOrder {
         _ mode: InOrderVerificationMode,
         sourceLocation: SourceLocation = #_sourceLocation
     ) -> T.VerifierType {
-        let mockId = mock.getObjectIdentifier()
+        let mockId = mock.getMockIdentifier()
         guard self.localIndexProgress[mockId] != nil else {
             fatalError("Mock not specified in InOrder constructor")
         }
@@ -105,7 +105,8 @@ public class InOrder {
 
     /// Verify that no more interactions occurred on any of the tracked mocks
     public func verifyNoMoreInteractions(sourceLocation: SourceLocation = #_sourceLocation) {
-        let calls = smockableGlobalCallIndex.getCalls(for: (self.globalIndexProgress + 1)...)
+        // the range is off-by-1
+        let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress...)
         let unverifiedInteractions = calls.filter { (interactionMockIdentifier, _) in
 
             return self.localIndexProgress[interactionMockIdentifier] != nil
@@ -120,7 +121,7 @@ public class InOrder {
 
     /// Internal method called by verifier functions to perform ordered verification
     public func performVerification(
-        mockIdentifier: ObjectIdentifier,
+        mockIdentifier: String,
         mode: VerificationMode,
         matchingInvocations: [(localIndex: Int, globalIndex: Int)],
         functionName: String,
@@ -147,7 +148,7 @@ public class InOrder {
         // if the verifiedInvocations passed the verification mode
         if let verifiedInvocations, let first = verifiedInvocations.first, let last = verifiedInvocations.last {
             if self.strict {
-                let calls = smockableGlobalCallIndex.getCalls(for: (self.globalIndexProgress + 1)..<last.globalIndex)
+                let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress..<(last.globalIndex - 1))
                 let unverifiedInteractions = calls.filter { (interactionMockIdentifier, interactionLocalCallIndex) in
                     // filter out any verifiedInvocations
                     if mockIdentifier == interactionMockIdentifier
