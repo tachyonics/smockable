@@ -3,7 +3,7 @@
 <img src="https://github.com/tachyonics/smockable/actions/workflows/swift.yml/badge.svg?branch=main" alt="Build - Main Branch">
 </a>
 <a href="http://swift.org">
-<img src="https://img.shields.io/badge/swift-6.1|6.0-orange.svg?style=flat" alt="Swift 6.1 and 6.0 Compatible and Tested">
+<img src="https://img.shields.io/badge/swift-6.2-orange.svg?style=flat" alt="Swift 6.2 Compatible and Tested">
 </a>
 <img src="https://img.shields.io/badge/ubuntu-22.04|24.04-yellow.svg?style=flat" alt="Ubuntu 22.04 and 24.04 Tested">
 <img src="https://img.shields.io/badge/license-Apache2-blue.svg?style=flat" alt="Apache 2">
@@ -19,10 +19,10 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 ## Features
 
 - ✅ **Type-safe mocks** generated at compile time using Swift macros
-- ✅ **Expectation-based testing** with support for return values, errors, and custom closures
+- ✅ **Expectation-based testing** with parameter matching and support for multiple calls, return values, errors, and custom closures
 - ✅ **Call verification** with detailed invocation tracking
 - ✅ **Thread-safe** mock implementations with Sendable conformance
-- ✅ **Flexible expectations** supporting multiple calls, unbounded calls, and custom logic
+- ✅ **Flexible verifications** with parameter matching and InOrder verification to verify invocation sequence (including across multiple mocks)
 - ✅ **Protocol inheritance** and associated types support
 - ✅ **Async/await**, sync and throwing function support
 - ✅ **Protocol property requirements** with full get/set/async/throws support
@@ -30,9 +30,8 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 
 ## Requirements
 
-- Swift 6.0+
-- Xcode 16.0+
-- iOS 13.0+ / macOS 10.15+ / tvOS 13.0+ / watchOS 6.0+
+- Swift 6.2+
+- iOS 18.0+ / macOS 15.0+ / tvOS 18.0+ / watchOS 11.0+
 
 ## Installation
 
