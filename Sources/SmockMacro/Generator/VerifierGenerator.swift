@@ -169,11 +169,7 @@ enum VerifierGenerator {
             }
 
             if paramType == "String" || paramType == "String?" {
-                methodInterpolationParameters.append(
-                    """
-                    \(paramNameForSignature): \\"\\(\(paramName).description)\\"
-                    """
-                )
+                methodInterpolationParameters.append("\(paramNameForSignature): \\(\(paramName).stringSpecficDescription)")
             } else {
                 methodInterpolationParameters.append("\(paramNameForSignature): \\(\(paramName).description)")
             }

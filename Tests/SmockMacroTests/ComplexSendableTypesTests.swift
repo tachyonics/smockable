@@ -418,4 +418,166 @@ struct ComplexSendableTypesTests {
         verify(mock, times: 1).dictParam(metadata: ["k1": "v1"])
         verify(mock, times: 1).setParam(numbers: Set([1, 2]))
     }
+
+    // MARK: - Unhappy Path Tests
+
+    #if SMOCKABLE_UNHAPPY_PATH_TESTING
+    @Test
+    func testArrayParameterVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected arrayParam(strings: any) to be called exactly 3 times, but was called 2 times"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.arrayParam(strings: .any), times: .unbounded, return: "array result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call twice but verify 3 times - should fail
+            _ = mock.arrayParam(strings: ["item1", "item2"])
+            _ = mock.arrayParam(strings: ["item3", "item4"])
+            
+            verify(mock, times: 3).arrayParam(strings: .any)
+        }
+    }
+    
+    @Test
+    func testDictionaryParameterVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected dictParam(metadata: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.dictParam(metadata: .any), return: "dict result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call it but verify never called - should fail
+            _ = mock.dictParam(metadata: ["key": "value"])
+            
+            verify(mock, .never).dictParam(metadata: .any)
+        }
+    }
+    
+    @Test
+    func testSetParameterVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected setParam(numbers: any) to be called at least 2 times, but was called 1 time"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.setParam(numbers: .any), times: .unbounded, return: "set result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call once but verify at least 2 times - should fail
+            _ = mock.setParam(numbers: Set([1, 2, 3]))
+            
+            verify(mock, atLeast: 2).setParam(numbers: .any)
+        }
+    }
+    
+    @Test
+    func testGenericSendableVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected genericSendableParam(value: any) to be called at most 1 time, but was called 3 times"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.genericSendableParam(value: .any), times: .unbounded, return: "sendable result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call 3 times but verify at most 1 - should fail
+            _ = mock.genericSendableParam(value: "string")
+            _ = mock.genericSendableParam(value: 42)
+            _ = mock.genericSendableParam(value: true)
+            
+            verify(mock, atMost: 1).genericSendableParam(value: .any)
+        }
+    }
+    
+    @Test
+    func testSpecificSendableTypeVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected uuidParam(id: any) to be called 2...4 times, but was called 1 time"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.uuidParam(id: .any), times: .unbounded, return: "uuid result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call once but verify range 2...4 - should fail
+            _ = mock.uuidParam(id: UUID())
+            
+            verify(mock, times: 2...4).uuidParam(id: .any)
+        }
+    }
+    
+    @Test
+    func testMixedSendableParametersVerificationFailures() {
+        expectVerificationFailures(messages: [
+            "Expected mixedWithArray(name: any, items: any, enabled: any) to be called exactly 2 times, but was called 1 time",
+            "Expected mixedWithDict(count: any, config: any, data: any) to never be called, but was called 1 time"
+        ]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.mixedWithArray(name: .any, items: .any, enabled: .any), return: "mixed array")
+            when(expectations.mixedWithDict(count: .any, config: .any, data: .any), return: "mixed dict")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call each once
+            _ = mock.mixedWithArray(name: "test", items: ["item"], enabled: true)
+            _ = mock.mixedWithDict(count: 50, config: ["key": "value"], data: Data())
+            
+            // Two failing verifications
+            verify(mock, times: 2).mixedWithArray(name: .any, items: .any, enabled: .any)  // Fail 1
+            verify(mock, .never).mixedWithDict(count: .any, config: .any, data: .any)  // Fail 2
+        }
+    }
+    
+    @Test
+    func testComplexMixedParametersVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected complexMixedParams(name: any, ids: any, config: any, enabled: any, data: any, sendable: any) to be called at least once, but was never called"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.complexMixedParams(name: .any, ids: .any, config: .any, enabled: .any, data: .any, sendable: .any), return: "complex result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Don't call but verify at least once - should fail
+            verify(mock, .atLeastOnce).complexMixedParams(name: .any, ids: .any, config: .any, enabled: .any, data: .any, sendable: .any)
+        }
+    }
+    
+    @Test
+    func testSpecificCollectionValueVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected arrayParam(strings: [\"exact1\", \"exact2\"]) to be called exactly 1 time, but was called 0 times"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.arrayParam(strings: .any), times: .unbounded, return: "array result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call with different values but verify specific values - should fail
+            _ = mock.arrayParam(strings: ["different1", "different2"])
+            
+            verify(mock, times: 1).arrayParam(strings: ["exact1", "exact2"])
+        }
+    }
+    
+    @Test
+    func testRangeMatchingWithSendableTypesVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected mixedWithArray(name: \"a\"...\"m\", items: any, enabled: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.mixedWithArray(name: .any, items: .any, enabled: .any), return: "range result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call with value in range but verify never called with range - should fail
+            _ = mock.mixedWithArray(name: "hello", items: ["item"], enabled: true)  // "hello" is in "a"..."m"
+            
+            verify(mock, .never).mixedWithArray(name: "a"..."m", items: .any, enabled: .any)
+        }
+    }
+    
+    @Test
+    func testEmptyCollectionSpecificVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected arrayParam(strings: []) to be called exactly 1 time, but was called 0 times"]) {
+            var expectations = MockTestComplexSendableService.Expectations()
+            when(expectations.arrayParam(strings: .any), return: "array result")
+            
+            let mock = MockTestComplexSendableService(expectations: expectations)
+            
+            // Call with non-empty array but verify empty array - should fail
+            _ = mock.arrayParam(strings: ["not", "empty"])
+            
+            verify(mock, times: 1).arrayParam(strings: [])
+        }
+    }
+    #endif
 }

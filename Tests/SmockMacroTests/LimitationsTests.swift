@@ -307,4 +307,94 @@ struct LimitationsTests {
 
         verify(mockHandler, times: 1).handleReceivedData(.any)
     }
+
+    // MARK: - Unhappy Path Tests
+
+    #if SMOCKABLE_UNHAPPY_PATH_TESTING
+    @Test
+    func testInheritedProtocolVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected connect() to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockDataService.Expectations()
+            when(expectations.connect(), complete: .withSuccess)
+            
+            let mock = MockDataService(expectations: expectations)
+            
+            // Call once but verify twice - should fail
+            try? await mock.connect()
+            
+            verify(mock, times: 2).connect()
+        }
+    }
+    
+    @Test
+    func testMultipleInheritanceVerificationFailures() async {
+        await expectVerificationFailures(messages: [
+            "Expected authenticate(token: any) to never be called, but was called 1 time",
+            "Expected cache(key: any, value: any) to be called at least 2 times, but was called 1 time"
+        ]) {
+            var expectations = MockSecureDataService.Expectations()
+            when(expectations.authenticate(token: .any), return: true)
+            when(expectations.cache(key: .any, value: .any), complete: .withSuccess)
+            
+            let mock = MockSecureDataService(expectations: expectations)
+            
+            // Call each once
+            _ = try? await mock.authenticate(token: "token")
+            await mock.cache(key: "key", value: Data())
+            
+            // Two failing verifications
+            verify(mock, .never).authenticate(token: .any)  // Fail 1
+            verify(mock, atLeast: 2).cache(key: .any, value: .any)  // Fail 2
+        }
+    }
+    
+    @Test
+    func testCompositionApproachVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected connect() to be called at most 0 times, but was called 1 time"]) {
+            var connectionExpectations = MockConnectionManaging.Expectations()
+            when(connectionExpectations.connect(), complete: .withSuccess)
+            when(connectionExpectations.disconnect(), complete: .withSuccess)
+            
+            let mockConnection = MockConnectionManaging(expectations: connectionExpectations)
+            let mockReader = MockDataReading(expectations: .init())
+            let mockWriter = MockDataWriting(expectations: .init())
+            
+            let repository = Repository(
+                connectionManager: mockConnection,
+                dataReader: mockReader,
+                dataWriter: mockWriter
+            )
+            
+            // Perform transaction which calls connect
+            _ = try? await repository.performTransaction {
+                return "test"
+            }
+            
+            // Verify connect was never called - should fail
+            verify(mockConnection, atMost: 0).connect()
+        }
+    }
+    
+    @Test
+    func testNetworkAdapterVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected handleReceivedData(_ data: any) to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockNetworkDataHandler.Expectations()
+            when(expectations.handleReceivedData(.any), complete: .withSuccess)
+            
+            let mockHandler = MockNetworkDataHandler(expectations: expectations)
+            let adapter = NetworkAdapter(handler: mockHandler)
+            
+            // Call once through adapter
+            let session = URLSession.shared
+            let task = session.dataTask(with: URL(string: "https://example.com")!)
+            adapter.urlSession(session, dataTask: task, didReceive: Data())
+            
+            // Wait for completion
+            await adapter.task?.value
+            
+            // Verify called twice - should fail
+            verify(mockHandler, times: 2).handleReceivedData(.any)
+        }
+    }
+    #endif
 }
