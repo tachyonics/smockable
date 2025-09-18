@@ -40,6 +40,19 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConver
     }
 }
 
+extension ValueMatcher where T == String {
+    public var stringSpecficDescription: String {
+        switch self {
+        case .any:
+            return "any"
+        case .range(let range):
+            return "\"\(range.lowerBound)\"...\"\(range.upperBound)\""
+        case .exact(let match):
+            return "\"\(match)\""
+        }
+    }
+}
+
 public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConvertible {
     case any  // Matches any value
 
@@ -111,6 +124,23 @@ public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStri
         case .exact(let match):
             if let match {
                 return "\(match)"
+            } else {
+                return "nil"
+            }
+        }
+    }
+}
+
+extension OptionalValueMatcher where T == String {
+    public var stringSpecficDescription: String {
+        switch self {
+        case .any:
+            return "any"
+        case .range(let range):
+            return "\"\(range.lowerBound)\"...\"\(range.upperBound)\""
+        case .exact(let match):
+            if let match {
+                return "\"\(match)\""
             } else {
                 return "nil"
             }

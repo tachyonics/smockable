@@ -91,7 +91,7 @@ struct CorePropertyTests {
 
         var mock = MockTestPropertyService(expectations: expectations)
 
-        mock.syncName = "value"  // Matches range
+        mock.syncName = "zebra"  // Matches range
         mock.syncName = "exact"  // Matches exact
 
         verify(mock, times: 1).syncName.set("test"..."zebra")
@@ -585,4 +585,142 @@ struct CorePropertyTests {
         verify(mock, times: 4...4).asyncThrowingName.get()
         verify(mock, .never).syncReadOnly.get()
     }
+
+    // MARK: - Unhappy Path Tests
+
+    #if SMOCKABLE_UNHAPPY_PATH_TESTING
+    @Test
+    func testSyncPropertyVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncName.get() to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.get(), return: "test")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access once but verify for 2 times - should fail
+            _ = mock.syncName
+            verify(mock, times: 2).syncName.get()
+        }
+    }
+    
+    @Test
+    func testSyncPropertySetterVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncName.set(_ newValue: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.set(.any), complete: .withSuccess)
+            
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // Set the property but verify it was never set - should fail
+            mock.syncName = "test"
+            verify(mock, .never).syncName.set(.any)
+        }
+    }
+    
+    @Test
+    func testAsyncPropertyVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected asyncName.get() to be called at least 3 times, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.asyncName.get(), return: "async value")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access once but verify at least 3 times - should fail
+            _ = await mock.asyncName
+            verify(mock, atLeast: 3).asyncName.get()
+        }
+    }
+    
+    @Test
+    func testThrowingPropertyVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected throwingName.get() to be called at most 0 times, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.throwingName.get(), return: "throwing value")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access once but verify at most 0 times - should fail
+            _ = try? mock.throwingName
+            verify(mock, atMost: 0).throwingName.get()
+        }
+    }
+    
+    @Test
+    func testAsyncThrowingPropertyVerificationFailures() async {
+        expectVerificationFailures(messages: ["Expected asyncThrowingName.get() to be called at least once, but was never called"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.asyncThrowingName.get(), return: "async throwing value")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Don't access but verify at least once - should fail
+            verify(mock, .atLeastOnce).asyncThrowingName.get()
+        }
+    }
+    
+    @Test
+    func testReadOnlyPropertyVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncReadOnly.get() to be called exactly 1 time, but was called 0 times"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncReadOnly.get(), return: 43)
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Don't access but verify once - should fail
+            verify(mock, times: 1).syncReadOnly.get()
+        }
+    }
+    
+    @Test
+    func testMultiplePropertyVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncName.get() to be called exactly 3 times, but was called 1 time", "Expected syncReadOnly.get() to be called at least once, but was never called"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.get(), return: "test")
+            when(expectations.syncReadOnly.get(), return: 43)
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access syncName once
+            _ = mock.syncName
+            
+            // Two failing verifications
+            verify(mock, times: 3).syncName.get()  // Fail 1
+            verify(mock, .atLeastOnce).syncReadOnly.get()  // Fail 2
+        }
+    }
+    
+    @Test
+    func testPropertyRangeVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncName.get() to be called 2...4 times, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.get(), times: .unbounded, return: "test")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access once but verify range 2...4 times - should fail
+            _ = mock.syncName
+            verify(mock, times: 2...4).syncName.get()
+        }
+    }
+    
+    @Test
+    func testMixedPropertyAndSetterVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected asyncName.get() to never be called, but was called 1 time",
+                                                    "Expected syncName.set(_ newValue: any) to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.asyncName.get(), return: "async")
+            when(expectations.syncName.set(.any), complete: .withSuccess)
+            
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // Access async property once and set sync property once
+            _ = await mock.asyncName
+            mock.syncName = "sync value"
+            
+            // Two failing verifications
+            verify(mock, .never).asyncName.get()  // Fail 1 - was called
+            verify(mock, times: 2).syncName.set(.any)  // Fail 2 - only called once
+        }
+    }
+    #endif
 }

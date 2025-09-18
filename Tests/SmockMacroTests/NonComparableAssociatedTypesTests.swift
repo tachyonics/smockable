@@ -183,4 +183,124 @@ struct NonComparableAssociatedTypesTests {
             try await mockRepo.find(id: "123")
         }
     }
+
+    // MARK: - Unhappy Path Tests
+
+    #if SMOCKABLE_UNHAPPY_PATH_TESTING
+    @Test
+    func testNonComparableAssociatedTypeVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected save(_ entity: any) to be called exactly 3 times, but was called 2 times"]) {
+            var expectations = MockNonComparableRepository<NonComparableData>.Expectations()
+            when(expectations.save(.any), times: .unbounded, complete: .withSuccess)
+            
+            let mockRepo = MockNonComparableRepository<NonComparableData>(expectations: expectations)
+            
+            // Call twice but verify 3 times - should fail
+            try? await mockRepo.save(NonComparableData(content: "first"))
+            try? await mockRepo.save(NonComparableData(content: "second"))
+            
+            verify(mockRepo, times: 3).save(.any)
+        }
+    }
+    
+    @Test
+    func testMixedComparabilityVerificationFailures() async {
+        await expectVerificationFailures(messages: [
+            "Expected storeComparable(_ item: any) to never be called, but was called 1 time",
+            "Expected storeNonComparable(_ item: any) to be called at least 2 times, but was called 1 time"
+        ]) {
+            var expectations = MockMixedComparabilityStore<String, SimpleData>.Expectations()
+            when(expectations.storeComparable(.any), complete: .withSuccess)
+            when(expectations.storeNonComparable(.any), complete: .withSuccess)
+            
+            let mockStore = MockMixedComparabilityStore<String, SimpleData>(expectations: expectations)
+            
+            // Call each once
+            try? await mockStore.storeComparable("test")
+            try? await mockStore.storeNonComparable(SimpleData(value: "data"))
+            
+            // Two failing verifications
+            verify(mockStore, .never).storeComparable(.any)  // Fail 1
+            verify(mockStore, atLeast: 2).storeNonComparable(.any)  // Fail 2
+        }
+    }
+    
+    @Test
+    func testDataProcessorVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected process(_ input: any) to be called at most 1 time, but was called 3 times"]) {
+            var expectations = MockDataProcessor<String, Int>.Expectations()
+            when(expectations.process(.any), times: .unbounded, return: 42)
+            
+            let mockProcessor = MockDataProcessor<String, Int>(expectations: expectations)
+            
+            // Call 3 times but verify at most 1 - should fail
+            _ = try? await mockProcessor.process("input1")
+            _ = try? await mockProcessor.process("input2")
+            _ = try? await mockProcessor.process("input3")
+            
+            verify(mockProcessor, atMost: 1).process(.any)
+        }
+    }
+    
+    @Test
+    func testNonComparableRangeVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected save(_ entity: any) to be called 2...4 times, but was called 1 time"]) {
+            var expectations = MockNonComparableRepository<SimpleData>.Expectations()
+            when(expectations.save(.any), times: .unbounded, complete: .withSuccess)
+            
+            let mockRepo = MockNonComparableRepository<SimpleData>(expectations: expectations)
+            
+            // Call once but verify range 2...4 - should fail
+            try? await mockRepo.save(SimpleData(value: "test"))
+            
+            verify(mockRepo, times: 2...4).save(.any)
+        }
+    }
+    
+    @Test
+    func testNonComparableWithErrorVerificationFailures() async {
+        expectVerificationFailures(messages: ["Expected find(id: any) to be called at least once, but was never called"]) {
+            var expectations = MockNonComparableRepository<NonComparableData>.Expectations()
+            when(expectations.find(id: .any), throw: NSError(domain: "test", code: 1))
+            
+            let mockRepo = MockNonComparableRepository<NonComparableData>(expectations: expectations)
+            
+            // Don't call but verify at least once - should fail
+            verify(mockRepo, .atLeastOnce).find(id: .any)
+        }
+    }
+    
+    @Test
+    func testMixedComparableAndNonComparableFailures() async {
+        await expectVerificationFailures(messages: ["Expected getComparable(id: \"specific\") to be called exactly 1 time, but was called 0 times"]) {
+            var expectations = MockMixedComparabilityStore<String, SimpleData>.Expectations()
+            when(expectations.getComparable(id: .any), return: "result")
+            when(expectations.getNonComparable(id: .any), return: SimpleData(value: "data"))
+            
+            let mockStore = MockMixedComparabilityStore<String, SimpleData>(expectations: expectations)
+            
+            // Call with different parameter but verify specific value - should fail
+            _ = try? await mockStore.getComparable(id: "different")
+            _ = try? await mockStore.getNonComparable(id: "test")
+            
+            verify(mockStore, times: 1).getComparable(id: "specific")
+        }
+    }
+    
+    @Test
+    func testUnconstrainedAssociatedTypeVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected validate(_ input: any) to never be called, but was called 2 times"]) {
+            var expectations = MockDataProcessor<NonComparableData, String>.Expectations()
+            when(expectations.validate(.any), times: .unbounded, return: true)
+            
+            let mockProcessor = MockDataProcessor<NonComparableData, String>(expectations: expectations)
+            
+            // Call twice but verify never called - should fail
+            _ = await mockProcessor.validate(NonComparableData(content: "test1"))
+            _ = await mockProcessor.validate(NonComparableData(content: "test2"))
+            
+            verify(mockProcessor, .never).validate(.any)
+        }
+    }
+    #endif
 }

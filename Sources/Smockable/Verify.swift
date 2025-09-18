@@ -6,6 +6,10 @@
 import Testing
 import Foundation
 
+#if SMOCKABLE_UNHAPPY_PATH_TESTING
+import Synchronization
+#endif
+
 /// Verification modes for function-style verification
 public enum VerificationMode {
     case times(Int)  // Exactly N times
@@ -26,6 +30,27 @@ private func times<IntegerType: BinaryInteger>(_ count: IntegerType) -> String {
 
 /// Helper for performing verification assertions
 public struct VerificationHelper {
+    private static func handleExpectation(
+        condition: Bool,
+        message: String,
+        sourceLocation: SourceLocation
+    ) {
+        #if SMOCKABLE_UNHAPPY_PATH_TESTING
+        if let recorder = failureRecorder {
+            if !condition {
+                recorder.record(FailureRecord(
+                    message: message,
+                    sourceLocation: sourceLocation
+                ))
+            }
+            
+            return
+        }
+        #endif
+        
+        #expect(condition, "\(message)", sourceLocation: sourceLocation)
+    }
+    
     public static func performVerification(
         mode: VerificationMode,
         matchingCount: Int,
@@ -34,39 +59,39 @@ public struct VerificationHelper {
     ) {
         switch mode {
         case .times(let expected):
-            #expect(
-                matchingCount == expected,
-                "Expected \(functionName) to be called exactly \(times(expected)), but was called \(times(matchingCount))",
+            handleExpectation(
+                condition: matchingCount == expected,
+                message: "Expected \(functionName) to be called exactly \(times(expected)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .atLeast(let minimum):
-            #expect(
-                matchingCount >= minimum,
-                "Expected \(functionName) to be called at least \(times(minimum)), but was called \(times(matchingCount))",
+            handleExpectation(
+                condition: matchingCount >= minimum,
+                message: "Expected \(functionName) to be called at least \(times(minimum)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .atMost(let maximum):
-            #expect(
-                matchingCount <= maximum,
-                "Expected \(functionName) to be called at most \(times(maximum)), but was called \(times(matchingCount))",
+            handleExpectation(
+                condition: matchingCount <= maximum,
+                message: "Expected \(functionName) to be called at most \(times(maximum)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .never:
-            #expect(
-                matchingCount == 0,
-                "Expected \(functionName) to never be called, but was called \(times(matchingCount))",
+            handleExpectation(
+                condition: matchingCount == 0,
+                message: "Expected \(functionName) to never be called, but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .atLeastOnce:
-            #expect(
-                matchingCount > 0,
-                "Expected \(functionName) to be called at least once, but was never called",
+            handleExpectation(
+                condition: matchingCount > 0,
+                message: "Expected \(functionName) to be called at least once, but was never called",
                 sourceLocation: sourceLocation
             )
         case .range(let range):
-            #expect(
-                range.contains(matchingCount),
-                "Expected \(functionName) to be called \(range) times, but was called \(times(matchingCount))",
+            handleExpectation(
+                condition: range.contains(matchingCount),
+                message: "Expected \(functionName) to be called \(range) times, but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         }
@@ -77,9 +102,9 @@ public struct VerificationHelper {
         mockName: String,
         sourceLocation: SourceLocation
     ) {
-        #expect(
-            interactionCount == 0,
-            "Expected \(mockName) to have no interactions but was called \(times(interactionCount))",
+        handleExpectation(
+            condition: interactionCount == 0,
+            message: "Expected \(mockName) to have no interactions but was called \(times(interactionCount))",
             sourceLocation: sourceLocation
         )
     }

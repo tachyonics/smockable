@@ -390,4 +390,167 @@ struct CoreFunctionTests {
         verify(mock, times: 1).asyncFunction(id: "async2")
         verify(mock, times: 1).asyncThrowingFunction(id: "asyncThrow4")
     }
+
+    // MARK: - Unhappy Path Tests
+
+    #if SMOCKABLE_UNHAPPY_PATH_TESTING
+    @Test
+    func testVerificationFailuresForCallCountMismatch() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), return: "test")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call once but verify for 2 times - should fail
+            _ = mock.syncFunction(id: "test")
+            verify(mock, times: 2).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testVerificationFailuresForNeverCalled() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), return: "test")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call it but verify it was never called - should fail
+            _ = mock.syncFunction(id: "test")
+            verify(mock, .never).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testVerificationFailuresForAtLeast() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called at least 3 times, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call once but verify at least 3 times - should fail
+            _ = mock.syncFunction(id: "test")
+            verify(mock, atLeast: 3).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testVerificationFailuresForAtMost() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called at most 1 time, but was called 3 times"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call 3 times but verify at most 1 time - should fail
+            _ = mock.syncFunction(id: "test1")
+            _ = mock.syncFunction(id: "test2")
+            _ = mock.syncFunction(id: "test3")
+            verify(mock, atMost: 1).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testVerificationFailuresForAtLeastOnce() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called at least once, but was never called"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Don't call it but verify at least once - should fail
+            verify(mock, .atLeastOnce).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testVerificationFailuresForRange() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called 1...2 times, but was called 5 times"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call 5 times but verify range 1...2 times - should fail
+            for i in 1...5 {
+                _ = mock.syncFunction(id: "test\(i)")
+            }
+            verify(mock, times: 1...2).syncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testMultipleVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called exactly 3 times, but was called 1 time",
+                                              "Expected syncFunction(id: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call once
+            _ = mock.syncFunction(id: "test")
+            
+            // Two failing verifications
+            verify(mock, times: 3).syncFunction(id: .any)  // Fail 1
+            verify(mock, .never).syncFunction(id: .any)    // Fail 2
+        }
+    }
+    
+    @Test
+    func testAsyncFunctionVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected asyncFunction(id: any) to be called exactly 2 times, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.asyncFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call once but verify for 2 times - should fail
+            _ = await mock.asyncFunction(id: "test")
+            verify(mock, times: 2).asyncFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testThrowingFunctionVerificationFailures() {
+        expectVerificationFailures(messages: ["Expected throwingFunction(id: any) to never be called, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.throwingFunction(id: .any), return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call it but verify never called - should fail
+            _ = try? mock.throwingFunction(id: "test")
+            verify(mock, .never).throwingFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testAsyncThrowingFunctionVerificationFailures() async {
+        await expectVerificationFailures(messages: ["Expected asyncThrowingFunction(id: any) to be called at least 3 times, but was called 1 time"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.asyncThrowingFunction(id: .any), times: .unbounded, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // Call once but verify at least 3 times - should fail
+            _ = try? await mock.asyncThrowingFunction(id: "test")
+            verify(mock, atLeast: 3).asyncThrowingFunction(id: .any)
+        }
+    }
+    
+    @Test
+    func testNeverCalledButVerified() async {
+        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called exactly 1 time, but was called 0 times"]) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), return: "test")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            verify(mock, times: 1).syncFunction(id: .any)  // Should fail - called 0 times but expected 1
+        }
+    }
+    #endif
 }

@@ -5,6 +5,10 @@
 
 import Testing
 
+#if SMOCKABLE_UNHAPPY_PATH_TESTING
+import Synchronization
+#endif
+
 public enum InOrderVerificationMode {
     case additionalTimes(Int)  // Exactly N times
     case additionalAtLeast(Int)  // At least N times
@@ -33,6 +37,26 @@ public enum InOrderVerificationMode {
 
 /// InOrder verification class for verifying mock interactions in a specific order
 public class InOrder {
+    private static func handleExpectation(
+        condition: Bool,
+        message: String,
+        sourceLocation: SourceLocation
+    ) {
+        #if SMOCKABLE_UNHAPPY_PATH_TESTING
+        if let recorder = failureRecorder {
+            if !condition {
+                recorder.record(FailureRecord(
+                    message: message,
+                    sourceLocation: sourceLocation
+                ))
+            }
+            
+            return
+        }
+        #endif
+        
+        #expect(condition, "\(message)", sourceLocation: sourceLocation)
+    }
     private let strict: Bool
     private var globalIndexProgress: Int = 0
     private var localIndexProgress: [String: Int]
@@ -112,9 +136,9 @@ public class InOrder {
             return self.localIndexProgress[interactionMockIdentifier] != nil
         }
 
-        #expect(
-            unverifiedInteractions.count == 0,
-            "Expected no remaining unverified mock interactions but interactions occurred \(times(unverifiedInteractions.count))",
+        Self.handleExpectation(
+            condition: unverifiedInteractions.count == 0,
+            message: "Expected no remaining unverified mock interactions but interactions occurred \(times(unverifiedInteractions.count))",
             sourceLocation: sourceLocation
         )
     }
@@ -160,15 +184,15 @@ public class InOrder {
                 }
 
                 if verifiedInvocations.count == 1 {
-                    #expect(
-                        unverifiedInteractions.count == 0,
-                        "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                    Self.handleExpectation(
+                        condition: unverifiedInteractions.count == 0,
+                        message: "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
                         sourceLocation: sourceLocation
                     )
                 } else {
-                    #expect(
-                        unverifiedInteractions.count == 0,
-                        "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                    Self.handleExpectation(
+                        condition: unverifiedInteractions.count == 0,
+                        message: "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
                         sourceLocation: sourceLocation
                     )
                 }
@@ -185,9 +209,9 @@ public class InOrder {
                 guard let previousFunctionName = self.previousFunctionName else {
                     fatalError("Missing previousFunctionName")
                 }
-                #expect(
-                    first.globalIndex > self.globalIndexProgress,
-                    "Expected \(functionName) to be called after invocation of \(previousFunctionName) but was called before",
+                Self.handleExpectation(
+                    condition: first.globalIndex > self.globalIndexProgress,
+                    message: "Expected \(functionName) to be called after invocation of \(previousFunctionName) but was called before",
                     sourceLocation: sourceLocation
                 )
             }
@@ -205,17 +229,17 @@ public class InOrder {
 
         switch mode {
         case .times(let expected):
-            #expect(
-                count >= expected,
-                "Expected \(functionName) to be called an additional \(times(expected)), but was called \(times(count))",
+            Self.handleExpectation(
+                condition: count >= expected,
+                message: "Expected \(functionName) to be called an additional \(times(expected)), but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             return (count >= expected) ? Array(candidateInvocations.prefix(expected)) : nil
 
         case .atLeast(let minimum):
-            #expect(
-                count >= minimum,
-                "Expected \(functionName) to be called at least an additional \(times(minimum)), but was called \(times(count))",
+            Self.handleExpectation(
+                condition: count >= minimum,
+                message: "Expected \(functionName) to be called at least an additional \(times(minimum)), but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             // Greedy: verify as many as possible
@@ -225,26 +249,26 @@ public class InOrder {
             return Array(candidateInvocations.prefix(maximum))
 
         case .never:
-            #expect(
-                count == 0,
-                "Expected \(functionName) to not be called again, but was called \(times(count))",
+            Self.handleExpectation(
+                condition: count == 0,
+                message: "Expected \(functionName) to not be called again, but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             return (count == 0) ? [] : nil
 
         case .atLeastOnce:
-            #expect(
-                count > 0,
-                "Expected \(functionName) to be called additionally at least once, but was never called",
+            Self.handleExpectation(
+                condition: count > 0,
+                message: "Expected \(functionName) to be called additionally at least once, but was never called",
                 sourceLocation: sourceLocation
             )
             // Greedy: verify as many as possible
             return (count > 0) ? candidateInvocations : nil
 
         case .range(let range):
-            #expect(
-                count >= range.lowerBound,
-                "Expected \(functionName) to be called additionally \(range) times in order, but was called \(times(count))",
+            Self.handleExpectation(
+                condition: count >= range.lowerBound,
+                message: "Expected \(functionName) to be called additionally \(range) times, but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             return (count >= range.lowerBound) ? Array(candidateInvocations.prefix(range.upperBound)) : nil

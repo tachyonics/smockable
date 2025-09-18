@@ -2,6 +2,7 @@
 
 import CompilerPluginSupport
 import PackageDescription
+import Foundation
 
 let package = Package(
     name: "smockable",
@@ -31,7 +32,8 @@ let package = Package(
             name: "Smockable",
             dependencies: [
                 .target(name: "SmockMacro")
-            ]
+            ],
+            swiftSettings: swiftSettingsForTopLevelPackage()
         ),
         .target(
             name: "SmockableUtils",
@@ -43,6 +45,9 @@ let package = Package(
                 .target(name: "Smockable"),
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
                 .target(name: "SmockableUtils"),
+            ],
+            swiftSettings: [
+                .define("SMOCKABLE_UNHAPPY_PATH_TESTING")
             ]
         ),
         .testTarget(
@@ -53,3 +58,26 @@ let package = Package(
         ),
     ]
 )
+
+func swiftSettingsForTopLevelPackage() -> [SwiftSetting] {
+    // Check if we're in the root of our own package by looking for specific files
+    let fileManager = FileManager.default
+    let currentDir = URL(fileURLWithPath: fileManager.currentDirectoryPath)
+    
+    // Look for package-specific files that indicate this is the top-level build
+    let packageIndicators = [
+        "README.md",
+        ".git",
+        "Sources/Smockable",
+        "Tests/SmockMacroTests"
+    ]
+    
+    let isTopLevel = packageIndicators.allSatisfy { indicator in
+        fileManager.fileExists(atPath: currentDir.appendingPathComponent(indicator).path)
+    }
+    
+    if isTopLevel {
+        return [.define("SMOCKABLE_UNHAPPY_PATH_TESTING")]
+    }
+    return []
+}
