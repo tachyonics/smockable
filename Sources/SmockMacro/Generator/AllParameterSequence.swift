@@ -8,7 +8,7 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum AllParameterSequenceGenerator {
-    public enum ParameterForm: CaseIterable {
+    enum ParameterForm: CaseIterable {
         case explicitMatcher
         case range
         case exact
@@ -77,7 +77,7 @@ enum AllParameterSequenceGenerator {
         }
     }
 
-    public static func generateMatcherCall(parameters: [FunctionParameterSyntax], prefix: String = "") -> String {
+    static func generateMatcherCall(parameters: [FunctionParameterSyntax], prefix: String = "") -> String {
         return parameters.map { parameter in
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
             let firstName = parameter.firstName.text

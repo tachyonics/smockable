@@ -121,7 +121,7 @@ struct ProcessingConfig: Codable, Equatable, Sendable, Comparable {
 // MARK: - Protocol Definitions
 
 @Smock
-public protocol Repository {
+protocol Repository {
     associatedtype Entity: Sendable & Comparable
 
     func save(_ entity: Entity) async throws
@@ -130,7 +130,7 @@ public protocol Repository {
 }
 
 @Smock
-public protocol KeyValueStore {
+protocol KeyValueStore {
     associatedtype Key: Hashable & Sendable & Comparable
     associatedtype Value: Codable & Sendable & Comparable
 
@@ -141,7 +141,7 @@ public protocol KeyValueStore {
 }
 
 @Smock
-public protocol Serializer {
+protocol Serializer {
     associatedtype Input: Codable & Sendable & Comparable
     associatedtype Output: Codable & Sendable & Comparable
 
@@ -157,7 +157,7 @@ public protocol EventHandler {
 }
 
 @Smock
-public protocol DataTransformer {
+protocol DataTransformer {
     associatedtype Input: Codable & Sendable & Comparable
     associatedtype Output: Codable & Sendable & Comparable
     associatedtype Config: Codable & Sendable & Comparable
@@ -168,7 +168,7 @@ public protocol DataTransformer {
 }
 
 @Smock
-public protocol SimpleReadWritable {
+protocol SimpleReadWritable {
     associatedtype Item: Sendable & Comparable
 
     func read(id: String) async throws -> Item?
@@ -177,7 +177,7 @@ public protocol SimpleReadWritable {
 }
 
 @Smock
-public protocol Cache {
+protocol Cache {
     associatedtype CacheKey: Hashable & Sendable & Comparable
     associatedtype CacheValue: Codable & Sendable & Comparable
 
@@ -186,7 +186,7 @@ public protocol Cache {
 }
 
 @Smock
-public protocol Serializable {
+protocol Serializable {
     associatedtype Data: Codable & Sendable & Comparable
 
     func serialize() async throws -> Data
@@ -194,7 +194,7 @@ public protocol Serializable {
 }
 
 @Smock
-public protocol Processor {
+protocol Processor {
     associatedtype Input: Sendable & Comparable
     associatedtype Output: Sendable & Comparable
 
@@ -204,7 +204,7 @@ public protocol Processor {
 // MARK: - Equatable-Only Associated Type Protocols
 
 @Smock
-public protocol BooleanConfigRepository {
+protocol BooleanConfigRepository {
     associatedtype ConfigType: Equatable & Sendable
 
     func save(_ config: ConfigType) async throws
@@ -214,7 +214,7 @@ public protocol BooleanConfigRepository {
 }
 
 @Smock
-public protocol IdentifierService {
+protocol IdentifierService {
     associatedtype IDType: Equatable & Sendable
 
     func generate() async -> IDType
@@ -224,7 +224,7 @@ public protocol IdentifierService {
 }
 
 @Smock
-public protocol EquatableDataProcessor {
+protocol EquatableDataProcessor {
     associatedtype InputData: Equatable & Sendable
     associatedtype OutputData: Equatable & Sendable
 
@@ -234,7 +234,7 @@ public protocol EquatableDataProcessor {
 }
 
 @Smock
-public protocol NetworkManager {
+protocol NetworkManager {
     associatedtype ConfigType: Equatable & Sendable
     associatedtype ResponseType: Equatable & Sendable
 
@@ -244,7 +244,7 @@ public protocol NetworkManager {
 }
 
 @Smock
-public protocol MixedTypeService {
+protocol MixedTypeService {
     associatedtype ComparableType: Comparable & Sendable
     associatedtype EquatableType: Equatable & Sendable
 
