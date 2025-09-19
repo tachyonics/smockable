@@ -47,8 +47,8 @@ private func times<IntegerType: BinaryInteger>(_ count: IntegerType) -> String {
 /// Helper utility for performing verification assertions in mock testing.
 ///
 /// This struct provides internal functionality for handling verification failures
-/// and integrating with the testing framework. It supports both normal testing
-/// scenarios and unhappy path testing when `SMOCKABLE_UNHAPPY_PATH_TESTING` is enabled.
+/// and integrating with the testing framework.
+/// Users of mocks typically don't interact with this type directly.
 public struct VerificationHelper {
     private static func handleExpectation(
         condition: Bool,
@@ -139,7 +139,7 @@ public struct VerificationHelper {
 ///
 /// This protocol provides the interface for verifying mock interactions and is
 /// automatically implemented by the `@Smock` macro for generated mock classes.
-/// You typically don't interact with this protocol directly.
+/// Users of mocks typically don't interact with this protocol directly.
 public protocol VerifiableSmock {
     /// The type of verifier returned for this mock.
     associatedtype VerifierType

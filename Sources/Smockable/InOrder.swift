@@ -199,8 +199,7 @@ public class InOrder {
 
     /// Verifies a mock interaction occurred at least the specified number of additional times.
     ///
-    /// Uses greedy matching - will consume as many matching interactions as possible
-    /// up to the next non-matching interaction.
+    /// Uses greedy matching - will consume as many matching interactions as possible.
     ///
     /// ## Example
     /// ```swift
