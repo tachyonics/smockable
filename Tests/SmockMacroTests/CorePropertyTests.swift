@@ -638,8 +638,8 @@ struct CorePropertyTests {
     }
 
     @Test
-    func testThrowingPropertyVerificationFailures() {
-        expectVerificationFailures(messages: [
+    func testThrowingPropertyVerificationFailures() throws {
+        try expectVerificationFailures(messages: [
             "Expected throwingName.get() to be called at most 0 times, but was called 1 time"
         ]) {
             var expectations = MockTestPropertyService.Expectations()
@@ -648,7 +648,7 @@ struct CorePropertyTests {
             let mock = MockTestPropertyService(expectations: expectations)
 
             // Access once but verify at most 0 times - should fail
-            _ = try? mock.throwingName
+            _ = try mock.throwingName
             verify(mock, atMost: 0).throwingName.get()
         }
     }
@@ -738,6 +738,155 @@ struct CorePropertyTests {
             // Two failing verifications
             verify(mock, .never).asyncName.get()  // Fail 1 - was called
             verify(mock, times: 2).syncName.set(.any)  // Fail 2 - only called once
+        }
+    }
+    #endif
+
+    // MARK: - Fatal Error Tests (Swift 6.2+)
+
+    #if swift(>=6.2)
+    // These tests require Swift 6.2+ for improved fatalError testing support
+
+    @Test
+    func testSyncPropertyGetterNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            // Create mock with no expectations
+            let expectations = MockTestPropertyService.Expectations()
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = mock.syncName
+        }
+    }
+
+    @Test
+    func testSyncPropertySetterNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestPropertyService.Expectations()
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            mock.syncName = "test"
+        }
+    }
+
+    @Test
+    func testSyncPropertyGetterExhaustedExpectationFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.get(), times: 1, return: "value")
+            
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // First call should work
+            _ = mock.syncName
+            
+            // Second call should fail with fatalError since expectation is exhausted
+            _ = mock.syncName
+        }
+    }
+
+    @Test
+    func testSyncPropertySetterParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.set("expected"), complete: .withSuccess)
+            
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since parameter doesn't match
+            mock.syncName = "different"
+        }
+    }
+
+    @Test
+    func testSyncPropertySetterExhaustedExpectationFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncName.set(.any), times: 1, complete: .withSuccess)
+            
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // First call should work
+            mock.syncName = "test1"
+            
+            // Second call should fail with fatalError since expectation is exhausted
+            mock.syncName = "test2"
+        }
+    }
+
+    @Test
+    func testAsyncPropertyNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestPropertyService.Expectations()
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = await mock.asyncName
+        }
+    }
+
+    @Test
+    func testThrowingPropertyNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestPropertyService.Expectations()
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = try mock.throwingName
+        }
+    }
+
+    @Test
+    func testAsyncThrowingPropertyNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestPropertyService.Expectations()
+            let mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = try await mock.asyncThrowingName
+        }
+    }
+
+    @Test
+    func testComplexPropertySetterParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestComplexPropertyService.Expectations()
+            when(expectations.syncArray.set(["expected"]), complete: .withSuccess)
+            
+            var mock = MockTestComplexPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since parameter doesn't match
+            mock.syncArray = ["different"]
+        }
+    }
+
+    @Test
+    func testComplexPropertyGetterExhaustedExpectationFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestComplexPropertyService.Expectations()
+            when(expectations.syncDictionary.get(), times: 1, return: ["key": "value"])
+            
+            let mock = MockTestComplexPropertyService(expectations: expectations)
+            
+            // First call should work
+            _ = mock.syncDictionary
+            
+            // Second call should fail with fatalError since expectation is exhausted
+            _ = mock.syncDictionary
+        }
+    }
+
+    @Test
+    func testOptionalPropertySetterParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestPropertyService.Expectations()
+            when(expectations.syncOptional.set("specific"), complete: .withSuccess)
+            
+            var mock = MockTestPropertyService(expectations: expectations)
+            
+            // This should fail with fatalError since parameter doesn't match (nil vs specific string)
+            mock.syncOptional = nil
         }
     }
     #endif

@@ -391,8 +391,8 @@ struct SmockableTests {
     }
 
     @Test
-    func testWeatherServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testWeatherServiceVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time"
         ]) {
             var expectations = MockWeatherService.Expectations()
@@ -401,14 +401,14 @@ struct SmockableTests {
             let mockWeatherService = MockWeatherService(expectations: expectations)
 
             // Call once but verify for 2 times - should fail
-            _ = try? await mockWeatherService.getCurrentTemperature(for: "London")
+            _ = try await mockWeatherService.getCurrentTemperature(for: "London")
             verify(mockWeatherService, times: 2).getCurrentTemperature(for: .any)
         }
     }
 
     @Test
-    func testWeatherServiceNeverCalledFailure() async {
-        await expectVerificationFailures(messages: [
+    func testWeatherServiceNeverCalledFailure() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected getCurrentTemperature(for city: any) to never be called, but was called 1 time"
         ]) {
             var expectations = MockWeatherService.Expectations()
@@ -417,14 +417,14 @@ struct SmockableTests {
             let mockWeatherService = MockWeatherService(expectations: expectations)
 
             // Call it but verify never called - should fail
-            _ = try? await mockWeatherService.getCurrentTemperature(for: "London")
+            _ = try await mockWeatherService.getCurrentTemperature(for: "London")
             verify(mockWeatherService, .never).getCurrentTemperature(for: .any)
         }
     }
 
     @Test
-    func testBankServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testBankServiceVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected withdraw(amount: any) to be called at least 3 times, but was called 2 times"
         ]) {
             var expectations = MockBank.Expectations()
@@ -433,15 +433,15 @@ struct SmockableTests {
             let mockBank = MockBank(expectations: expectations)
 
             // Call twice but verify at least 3 times - should fail
-            _ = try? await mockBank.withdraw(amount: 100)
-            _ = try? await mockBank.withdraw(amount: 200)
+            _ = try await mockBank.withdraw(amount: 100)
+            _ = try await mockBank.withdraw(amount: 200)
             verify(mockBank, atLeast: 3).withdraw(amount: .any)
         }
     }
 
     @Test
-    func testMultipleMockVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMultipleMockVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time",
             "Expected getBalance() to never be called, but was called 1 time",
         ]) {
@@ -456,7 +456,7 @@ struct SmockableTests {
             let bankMock = MockBank(expectations: bankExpectations)
 
             // Call each once
-            _ = try? await weatherMock.getCurrentTemperature(for: "London")
+            _ = try await weatherMock.getCurrentTemperature(for: "London")
             _ = await bankMock.getBalance()
 
             // Two failing verifications
