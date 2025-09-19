@@ -221,7 +221,7 @@ struct CoreFunctionTests {
     }
 
     @Test
-    func testThrowingFunctionWithErrors() {
+    func testThrowingFunctionWithErrors() throws {
         var expectations = MockTestFunctionService.Expectations()
         when(expectations.throwingFunction(id: "success"), return: "success result")
         when(expectations.throwingFunction(id: "error"), throw: TestFunctionError.throwingError)
@@ -230,7 +230,7 @@ struct CoreFunctionTests {
         let mock = MockTestFunctionService(expectations: expectations)
 
         // Test success case
-        let result = try? mock.throwingFunction(id: "success")
+        let result = try mock.throwingFunction(id: "success")
         #expect(result == "success result")
 
         // Test error cases
@@ -530,8 +530,8 @@ struct CoreFunctionTests {
     }
 
     @Test
-    func testThrowingFunctionVerificationFailures() {
-        expectVerificationFailures(messages: [
+    func testThrowingFunctionVerificationFailures() throws {
+        try expectVerificationFailures(messages: [
             "Expected throwingFunction(id: any) to never be called, but was called 1 time"
         ]) {
             var expectations = MockTestFunctionService.Expectations()
@@ -540,14 +540,14 @@ struct CoreFunctionTests {
             let mock = MockTestFunctionService(expectations: expectations)
 
             // Call it but verify never called - should fail
-            _ = try? mock.throwingFunction(id: "test")
+            _ = try mock.throwingFunction(id: "test")
             verify(mock, .never).throwingFunction(id: .any)
         }
     }
 
     @Test
-    func testAsyncThrowingFunctionVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testAsyncThrowingFunctionVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected asyncThrowingFunction(id: any) to be called at least 3 times, but was called 1 time"
         ]) {
             var expectations = MockTestFunctionService.Expectations()
@@ -556,7 +556,7 @@ struct CoreFunctionTests {
             let mock = MockTestFunctionService(expectations: expectations)
 
             // Call once but verify at least 3 times - should fail
-            _ = try? await mock.asyncThrowingFunction(id: "test")
+            _ = try await mock.asyncThrowingFunction(id: "test")
             verify(mock, atLeast: 3).asyncThrowingFunction(id: .any)
         }
     }
@@ -572,6 +572,117 @@ struct CoreFunctionTests {
             let mock = MockTestFunctionService(expectations: expectations)
 
             verify(mock, times: 1).syncFunction(id: .any)  // Should fail - called 0 times but expected 1
+        }
+    }
+    #endif
+
+    // MARK: - Fatal Error Tests (Swift 6.2+)
+
+    #if swift(>=6.2)
+    // These tests require Swift 6.2+ for improved fatalError testing support
+
+    @Test
+    func testSyncFunctionNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            // Create mock with no expectations
+            let expectations = MockTestFunctionService.Expectations()
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = mock.syncFunction(id: "test")
+        }
+    }
+
+    @Test
+    func testSyncFunctionParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: "expected"), return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since parameter doesn't match
+            _ = mock.syncFunction(id: "different")
+        }
+    }
+
+    @Test
+    func testSyncFunctionExhaustedExpectationFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncFunction(id: .any), times: 1, return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // First call should work
+            _ = mock.syncFunction(id: "test")
+            
+            // Second call should fail with fatalError since expectation is exhausted
+            _ = mock.syncFunction(id: "test")
+        }
+    }
+
+    @Test
+    func testAsyncFunctionNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestFunctionService.Expectations()
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = await mock.asyncFunction(id: "test")
+        }
+    }
+
+    @Test
+    func testThrowingFunctionParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.throwingFunction(id: "expected"), return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since parameter doesn't match
+            _ = try mock.throwingFunction(id: "different")
+        }
+    }
+
+    @Test
+    func testVoidFunctionExhaustedExpectationFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncVoidFunction(), times: 1, complete: .withSuccess)
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // First call should work
+            mock.syncVoidFunction()
+            
+            // Second call should fail with fatalError since expectation is exhausted
+            mock.syncVoidFunction()
+        }
+    }
+
+    @Test
+    func testMultiParamFunctionParameterMismatchFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations = MockTestFunctionService.Expectations()
+            when(expectations.syncMultiParam(name: "john", count: 1...10, score: .any), return: "result")
+            
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since count is outside range
+            _ = mock.syncMultiParam(name: "john", count: 15, score: 5.0)
+        }
+    }
+
+    @Test
+    func testAsyncThrowingFunctionNoExpectationsFails() async {
+        await #expect(processExitsWith: .failure) {
+            let expectations = MockTestFunctionService.Expectations()
+            let mock = MockTestFunctionService(expectations: expectations)
+            
+            // This should fail with fatalError since no expectations are set
+            _ = try await mock.asyncThrowingFunction(id: "test")
         }
     }
     #endif

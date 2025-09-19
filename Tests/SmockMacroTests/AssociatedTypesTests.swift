@@ -738,8 +738,8 @@ struct AssociatedTypesTests {
 
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
-    func testAssociatedTypeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testAssociatedTypeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected read(id: any) to be called exactly 2 times, but was called 1 time"
         ]) {
             var expectations = MockSimpleReadWritable<User>.Expectations()
@@ -748,14 +748,14 @@ struct AssociatedTypesTests {
             let mockService = MockSimpleReadWritable<User>(expectations: expectations)
 
             // Call once but verify twice - should fail
-            _ = try? await mockService.read(id: "100")
+            _ = try await mockService.read(id: "100")
             verify(mockService, times: 2).read(id: .any)
         }
     }
 
     @Test
-    func testComplexAssociatedTypeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testComplexAssociatedTypeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected process(_ input: any) to never be called, but was called 1 time"
         ]) {
             var expectations = MockProcessor<String, String>.Expectations()
@@ -764,7 +764,7 @@ struct AssociatedTypesTests {
             let mockProcessor = MockProcessor<String, String>(expectations: expectations)
 
             // Call it but verify never called - should fail
-            _ = try? await mockProcessor.process("test input")
+            _ = try await mockProcessor.process("test input")
 
             verify(mockProcessor, .never).process(.any)
         }
@@ -804,8 +804,8 @@ struct AssociatedTypesTests {
     }
 
     @Test
-    func testComparableTypeWithRangeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testComparableTypeWithRangeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected transform(_ input: any, config: any) to be called 2...4 times, but was called 1 time"
         ]) {
             var expectations = MockDataTransformer<RawData, ProcessedData, ProcessingConfig>.Expectations()
@@ -820,7 +820,7 @@ struct AssociatedTypesTests {
             )
 
             // Call once but verify range 2...4 - should fail
-            _ = try? await mockTransformer.transform(
+            _ = try await mockTransformer.transform(
                 RawData(content: "test", metadata: [:]),
                 config: ProcessingConfig(enableTagging: true, scoreThreshold: 0.5)
             )
@@ -830,8 +830,8 @@ struct AssociatedTypesTests {
     }
 
     @Test
-    func testCodableTypeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testCodableTypeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected serialize(_ input: any) to be called at most 1 time, but was called 3 times"
         ]) {
             var expectations = MockSerializer<UserData, SerializedUserData>.Expectations()
@@ -844,17 +844,17 @@ struct AssociatedTypesTests {
             let mockSerializer = MockSerializer<UserData, SerializedUserData>(expectations: expectations)
 
             // Call 3 times but verify at most 1 - should fail
-            _ = try? await mockSerializer.serialize(UserData(id: "1", name: "test1"))
-            _ = try? await mockSerializer.serialize(UserData(id: "2", name: "test2"))
-            _ = try? await mockSerializer.serialize(UserData(id: "3", name: "test3"))
+            _ = try await mockSerializer.serialize(UserData(id: "1", name: "test1"))
+            _ = try await mockSerializer.serialize(UserData(id: "2", name: "test2"))
+            _ = try await mockSerializer.serialize(UserData(id: "3", name: "test3"))
 
             verify(mockSerializer, atMost: 1).serialize(.any)
         }
     }
 
     @Test
-    func testMultipleAssociatedTypeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMultipleAssociatedTypeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected read(id: any) to be called exactly 2 times, but was called 1 time",
             "Expected write(id: any, item: any) to never be called, but was called 1 time",
         ]) {
@@ -865,8 +865,8 @@ struct AssociatedTypesTests {
             let mockService = MockSimpleReadWritable<User>(expectations: expectations)
 
             // Call each once
-            _ = try? await mockService.read(id: "100")
-            try? await mockService.write(id: "200", item: User(id: "write", name: "write"))
+            _ = try await mockService.read(id: "100")
+            try await mockService.write(id: "200", item: User(id: "write", name: "write"))
 
             // Two failing verifications
             verify(mockService, times: 2).read(id: .any)  // Fail 1
@@ -894,8 +894,8 @@ struct AssociatedTypesTests {
     }
 
     @Test
-    func testProcessingResultEnumVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testProcessingResultEnumVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected process(_ input: any) to be called exactly 3 times, but was called 2 times"
         ]) {
             var expectations = MockProcessor<String, String>.Expectations()
@@ -904,8 +904,8 @@ struct AssociatedTypesTests {
             let mockProcessor = MockProcessor<String, String>(expectations: expectations)
 
             // Call twice but verify 3 times - should fail
-            _ = try? await mockProcessor.process("input1")
-            _ = try? await mockProcessor.process("input2")
+            _ = try await mockProcessor.process("input1")
+            _ = try await mockProcessor.process("input2")
 
             verify(mockProcessor, times: 3).process(.any)
         }

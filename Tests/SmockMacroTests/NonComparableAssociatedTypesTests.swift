@@ -188,8 +188,8 @@ struct NonComparableAssociatedTypesTests {
 
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
-    func testNonComparableAssociatedTypeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testNonComparableAssociatedTypeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected save(_ entity: any) to be called exactly 3 times, but was called 2 times"
         ]) {
             var expectations = MockNonComparableRepository<NonComparableData>.Expectations()
@@ -198,16 +198,16 @@ struct NonComparableAssociatedTypesTests {
             let mockRepo = MockNonComparableRepository<NonComparableData>(expectations: expectations)
 
             // Call twice but verify 3 times - should fail
-            try? await mockRepo.save(NonComparableData(content: "first"))
-            try? await mockRepo.save(NonComparableData(content: "second"))
+            try await mockRepo.save(NonComparableData(content: "first"))
+            try await mockRepo.save(NonComparableData(content: "second"))
 
             verify(mockRepo, times: 3).save(.any)
         }
     }
 
     @Test
-    func testMixedComparabilityVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMixedComparabilityVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected storeComparable(_ item: any) to never be called, but was called 1 time",
             "Expected storeNonComparable(_ item: any) to be called at least 2 times, but was called 1 time",
         ]) {
@@ -218,8 +218,8 @@ struct NonComparableAssociatedTypesTests {
             let mockStore = MockMixedComparabilityStore<String, SimpleData>(expectations: expectations)
 
             // Call each once
-            try? await mockStore.storeComparable("test")
-            try? await mockStore.storeNonComparable(SimpleData(value: "data"))
+            try await mockStore.storeComparable("test")
+            try await mockStore.storeNonComparable(SimpleData(value: "data"))
 
             // Two failing verifications
             verify(mockStore, .never).storeComparable(.any)  // Fail 1
@@ -228,8 +228,8 @@ struct NonComparableAssociatedTypesTests {
     }
 
     @Test
-    func testDataProcessorVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testDataProcessorVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected process(_ input: any) to be called at most 1 time, but was called 3 times"
         ]) {
             var expectations = MockDataProcessor<String, Int>.Expectations()
@@ -238,17 +238,17 @@ struct NonComparableAssociatedTypesTests {
             let mockProcessor = MockDataProcessor<String, Int>(expectations: expectations)
 
             // Call 3 times but verify at most 1 - should fail
-            _ = try? await mockProcessor.process("input1")
-            _ = try? await mockProcessor.process("input2")
-            _ = try? await mockProcessor.process("input3")
+            _ = try await mockProcessor.process("input1")
+            _ = try await mockProcessor.process("input2")
+            _ = try await mockProcessor.process("input3")
 
             verify(mockProcessor, atMost: 1).process(.any)
         }
     }
 
     @Test
-    func testNonComparableRangeVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testNonComparableRangeVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected save(_ entity: any) to be called 2...4 times, but was called 1 time"
         ]) {
             var expectations = MockNonComparableRepository<SimpleData>.Expectations()
@@ -257,7 +257,7 @@ struct NonComparableAssociatedTypesTests {
             let mockRepo = MockNonComparableRepository<SimpleData>(expectations: expectations)
 
             // Call once but verify range 2...4 - should fail
-            try? await mockRepo.save(SimpleData(value: "test"))
+            try await mockRepo.save(SimpleData(value: "test"))
 
             verify(mockRepo, times: 2...4).save(.any)
         }
@@ -278,8 +278,8 @@ struct NonComparableAssociatedTypesTests {
     }
 
     @Test
-    func testMixedComparableAndNonComparableFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMixedComparableAndNonComparableFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected getComparable(id: \"specific\") to be called exactly 1 time, but was called 0 times"
         ]) {
             var expectations = MockMixedComparabilityStore<String, SimpleData>.Expectations()
@@ -289,8 +289,8 @@ struct NonComparableAssociatedTypesTests {
             let mockStore = MockMixedComparabilityStore<String, SimpleData>(expectations: expectations)
 
             // Call with different parameter but verify specific value - should fail
-            _ = try? await mockStore.getComparable(id: "different")
-            _ = try? await mockStore.getNonComparable(id: "test")
+            _ = try await mockStore.getComparable(id: "different")
+            _ = try await mockStore.getNonComparable(id: "test")
 
             verify(mockStore, times: 1).getComparable(id: "specific")
         }

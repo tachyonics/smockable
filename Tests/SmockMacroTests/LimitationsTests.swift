@@ -312,8 +312,8 @@ struct LimitationsTests {
 
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
-    func testInheritedProtocolVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testInheritedProtocolVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected connect() to be called exactly 2 times, but was called 1 time"
         ]) {
             var expectations = MockDataService.Expectations()
@@ -322,15 +322,15 @@ struct LimitationsTests {
             let mock = MockDataService(expectations: expectations)
 
             // Call once but verify twice - should fail
-            try? await mock.connect()
+            try await mock.connect()
 
             verify(mock, times: 2).connect()
         }
     }
 
     @Test
-    func testMultipleInheritanceVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMultipleInheritanceVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected authenticate(token: any) to never be called, but was called 1 time",
             "Expected cache(key: any, value: any) to be called at least 2 times, but was called 1 time",
         ]) {
@@ -341,7 +341,7 @@ struct LimitationsTests {
             let mock = MockSecureDataService(expectations: expectations)
 
             // Call each once
-            _ = try? await mock.authenticate(token: "token")
+            _ = try await mock.authenticate(token: "token")
             await mock.cache(key: "key", value: Data())
 
             // Two failing verifications
@@ -351,8 +351,8 @@ struct LimitationsTests {
     }
 
     @Test
-    func testCompositionApproachVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testCompositionApproachVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected connect() to be called at most 0 times, but was called 1 time"
         ]) {
             var connectionExpectations = MockConnectionManaging.Expectations()
@@ -370,7 +370,7 @@ struct LimitationsTests {
             )
 
             // Perform transaction which calls connect
-            _ = try? await repository.performTransaction {
+            _ = try await repository.performTransaction {
                 return "test"
             }
 

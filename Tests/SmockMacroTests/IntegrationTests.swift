@@ -436,8 +436,8 @@ struct IntegrationTests {
     }
 
     @Test
-    func testComplexParameterVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testComplexParameterVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected complexFunction(name: any, count: any, enabled: any, data: any, items: any, config: any, sendable: any) to never be called, but was called 1 time"
         ]) {
             var expectations = MockTestIntegrationService.Expectations()
@@ -457,7 +457,7 @@ struct IntegrationTests {
             let mock = MockTestIntegrationService(expectations: expectations)
 
             // Call it but verify never called - should fail
-            _ = try? await mock.complexFunction(
+            _ = try await mock.complexFunction(
                 name: "test",
                 count: 1,
                 enabled: true,
@@ -480,8 +480,8 @@ struct IntegrationTests {
     }
 
     @Test
-    func testRealWorldServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testRealWorldServiceVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected authenticate(username: any, password: any) to be called at least 3 times, but was called 1 time"
         ]) {
             var expectations = MockTestRealWorldService.Expectations()
@@ -491,16 +491,16 @@ struct IntegrationTests {
             let mock = MockTestRealWorldService(expectations: expectations)
 
             // Call twice but verify at least 3 times - should fail
-            _ = try? await mock.authenticate(username: "user", password: "pass")
-            _ = try? await mock.fetchUserProfile(userId: "123")
+            _ = try await mock.authenticate(username: "user", password: "pass")
+            _ = try await mock.fetchUserProfile(userId: "123")
 
             verify(mock, atLeast: 3).authenticate(username: .any, password: .any)
         }
     }
 
     @Test
-    func testMixedAsyncThrowingVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testMixedAsyncThrowingVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected asyncThrowingFunction(id: any) to be called exactly 3 times, but was called 1 time",
             "Expected asyncThrowingProperty.get() to never be called, but was called 1 time",
         ]) {
@@ -511,8 +511,8 @@ struct IntegrationTests {
             let mock = MockTestIntegrationService(expectations: expectations)
 
             // Call once each
-            _ = try? await mock.asyncThrowingFunction(id: "test")
-            _ = try? await mock.asyncThrowingProperty
+            _ = try await mock.asyncThrowingFunction(id: "test")
+            _ = try await mock.asyncThrowingProperty
 
             // Two failing verifications
             verify(mock, times: 3).asyncThrowingFunction(id: .any)  // Fail 1
@@ -541,8 +541,8 @@ struct IntegrationTests {
     }
 
     @Test
-    func testFileOperationVerificationFailures() async {
-        await expectVerificationFailures(messages: []) {
+    func testFileOperationVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: []) {
             var expectations = MockTestRealWorldService.Expectations()
             when(
                 expectations.uploadFile(data: .any, filename: .any, metadata: .any),
@@ -554,10 +554,10 @@ struct IntegrationTests {
             let mock = MockTestRealWorldService(expectations: expectations)
 
             // Call 4 times but verify range 1...2 - should fail
-            _ = try? await mock.uploadFile(data: Data(), filename: "f1", metadata: nil)
-            _ = try? await mock.uploadFile(data: Data(), filename: "f2", metadata: nil)
-            _ = try? await mock.downloadFile(fileId: "123")
-            _ = try? await mock.downloadFile(fileId: "456")
+            _ = try await mock.uploadFile(data: Data(), filename: "f1", metadata: nil)
+            _ = try await mock.uploadFile(data: Data(), filename: "f2", metadata: nil)
+            _ = try await mock.downloadFile(fileId: "123")
+            _ = try await mock.downloadFile(fileId: "456")
 
             verify(mock, times: 1...2).uploadFile(data: .any, filename: .any, metadata: .any)
         }
@@ -604,8 +604,8 @@ struct IntegrationTests {
     }
 
     @Test
-    func testComplexWorkflowVerificationFailures() async {
-        await expectVerificationFailures(messages: [
+    func testComplexWorkflowVerificationFailures() async throws {
+        try await expectVerificationFailures(messages: [
             "Expected authenticate(username: any, password: any) to be called exactly 2 times, but was called 1 time",
             "Expected currentUserId.get() to be called at least once, but was never called",
             "Expected isAuthenticated.get() to never be called, but was called 1 time",
@@ -619,7 +619,7 @@ struct IntegrationTests {
             let mock = MockTestRealWorldService(expectations: expectations)
 
             // Execute partial workflow
-            _ = try? await mock.authenticate(username: "user", password: "pass")
+            _ = try await mock.authenticate(username: "user", password: "pass")
             _ = await mock.isAuthenticated
 
             // Three failing verifications
