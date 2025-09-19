@@ -418,8 +418,14 @@ struct InOrderTests {
         inOrder.verify(mock, additionalAtLeast: 5).firstMethod(id: .any)
         inOrder.verifyNoMoreInteractions()
     }
-    
-    @Test(arguments: [true, false], [InOrderVerificationMode.additionalTimes(2), InOrderVerificationMode.additionalAtMost(2), InOrderVerificationMode.additionalRange(1...2)])
+
+    @Test(
+        arguments: [true, false],
+        [
+            InOrderVerificationMode.additionalTimes(2), InOrderVerificationMode.additionalAtMost(2),
+            InOrderVerificationMode.additionalRange(1...2),
+        ]
+    )
     func testLargeNumberOfInteractionsFullVerification(strict: Bool, verificationMode: InOrderVerificationMode) {
         var expectations = MockTestInOrderService.Expectations()
         when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
@@ -454,26 +460,26 @@ struct InOrderTests {
 
     #if swift(>=6.2)
     // These tests require Swift 6.2+ for improved fatalError testing support
-    
+
     @Test
     func testMockNotInConstructorFails() async {
         await #expect(processExitsWith: .failure) {
             var expectations1 = MockTestInOrderService.Expectations()
             when(expectations1.firstMethod(id: .any), return: "mock1")
-        
+
             var expectations2 = MockTestInOrderService.Expectations()
             when(expectations2.secondMethod(count: .any), return: 100)
-        
+
             let mock1 = MockTestInOrderService(expectations: expectations1)
             let mock2 = MockTestInOrderService(expectations: expectations2)
-        
+
             // Only add mock1 to InOrder
             let inOrder = InOrder(strict: false, mock1)
-        
+
             // This should work
             _ = mock1.firstMethod(id: "test")
             inOrder.verify(mock1).firstMethod(id: "test")
-        
+
             // This should fail with fatalError
             _ = mock2.secondMethod(count: 20)
             inOrder.verify(mock2).secondMethod(count: 20)
@@ -486,147 +492,191 @@ struct InOrderTests {
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
     func testInOrderVerificationFailureWrongOrder() {
-        expectVerificationFailures(messages: ["Expected secondMethod(count: 5) to be called an additional 1 time, but was called 0 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected secondMethod(count: 5) to be called an additional 1 time, but was called 0 times"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
             when(expectations.secondMethod(count: .any), times: .unbounded, return: 42)
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Call in one order
             _ = mock.secondMethod(count: 5)
             _ = mock.firstMethod(id: "first")
-            
+
             // Verify in different order - should fail
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: "first")
             inOrder.verify(mock, additionalTimes: 1).secondMethod(count: 5)
         }
     }
-    
+
     @Test
     func testInOrderVerificationFailureNotEnoughCalls() {
-        expectVerificationFailures(messages: ["Expected firstMethod(id: any) to be called an additional 2 times, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected firstMethod(id: any) to be called an additional 2 times, but was called 1 time"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Call once
             _ = mock.firstMethod(id: "test")
-            
+
             // Verify for 2 additional times - should fail
             inOrder.verify(mock, additionalTimes: 2).firstMethod(id: .any)
         }
     }
-    
+
     @Test
     func testInOrderVerificationFailureAtLeast() {
-        expectVerificationFailures(messages: ["Expected firstMethod(id: any) to be called at least an additional 3 times, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected firstMethod(id: any) to be called at least an additional 3 times, but was called 1 time"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Call once
             _ = mock.firstMethod(id: "test")
-            
+
             // Verify at least 3 additional times - should fail
             inOrder.verify(mock, additionalAtLeast: 3).firstMethod(id: .any)
         }
     }
-    
+
     @Test
     func testInOrderVerificationFailureNeverCalled() {
-        expectVerificationFailures(messages: ["Expected firstMethod(id: any) to not be called again, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected firstMethod(id: any) to not be called again, but was called 1 time"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Call it
             _ = mock.firstMethod(id: "test")
-            
+
             // Verify never called again - should fail
             inOrder.verify(mock, .additionalNone).firstMethod(id: .any)
         }
     }
-    
+
     @Test
     func testInOrderVerificationFailureAtLeastOnce() {
-        expectVerificationFailures(messages: ["Expected firstMethod(id: any) to be called additionally at least once, but was never called"]) {
+        expectVerificationFailures(messages: [
+            "Expected firstMethod(id: any) to be called additionally at least once, but was never called"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), return: "result")
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Don't call it
-            
+
             // Verify at least once additionally - should fail
             inOrder.verify(mock, .additionalAtLeastOnce).firstMethod(id: .any)
         }
     }
-    
+
     @Test
     func testInOrderVerificationFailureRange() {
-        expectVerificationFailures(messages: ["Expected firstMethod(id: any) to be called additionally 1...2 times, but was called 0 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected firstMethod(id: any) to be called additionally 1...2 times, but was called 0 times"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Don't call it enough times
-            
+
             // Verify range 1...2 times - should fail since no calls
             inOrder.verify(mock, additionalRange: 1...2).firstMethod(id: .any)
         }
     }
-    
+
     @Test
     func testInOrderVerifyNoMoreInteractionsFailure() {
-        expectVerificationFailures(messages: ["Expected no remaining unverified mock interactions but interactions occurred 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected no remaining unverified mock interactions but interactions occurred 1 time"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
             when(expectations.secondMethod(count: .any), times: .unbounded, return: 42)
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: false, mock)
-            
+
             // Call both methods
             _ = mock.firstMethod(id: "test1")
             _ = mock.secondMethod(count: 5)
-            
+
             // Verify only one of them
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: .any)
-            
+
             // Verify no more interactions - should fail because secondMethod wasn't verified
             inOrder.verifyNoMoreInteractions()
         }
     }
-    
+
     @Test
     func testInOrderStrictModeFailure() {
-        expectVerificationFailures(messages: ["Expected no unverified mock interactions before this call to firstMethod(id: \"second\") but interactions occurred 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected no unverified mock interactions before this call to firstMethod(id: \"second\") but interactions occurred 1 time"
+        ]) {
             var expectations = MockTestInOrderService.Expectations()
             when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
             when(expectations.secondMethod(count: .any), times: .unbounded, return: 42)
-            
+
             let mock = MockTestInOrderService(expectations: expectations)
             let inOrder = InOrder(strict: true, mock)  // Strict mode
-            
+
             // Call in sequence with an unverified call in between
             _ = mock.firstMethod(id: "first")
             _ = mock.secondMethod(count: 11)  // This will cause strict mode to fail
             _ = mock.firstMethod(id: "second")
-            
+
             // Verify the first and third calls - should fail in strict mode
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: "first")
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: "second")
+        }
+    }
+
+    @Test
+    func testMisordering() {
+        expectVerificationFailures(messages: [
+            "Expected no unverified mock interactions before this call to firstMethod(id: any) but interactions occurred 1 time",
+            "Expected secondMethod(count: 1...10) to be called an additional 1 time, but was called 0 times",
+        ]) {
+            var expectations = MockTestInOrderService.Expectations()
+            when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
+            when(expectations.secondMethod(count: .any), times: .unbounded, return: 1)
+
+            let mock = MockTestInOrderService(expectations: expectations)
+
+            _ = mock.firstMethod(id: "exact")
+            _ = mock.secondMethod(count: 5)
+            _ = mock.firstMethod(id: "range")
+            _ = mock.secondMethod(count: 15)
+
+            let inOrder = InOrder(strict: true, mock)
+
+            // Test various matcher types work in ordered verification
+            inOrder.verify(mock).firstMethod(id: "exact")  // Exact match
+            inOrder.verify(mock).firstMethod(id: .any)  // Ordering fail
+            inOrder.verify(mock).secondMethod(count: 1...10)  // Range match
+            inOrder.verify(mock).secondMethod(count: 10...20)  // Range match
+            inOrder.verifyNoMoreInteractions()
         }
     }
     #endif

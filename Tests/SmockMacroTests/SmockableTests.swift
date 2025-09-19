@@ -374,98 +374,110 @@ struct SmockableTests {
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
     func testVerifyNoInteractionsFailsWhenThereWereInteractions() async {
-        await expectVerificationFailures(messages: ["Expected MockService1Protocol to have no interactions but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected MockService1Protocol to have no interactions but was called 1 time"
+        ]) {
             var expectations = MockService1Protocol.Expectations()
             when(expectations.initialize(name: .any, secondName: .any), return: "test")
-            
+
             let mock = MockService1Protocol(expectations: expectations)
-            
+
             // Call it but verify no interactions - should fail
             let result = await mock.initialize(name: "test", secondName: "test")
-            
+
             #expect(result == "test")
             verifyNoInteractions(mock)
         }
     }
-    
+
     @Test
     func testWeatherServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time"
+        ]) {
             var expectations = MockWeatherService.Expectations()
             when(expectations.getCurrentTemperature(for: .any), return: 22.5)
-            
+
             let mockWeatherService = MockWeatherService(expectations: expectations)
-            
+
             // Call once but verify for 2 times - should fail
             _ = try? await mockWeatherService.getCurrentTemperature(for: "London")
             verify(mockWeatherService, times: 2).getCurrentTemperature(for: .any)
         }
     }
-    
+
     @Test
     func testWeatherServiceNeverCalledFailure() async {
-        await expectVerificationFailures(messages: ["Expected getCurrentTemperature(for city: any) to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected getCurrentTemperature(for city: any) to never be called, but was called 1 time"
+        ]) {
             var expectations = MockWeatherService.Expectations()
             when(expectations.getCurrentTemperature(for: .any), return: 22.5)
-            
+
             let mockWeatherService = MockWeatherService(expectations: expectations)
-            
+
             // Call it but verify never called - should fail
             _ = try? await mockWeatherService.getCurrentTemperature(for: "London")
             verify(mockWeatherService, .never).getCurrentTemperature(for: .any)
         }
     }
-    
+
     @Test
     func testBankServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected withdraw(amount: any) to be called at least 3 times, but was called 2 times"]) {
+        await expectVerificationFailures(messages: [
+            "Expected withdraw(amount: any) to be called at least 3 times, but was called 2 times"
+        ]) {
             var expectations = MockBank.Expectations()
             when(expectations.withdraw(amount: .any), times: .unbounded, return: 500.0)
-            
+
             let mockBank = MockBank(expectations: expectations)
-            
+
             // Call twice but verify at least 3 times - should fail
             _ = try? await mockBank.withdraw(amount: 100)
             _ = try? await mockBank.withdraw(amount: 200)
             verify(mockBank, atLeast: 3).withdraw(amount: .any)
         }
     }
-    
+
     @Test
     func testMultipleMockVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time",
-                                                    "Expected getBalance() to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected getCurrentTemperature(for city: any) to be called exactly 2 times, but was called 1 time",
+            "Expected getBalance() to never be called, but was called 1 time",
+        ]) {
             // Test multiple mocks with failures
             var weatherExpectations = MockWeatherService.Expectations()
             when(weatherExpectations.getCurrentTemperature(for: .any), return: 22.5)
-            
+
             var bankExpectations = MockBank.Expectations()
             when(bankExpectations.getBalance(), return: 1000.0)
-            
+
             let weatherMock = MockWeatherService(expectations: weatherExpectations)
             let bankMock = MockBank(expectations: bankExpectations)
-            
+
             // Call each once
             _ = try? await weatherMock.getCurrentTemperature(for: "London")
             _ = await bankMock.getBalance()
-            
+
             // Two failing verifications
             verify(weatherMock, times: 2).getCurrentTemperature(for: .any)  // Fail 1
             verify(bankMock, .never).getBalance()  // Fail 2
         }
     }
-    
+
     @Test
     func testSyncServiceVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected initialize(name: any, secondName: any) to be called at most 1 time, but was called 3 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected initialize(name: any, secondName: any) to be called at most 1 time, but was called 3 times"
+        ]) {
             var expectations = MockService2Protocol.Expectations()
             when(expectations.initialize(name: .any, secondName: .any), times: .unbounded, return: "result")
-            
+
             let mock = MockService2Protocol(expectations: expectations)
-            
+
             // Call 3 times but verify at most 1 time - should fail
             _ = mock.initialize(name: "test1", secondName: "value1")
-            _ = mock.initialize(name: "test2", secondName: "value2") 
+            _ = mock.initialize(name: "test2", secondName: "value2")
             _ = mock.initialize(name: "test3", secondName: "value3")
             verify(mock, atMost: 1).initialize(name: .any, secondName: .any)
         }

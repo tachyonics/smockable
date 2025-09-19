@@ -248,90 +248,102 @@ struct ExactValueMatchingTests {
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
     func testExactStringValueVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processString(value: \"exact\") to be called exactly 2 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processString(value: \"exact\") to be called exactly 2 times, but was called 1 time"
+        ]) {
             var expectations = MockStringService.Expectations()
             when(expectations.processString(value: "exact"), return: "exact match")
-            
+
             let mock = MockStringService(expectations: expectations)
-            
+
             // Call once but verify twice - should fail
             _ = await mock.processString(value: "exact")
-            
+
             verify(mock, times: 2).processString(value: "exact")
         }
     }
-    
+
     @Test
     func testExactIntegerValueVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processInt(value: 42) to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processInt(value: 42) to never be called, but was called 1 time"
+        ]) {
             var expectations = MockNumericService.Expectations()
             when(expectations.processInt(value: 42), return: "forty-two")
-            
+
             let mock = MockNumericService(expectations: expectations)
-            
+
             // Call it but verify never called - should fail
             _ = await mock.processInt(value: 42)
-            
+
             verify(mock, .never).processInt(value: 42)
         }
     }
-    
+
     @Test
     func testExactBooleanValueVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processBoolean(value: true) to be called at least 3 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processBoolean(value: true) to be called at least 3 times, but was called 1 time"
+        ]) {
             var expectations = MockBooleanService.Expectations()
             when(expectations.processBoolean(value: true), times: .unbounded, return: "true processed")
-            
+
             let mock = MockBooleanService(expectations: expectations)
-            
+
             // Call once but verify at least 3 times - should fail
             _ = await mock.processBoolean(value: true)
-            
+
             verify(mock, atLeast: 3).processBoolean(value: true)
         }
     }
-    
+
     @Test
     func testMismatchedExactValueVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processString(value: \"expected\") to be called exactly 1 time, but was called 0 times"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processString(value: \"expected\") to be called exactly 1 time, but was called 0 times"
+        ]) {
             var expectations = MockStringService.Expectations()
             when(expectations.processString(value: .any), times: .unbounded, return: "any match")
-            
+
             let mock = MockStringService(expectations: expectations)
-            
+
             // Call with different value but verify specific value - should fail
             _ = await mock.processString(value: "actual")
-            
+
             verify(mock, times: 1).processString(value: "expected")
         }
     }
-    
+
     @Test
     func testRangeValueVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processInt(value: any) to be called 2...4 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processInt(value: any) to be called 2...4 times, but was called 1 time"
+        ]) {
             var expectations = MockNumericService.Expectations()
             when(expectations.processInt(value: .any), times: .unbounded, return: "any number")
-            
+
             let mock = MockNumericService(expectations: expectations)
-            
+
             // Call once but verify range 2...4 - should fail
             _ = await mock.processInt(value: 50)
-            
+
             verify(mock, times: 2...4).processInt(value: .any)
         }
     }
-    
+
     @Test
     func testExactVsAnyMatcherVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected processBoolean(value: false) to be called at least once, but was never called"]) {
+        await expectVerificationFailures(messages: [
+            "Expected processBoolean(value: false) to be called at least once, but was never called"
+        ]) {
             var expectations = MockBooleanService.Expectations()
             when(expectations.processBoolean(value: .any), return: "any boolean")
-            
+
             let mock = MockBooleanService(expectations: expectations)
-            
+
             // Call with true but verify false specifically - should fail
             _ = await mock.processBoolean(value: true)
-            
+
             verify(mock, .atLeastOnce).processBoolean(value: false)
         }
     }

@@ -30,17 +30,15 @@ private func withFailureRecording<T>(
     return (result: result, failures: failures)
 }
 
-
-
 func expectVerificationFailures<T>(
     messages: [String],
     operation: () throws -> T,
     sourceLocation: SourceLocation = #_sourceLocation
 ) rethrows {
     let (_, failures) = try withFailureRecording(operation: operation)
-    
+
     let actualMessages = failures.map(\.message)
-    
+
     #expect(
         messages == actualMessages,
         "Expected verification failures '\(messages)', but got failures: \(actualMessages)",
@@ -54,9 +52,9 @@ func expectVerificationFailures<T>(
     sourceLocation: SourceLocation = #_sourceLocation
 ) async rethrows {
     let (_, failures) = try await withFailureRecording(operation: operation)
-    
+
     let actualMessages = failures.map(\.message)
-    
+
     #expect(
         messages == actualMessages,
         "Expected verification failures '\(messages)', but got failures: \(actualMessages)",

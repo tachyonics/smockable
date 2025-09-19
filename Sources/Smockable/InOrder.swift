@@ -45,23 +45,25 @@ public class InOrder {
         #if SMOCKABLE_UNHAPPY_PATH_TESTING
         if let recorder = failureRecorder {
             if !condition {
-                recorder.record(FailureRecord(
-                    message: message,
-                    sourceLocation: sourceLocation
-                ))
+                recorder.record(
+                    FailureRecord(
+                        message: message,
+                        sourceLocation: sourceLocation
+                    )
+                )
             }
-            
+
             return
         }
         #endif
-        
+
         #expect(condition, "\(message)", sourceLocation: sourceLocation)
     }
     private let strict: Bool
     private var globalIndexProgress: Int = 0
     private var localIndexProgress: [String: Int]
     private var previousFunctionName: String?
-    
+
     /// Initialize InOrder verification with a set of mocks
     /// - Parameters:
     ///   - strict: If true, verification must account for every interaction with the mocks in order.
@@ -138,7 +140,8 @@ public class InOrder {
 
         Self.handleExpectation(
             condition: unverifiedInteractions.count == 0,
-            message: "Expected no remaining unverified mock interactions but interactions occurred \(times(unverifiedInteractions.count))",
+            message:
+                "Expected no remaining unverified mock interactions but interactions occurred \(times(unverifiedInteractions.count))",
             sourceLocation: sourceLocation
         )
     }
@@ -174,8 +177,11 @@ public class InOrder {
             // check if the first invocation is the latest invocation so far
             if first.globalIndex > self.globalIndexProgress {
                 if self.strict {
-                    let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress..<(last.globalIndex - 1))
-                    let unverifiedInteractions = calls.filter { (interactionMockIdentifier, interactionLocalCallIndex) in
+                    let calls = smockableGlobalCallIndex.getCalls(
+                        for: self.globalIndexProgress..<(last.globalIndex - 1)
+                    )
+                    let unverifiedInteractions = calls.filter {
+                        (interactionMockIdentifier, interactionLocalCallIndex) in
                         // filter out any verifiedInvocations
                         if mockIdentifier == interactionMockIdentifier
                             && verifiedCallIndices.contains(interactionLocalCallIndex)
@@ -188,21 +194,23 @@ public class InOrder {
                     if verifiedInvocations.count == 1 {
                         Self.handleExpectation(
                             condition: unverifiedInteractions.count == 0,
-                            message: "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                            message:
+                                "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
                             sourceLocation: sourceLocation
                         )
                     } else {
                         Self.handleExpectation(
                             condition: unverifiedInteractions.count == 0,
-                            message: "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                            message:
+                                "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
                             sourceLocation: sourceLocation
                         )
                     }
                 }
-                
+
                 // update the global index
                 self.globalIndexProgress = last.globalIndex
-                
+
                 // update the local index for the mock
                 self.localIndexProgress[mockIdentifier] = last.localIndex
                 self.previousFunctionName = functionName
@@ -212,7 +220,8 @@ public class InOrder {
                 }
                 Self.handleExpectation(
                     condition: first.globalIndex > self.globalIndexProgress,
-                    message: "Expected \(functionName) to be called after invocation of \(previousFunctionName) but was called before",
+                    message:
+                        "Expected \(functionName) to be called after invocation of \(previousFunctionName) but was called before",
                     sourceLocation: sourceLocation
                 )
             }
@@ -232,7 +241,8 @@ public class InOrder {
         case .times(let expected):
             Self.handleExpectation(
                 condition: count >= expected,
-                message: "Expected \(functionName) to be called an additional \(times(expected)), but was called \(times(count))",
+                message:
+                    "Expected \(functionName) to be called an additional \(times(expected)), but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             return (count >= expected) ? Array(candidateInvocations.prefix(expected)) : nil
@@ -240,7 +250,8 @@ public class InOrder {
         case .atLeast(let minimum):
             Self.handleExpectation(
                 condition: count >= minimum,
-                message: "Expected \(functionName) to be called at least an additional \(times(minimum)), but was called \(times(count))",
+                message:
+                    "Expected \(functionName) to be called at least an additional \(times(minimum)), but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             // Greedy: verify as many as possible
@@ -269,7 +280,8 @@ public class InOrder {
         case .range(let range):
             Self.handleExpectation(
                 condition: count >= range.lowerBound,
-                message: "Expected \(functionName) to be called additionally \(range) times, but was called \(times(count))",
+                message:
+                    "Expected \(functionName) to be called additionally \(range) times, but was called \(times(count))",
                 sourceLocation: sourceLocation
             )
             return (count >= range.lowerBound) ? Array(candidateInvocations.prefix(range.upperBound)) : nil
