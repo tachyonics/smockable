@@ -418,29 +418,44 @@ struct IntegrationTests {
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
     func testMixedFunctionAndPropertyVerificationFailures() async {
-        expectVerificationFailures(messages: ["Expected syncFunction(id: any) to be called exactly 2 times, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected syncFunction(id: any) to be called exactly 2 times, but was called 1 time"
+        ]) {
             var expectations = MockTestIntegrationService.Expectations()
             when(expectations.syncProperty.get(), return: "initial")
             when(expectations.syncFunction(id: .any), return: "sync result")
-            
+
             let mock = MockTestIntegrationService(expectations: expectations)
-            
+
             // Execute once but verify twice - should fail
             _ = mock.syncProperty
             _ = mock.syncFunction(id: "test")
-            
+
             verify(mock, times: 2).syncFunction(id: .any)
         }
     }
-    
+
     @Test
     func testComplexParameterVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected complexFunction(name: any, count: any, enabled: any, data: any, items: any, config: any, sendable: any) to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected complexFunction(name: any, count: any, enabled: any, data: any, items: any, config: any, sendable: any) to never be called, but was called 1 time"
+        ]) {
             var expectations = MockTestIntegrationService.Expectations()
-            when(expectations.complexFunction(name: .any, count: .any, enabled: .any, data: .any, items: .any, config: .any, sendable: .any), return: "result")
-            
+            when(
+                expectations.complexFunction(
+                    name: .any,
+                    count: .any,
+                    enabled: .any,
+                    data: .any,
+                    items: .any,
+                    config: .any,
+                    sendable: .any
+                ),
+                return: "result"
+            )
+
             let mock = MockTestIntegrationService(expectations: expectations)
-            
+
             // Call it but verify never called - should fail
             _ = try? await mock.complexFunction(
                 name: "test",
@@ -451,134 +466,162 @@ struct IntegrationTests {
                 config: ["key": "value"],
                 sendable: "sendable"
             )
-            
-            verify(mock, .never).complexFunction(name: .any, count: .any, enabled: .any, data: .any, items: .any, config: .any, sendable: .any)
+
+            verify(mock, .never).complexFunction(
+                name: .any,
+                count: .any,
+                enabled: .any,
+                data: .any,
+                items: .any,
+                config: .any,
+                sendable: .any
+            )
         }
     }
-    
+
     @Test
     func testRealWorldServiceVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected authenticate(username: any, password: any) to be called at least 3 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected authenticate(username: any, password: any) to be called at least 3 times, but was called 1 time"
+        ]) {
             var expectations = MockTestRealWorldService.Expectations()
             when(expectations.authenticate(username: .any, password: .any), return: "token")
             when(expectations.fetchUserProfile(userId: .any), return: ["name": "test"])
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Call twice but verify at least 3 times - should fail
             _ = try? await mock.authenticate(username: "user", password: "pass")
             _ = try? await mock.fetchUserProfile(userId: "123")
-            
+
             verify(mock, atLeast: 3).authenticate(username: .any, password: .any)
         }
     }
-    
+
     @Test
     func testMixedAsyncThrowingVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected asyncThrowingFunction(id: any) to be called exactly 3 times, but was called 1 time",
-                                                    "Expected asyncThrowingProperty.get() to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected asyncThrowingFunction(id: any) to be called exactly 3 times, but was called 1 time",
+            "Expected asyncThrowingProperty.get() to never be called, but was called 1 time",
+        ]) {
             var expectations = MockTestIntegrationService.Expectations()
             when(expectations.asyncThrowingFunction(id: .any), times: .unbounded, return: "result")
             when(expectations.asyncThrowingProperty.get(), return: "property")
-            
+
             let mock = MockTestIntegrationService(expectations: expectations)
-            
+
             // Call once each
             _ = try? await mock.asyncThrowingFunction(id: "test")
             _ = try? await mock.asyncThrowingProperty
-            
+
             // Two failing verifications
             verify(mock, times: 3).asyncThrowingFunction(id: .any)  // Fail 1
             verify(mock, .never).asyncThrowingProperty.get()  // Fail 2
         }
     }
-    
+
     @Test
     func testRealWorldPropertyVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected isAuthenticated.get() to be called at most 1 time, but was called 2 times"]) {
+        await expectVerificationFailures(messages: [
+            "Expected isAuthenticated.get() to be called at most 1 time, but was called 2 times"
+        ]) {
             var expectations = MockTestRealWorldService.Expectations()
             when(expectations.isAuthenticated.get(), times: 2, return: true)
             when(expectations.currentUserId.get(), return: "user123")
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Access properties multiple times but verify at most 1 - should fail
             _ = await mock.isAuthenticated
             _ = await mock.isAuthenticated
             _ = await mock.currentUserId
-            
+
             verify(mock, atMost: 1).isAuthenticated.get()
         }
     }
-    
+
     @Test
     func testFileOperationVerificationFailures() async {
         await expectVerificationFailures(messages: []) {
             var expectations = MockTestRealWorldService.Expectations()
-            when(expectations.uploadFile(data: .any, filename: .any, metadata: .any), times: .unbounded, return: "file123")
+            when(
+                expectations.uploadFile(data: .any, filename: .any, metadata: .any),
+                times: .unbounded,
+                return: "file123"
+            )
             when(expectations.downloadFile(fileId: .any), times: .unbounded, return: Data())
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Call 4 times but verify range 1...2 - should fail
             _ = try? await mock.uploadFile(data: Data(), filename: "f1", metadata: nil)
             _ = try? await mock.uploadFile(data: Data(), filename: "f2", metadata: nil)
             _ = try? await mock.downloadFile(fileId: "123")
             _ = try? await mock.downloadFile(fileId: "456")
-            
+
             verify(mock, times: 1...2).uploadFile(data: .any, filename: .any, metadata: .any)
         }
     }
-    
+
     @Test
     func testThrowingPropertyIntegrationFailures() {
-        expectVerificationFailures(messages: ["Expected apiBaseUrl.get() to be called at least once, but was never called"]) {
+        expectVerificationFailures(messages: [
+            "Expected apiBaseUrl.get() to be called at least once, but was never called"
+        ]) {
             var expectations = MockTestRealWorldService.Expectations()
             when(expectations.apiBaseUrl.get(), return: "https://api.test.com")
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Don't access but verify at least once - should fail
             verify(mock, .atLeastOnce).apiBaseUrl.get()
         }
     }
-    
+
     @Test
     func testErrorHandlingVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected authenticate(username: \"bad\", password: any) to be called exactly 2 times, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected authenticate(username: \"bad\", password: any) to be called exactly 2 times, but was called 1 time"
+        ]) {
             var expectations = MockTestRealWorldService.Expectations()
-            when(expectations.authenticate(username: "bad", password: .any), throw: IntegrationError.authenticationFailed)
+            when(
+                expectations.authenticate(username: "bad", password: .any),
+                throw: IntegrationError.authenticationFailed
+            )
             when(expectations.fetchUserProfile(userId: .any), throw: IntegrationError.userNotFound)
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Call once but verify twice - should fail
             do {
                 _ = try await mock.authenticate(username: "bad", password: "wrong")
             } catch {
                 // Expected to throw
             }
-            
+
             verify(mock, times: 2).authenticate(username: "bad", password: .any)
         }
     }
-    
+
     @Test
     func testComplexWorkflowVerificationFailures() async {
-        await expectVerificationFailures(messages: ["Expected authenticate(username: any, password: any) to be called exactly 2 times, but was called 1 time",
-                                                    "Expected currentUserId.get() to be called at least once, but was never called", "Expected isAuthenticated.get() to never be called, but was called 1 time"]) {
+        await expectVerificationFailures(messages: [
+            "Expected authenticate(username: any, password: any) to be called exactly 2 times, but was called 1 time",
+            "Expected currentUserId.get() to be called at least once, but was never called",
+            "Expected isAuthenticated.get() to never be called, but was called 1 time",
+        ]) {
             var expectations = MockTestRealWorldService.Expectations()
             when(expectations.authenticate(username: .any, password: .any), return: "token")
             when(expectations.isAuthenticated.get(), return: true)
             when(expectations.currentUserId.get(), return: "user123")
             when(expectations.fetchUserProfile(userId: .any), return: ["name": "test"])
-            
+
             let mock = MockTestRealWorldService(expectations: expectations)
-            
+
             // Execute partial workflow
             _ = try? await mock.authenticate(username: "user", password: "pass")
             _ = await mock.isAuthenticated
-            
+
             // Three failing verifications
             verify(mock, times: 2).authenticate(username: .any, password: .any)  // Fail 1
             verify(mock, .atLeastOnce).currentUserId.get()  // Fail 2

@@ -437,75 +437,93 @@ struct ValueMatcherCategoryTests {
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
     @Test
     func testComparableValueMatcherVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected comparableOnly(string: any, int: any, double: any) to be called exactly 3 times, but was called 2 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected comparableOnly(string: any, int: any, double: any) to be called exactly 3 times, but was called 2 times"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.comparableOnly(string: .any, int: .any, double: .any), times: .unbounded, return: "result")
-            
+            when(
+                expectations.comparableOnly(string: .any, int: .any, double: .any),
+                times: .unbounded,
+                return: "result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call twice but verify 3 times - should fail
             _ = mock.comparableOnly(string: "test1", int: 10, double: 1.5)
             _ = mock.comparableOnly(string: "test2", int: 20, double: 2.5)
-            
+
             verify(mock, times: 3).comparableOnly(string: .any, int: .any, double: .any)
         }
     }
-    
+
     @Test
     func testRangeMatcherVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected comparableOnly(string: \"a\"...\"m\", int: 1...100, double: 0.0...10.0) to never be called, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected comparableOnly(string: \"a\"...\"m\", int: 1...100, double: 0.0...10.0) to never be called, but was called 1 time"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
             when(expectations.comparableOnly(string: .any, int: .any, double: .any), return: "result")
-            
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call with range parameters but verify never called - should fail
             _ = mock.comparableOnly(string: "hello", int: 50, double: 5.5)  // matches "a"..."m", 1...100, 0.0...10.0
-            
+
             verify(mock, .never).comparableOnly(string: "a"..."m", int: 1...100, double: 0.0...10.0)
         }
     }
-    
+
     @Test
     func testBoolValueMatcherVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected boolOnly(flag: any, active: any) to be called at least 2 times, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected boolOnly(flag: any, active: any) to be called at least 2 times, but was called 1 time"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
             when(expectations.boolOnly(flag: .any, active: .any), times: .unbounded, return: "bool result")
-            
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call once but verify at least 2 times - should fail
             _ = mock.boolOnly(flag: true, active: false)
-            
+
             verify(mock, atLeast: 2).boolOnly(flag: .any, active: .any)
         }
     }
-    
+
     @Test
     func testNonComparableValueMatcherVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected nonComparableOnly(data: any, sendable: any) to be called at most 1 time, but was called 3 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected nonComparableOnly(data: any, sendable: any) to be called at most 1 time, but was called 3 times"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
             when(expectations.nonComparableOnly(data: .any, sendable: .any), times: .unbounded, return: "data result")
-            
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call 3 times but verify at most 1 time - should fail
             _ = mock.nonComparableOnly(data: Data([1, 2, 3]), sendable: "sendable1")
             _ = mock.nonComparableOnly(data: Data([4, 5, 6]), sendable: "sendable2")
             _ = mock.nonComparableOnly(data: Data([7, 8, 9]), sendable: "sendable3")
-            
+
             verify(mock, atMost: 1).nonComparableOnly(data: .any, sendable: .any)
         }
     }
-    
+
     @Test
     func testMixedCategoryVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected allCategories(name: any, count: any, enabled: any, data: any, sendable: any) to be called 1...2 times, but was called 5 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected allCategories(name: any, count: any, enabled: any, data: any, sendable: any) to be called 1...2 times, but was called 5 times"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.allCategories(name: .any, count: .any, enabled: .any, data: .any, sendable: .any), times: .unbounded, return: "all result")
-            
+            when(
+                expectations.allCategories(name: .any, count: .any, enabled: .any, data: .any, sendable: .any),
+                times: .unbounded,
+                return: "all result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call 5 times but verify range 1...2 - should fail
             for i in 1...5 {
                 _ = mock.allCategories(
@@ -516,53 +534,70 @@ struct ValueMatcherCategoryTests {
                     sendable: "sendable\(i)"
                 )
             }
-            
+
             verify(mock, times: 1...2).allCategories(name: .any, count: .any, enabled: .any, data: .any, sendable: .any)
         }
     }
-    
+
     @Test
     func testSpecificValueMatchingVerificationFailures() {
-        expectVerificationFailures(messages: ["Expected comparableOnly(string: \"expected\", int: 42, double: 3.14) to be called exactly 1 time, but was called 0 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected comparableOnly(string: \"expected\", int: 42, double: 3.14) to be called exactly 1 time, but was called 0 times"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.comparableOnly(string: .any, int: .any, double: .any), times: .unbounded, return: "result")
-            
+            when(
+                expectations.comparableOnly(string: .any, int: .any, double: .any),
+                times: .unbounded,
+                return: "result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call with different specific values but verify specific value that wasn't called
             _ = mock.comparableOnly(string: "actual", int: 42, double: 3.14)
-            
+
             // Verify specific values that don't match what was called - should fail
             verify(mock, times: 1).comparableOnly(string: "expected", int: 42, double: 3.14)
         }
     }
-    
+
     @Test
     func testRangeAndSpecificValueMixedFailures() {
-        expectVerificationFailures(messages: ["Expected comparableAndBool(name: \"test\"...\"zebra\", count: 1...100, enabled: true) to be called exactly 2 times, but was called 1 time",
-                                              "Expected comparableAndBool(name: any, count: any, enabled: any) to never be called, but was called 1 time"]) {
+        expectVerificationFailures(messages: [
+            "Expected comparableAndBool(name: \"test\"...\"zebra\", count: 1...100, enabled: true) to be called exactly 2 times, but was called 1 time",
+            "Expected comparableAndBool(name: any, count: any, enabled: any) to never be called, but was called 1 time",
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.comparableAndBool(name: .any, count: .any, enabled: .any), times: .unbounded, return: "mixed result")
-            
+            when(
+                expectations.comparableAndBool(name: .any, count: .any, enabled: .any),
+                times: .unbounded,
+                return: "mixed result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call once with values in range
             _ = mock.comparableAndBool(name: "value", count: 50, enabled: true)
-            
+
             // Two failing verifications
             verify(mock, times: 2).comparableAndBool(name: "test"..."zebra", count: 1...100, enabled: true)  // Fail 1 - called once, not twice
             verify(mock, .never).comparableAndBool(name: .any, count: .any, enabled: .any)  // Fail 2 - was called
         }
     }
-    
+
     @Test
     func testComplexParameterCombinationFailures() {
-        expectVerificationFailures(messages: ["Expected allCategories(name: \"specific\", count: 100, enabled: true, data: any, sendable: any) to be called at least once, but was never called"]) {
+        expectVerificationFailures(messages: [
+            "Expected allCategories(name: \"specific\", count: 100, enabled: true, data: any, sendable: any) to be called at least once, but was never called"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.allCategories(name: .any, count: .any, enabled: .any, data: .any, sendable: .any), return: "result")
-            
+            when(
+                expectations.allCategories(name: .any, count: .any, enabled: .any, data: .any, sendable: .any),
+                return: "result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Don't call but verify specific combination - should fail
             verify(mock, .atLeastOnce).allCategories(
                 name: "specific",
@@ -573,18 +608,24 @@ struct ValueMatcherCategoryTests {
             )
         }
     }
-    
+
     @Test
     func testOutOfRangeValueMatcherFailures() {
-        expectVerificationFailures(messages: ["Expected comparableOnly(string: \"a\"...\"m\", int: 1...100, double: 0.0...10.0) to be called exactly 1 time, but was called 0 times"]) {
+        expectVerificationFailures(messages: [
+            "Expected comparableOnly(string: \"a\"...\"m\", int: 1...100, double: 0.0...10.0) to be called exactly 1 time, but was called 0 times"
+        ]) {
             var expectations = MockTestValueMatcherService.Expectations()
-            when(expectations.comparableOnly(string: .any, int: .any, double: .any), times: .unbounded, return: "result")
-            
+            when(
+                expectations.comparableOnly(string: .any, int: .any, double: .any),
+                times: .unbounded,
+                return: "result"
+            )
+
             let mock = MockTestValueMatcherService(expectations: expectations)
-            
+
             // Call with values outside expected ranges
             _ = mock.comparableOnly(string: "zebra", int: 200, double: 15.0)  // outside "a"..."m", 1...100, 0.0...10.0
-            
+
             // Verify with range that doesn't match - should fail since call was outside range
             verify(mock, times: 1).comparableOnly(string: "a"..."m", int: 1...100, double: 0.0...10.0)
         }

@@ -1,8 +1,8 @@
 // swift-tools-version:6.1
 
 import CompilerPluginSupport
-import PackageDescription
 import Foundation
+import PackageDescription
 
 let package = Package(
     name: "smockable",
@@ -63,19 +63,19 @@ func swiftSettingsForTopLevelPackage() -> [SwiftSetting] {
     // Check if we're in the root of our own package by looking for specific files
     let fileManager = FileManager.default
     let currentDir = URL(fileURLWithPath: fileManager.currentDirectoryPath)
-    
+
     // Look for package-specific files that indicate this is the top-level build
     let packageIndicators = [
         "README.md",
         ".git",
         "Sources/Smockable",
-        "Tests/SmockMacroTests"
+        "Tests/SmockMacroTests",
     ]
-    
+
     let isTopLevel = packageIndicators.allSatisfy { indicator in
         fileManager.fileExists(atPath: currentDir.appendingPathComponent(indicator).path)
     }
-    
+
     if isTopLevel {
         return [.define("SMOCKABLE_UNHAPPY_PATH_TESTING")]
     }

@@ -3,8 +3,8 @@
 //  smockable
 //
 
-import Testing
 import Foundation
+import Testing
 
 #if SMOCKABLE_UNHAPPY_PATH_TESTING
 import Synchronization
@@ -38,19 +38,21 @@ public struct VerificationHelper {
         #if SMOCKABLE_UNHAPPY_PATH_TESTING
         if let recorder = failureRecorder {
             if !condition {
-                recorder.record(FailureRecord(
-                    message: message,
-                    sourceLocation: sourceLocation
-                ))
+                recorder.record(
+                    FailureRecord(
+                        message: message,
+                        sourceLocation: sourceLocation
+                    )
+                )
             }
-            
+
             return
         }
         #endif
-        
+
         #expect(condition, "\(message)", sourceLocation: sourceLocation)
     }
-    
+
     public static func performVerification(
         mode: VerificationMode,
         matchingCount: Int,
@@ -61,19 +63,22 @@ public struct VerificationHelper {
         case .times(let expected):
             handleExpectation(
                 condition: matchingCount == expected,
-                message: "Expected \(functionName) to be called exactly \(times(expected)), but was called \(times(matchingCount))",
+                message:
+                    "Expected \(functionName) to be called exactly \(times(expected)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .atLeast(let minimum):
             handleExpectation(
                 condition: matchingCount >= minimum,
-                message: "Expected \(functionName) to be called at least \(times(minimum)), but was called \(times(matchingCount))",
+                message:
+                    "Expected \(functionName) to be called at least \(times(minimum)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .atMost(let maximum):
             handleExpectation(
                 condition: matchingCount <= maximum,
-                message: "Expected \(functionName) to be called at most \(times(maximum)), but was called \(times(matchingCount))",
+                message:
+                    "Expected \(functionName) to be called at most \(times(maximum)), but was called \(times(matchingCount))",
                 sourceLocation: sourceLocation
             )
         case .never:

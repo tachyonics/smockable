@@ -192,7 +192,7 @@ enum StorageGenerator {
                     let mutex: Mutex<Storage>
                     """
                 )
-                
+
                 try VariableDeclSyntax(
                     """
                     let mockIdentifier: String
