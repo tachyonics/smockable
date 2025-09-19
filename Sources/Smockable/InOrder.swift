@@ -9,7 +9,7 @@ import Testing
 import Synchronization
 #endif
 
-public enum InOrderVerificationMode {
+public enum InOrderVerificationMode: Sendable {
     case additionalTimes(Int)  // Exactly N times
     case additionalAtLeast(Int)  // At least N times
     case additionalAtMost(Int)  // At most N times
@@ -61,7 +61,7 @@ public class InOrder {
     private var globalIndexProgress: Int = 0
     private var localIndexProgress: [String: Int]
     private var previousFunctionName: String?
-
+    
     /// Initialize InOrder verification with a set of mocks
     /// - Parameters:
     ///   - strict: If true, verification must account for every interaction with the mocks in order.
@@ -171,40 +171,41 @@ public class InOrder {
 
         // if the verifiedInvocations passed the verification mode
         if let verifiedInvocations, let first = verifiedInvocations.first, let last = verifiedInvocations.last {
-            if self.strict {
-                let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress..<(last.globalIndex - 1))
-                let unverifiedInteractions = calls.filter { (interactionMockIdentifier, interactionLocalCallIndex) in
-                    // filter out any verifiedInvocations
-                    if mockIdentifier == interactionMockIdentifier
-                        && verifiedCallIndices.contains(interactionLocalCallIndex)
-                    {
-                        return false
-                    }
-                    return self.localIndexProgress[interactionMockIdentifier] != nil
-                }
-
-                if verifiedInvocations.count == 1 {
-                    Self.handleExpectation(
-                        condition: unverifiedInteractions.count == 0,
-                        message: "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
-                        sourceLocation: sourceLocation
-                    )
-                } else {
-                    Self.handleExpectation(
-                        condition: unverifiedInteractions.count == 0,
-                        message: "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
-                        sourceLocation: sourceLocation
-                    )
-                }
-            } else {
-                // update the local index for the mock
-                self.localIndexProgress[mockIdentifier] = last.localIndex
-            }
-
             // check if the first invocation is the latest invocation so far
             if first.globalIndex > self.globalIndexProgress {
+                if self.strict {
+                    let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress..<(last.globalIndex - 1))
+                    let unverifiedInteractions = calls.filter { (interactionMockIdentifier, interactionLocalCallIndex) in
+                        // filter out any verifiedInvocations
+                        if mockIdentifier == interactionMockIdentifier
+                            && verifiedCallIndices.contains(interactionLocalCallIndex)
+                        {
+                            return false
+                        }
+                        return self.localIndexProgress[interactionMockIdentifier] != nil
+                    }
+
+                    if verifiedInvocations.count == 1 {
+                        Self.handleExpectation(
+                            condition: unverifiedInteractions.count == 0,
+                            message: "Expected no unverified mock interactions before this call to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                            sourceLocation: sourceLocation
+                        )
+                    } else {
+                        Self.handleExpectation(
+                            condition: unverifiedInteractions.count == 0,
+                            message: "Expected no unverified mock interactions before or between these calls to \(functionName) but interactions occurred \(times(unverifiedInteractions.count))",
+                            sourceLocation: sourceLocation
+                        )
+                    }
+                }
+                
                 // update the global index
                 self.globalIndexProgress = last.globalIndex
+                
+                // update the local index for the mock
+                self.localIndexProgress[mockIdentifier] = last.localIndex
+                self.previousFunctionName = functionName
             } else {
                 guard let previousFunctionName = self.previousFunctionName else {
                     fatalError("Missing previousFunctionName")

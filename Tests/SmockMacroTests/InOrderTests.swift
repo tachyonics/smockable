@@ -398,7 +398,7 @@ struct InOrderTests {
         let mock = MockTestInOrderService(expectations: expectations)
 
         // Create many interactions
-        for i in 1...100 {
+        for i in 1...1000 {
             if i % 2 == 0 {
                 _ = mock.firstMethod(id: "even\(i)")
             } else {
@@ -418,114 +418,68 @@ struct InOrderTests {
         inOrder.verify(mock, additionalAtLeast: 5).firstMethod(id: .any)
         inOrder.verifyNoMoreInteractions()
     }
-
-    // MARK: - Commented Out Fatal Error Tests (for Swift 6.2+)
-
-    /*
-    // Uncomment when Swift 6.2 is available with improved fatalError testing
     
-    @Test
-    func testMockNotInConstructorFails() {
-        var expectations1 = MockTestInOrderService.Expectations()
-        when(expectations1.firstMethod(id: .any), return: "mock1")
-    
-        var expectations2 = MockTestInOrderService.Expectations()
-        when(expectations2.secondMethod(count: .any), return: 100)
-    
-        let mock1 = MockTestInOrderService(expectations: expectations1)
-        let mock2 = MockTestInOrderService(expectations: expectations2)
-    
-        // Only add mock1 to InOrder
-        let inOrder = InOrder(strict: false, mock1)
-    
-        // This should work
-        _ = mock1.firstMethod(id: "test")
-        inOrder.verify(mock1).firstMethod(id: "test")
-    
-        // This should fail with fatalError
-        _ = mock2.secondMethod(count: 20)
-        #expect(throws: Never.self) {
-            inOrder.verify(mock2).secondMethod(count: 20)
-        }
-    }
-    
-    @Test
-    func testStrictModeFailsOnGaps() {
+    @Test(arguments: [true, false], [InOrderVerificationMode.additionalTimes(2), InOrderVerificationMode.additionalAtMost(2), InOrderVerificationMode.additionalRange(1...2)])
+    func testLargeNumberOfInteractionsFullVerification(strict: Bool, verificationMode: InOrderVerificationMode) {
         var expectations = MockTestInOrderService.Expectations()
         when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
         when(expectations.secondMethod(count: .any), times: .unbounded, return: 1)
-    
+
         let mock = MockTestInOrderService(expectations: expectations)
-    
-        // Execute methods with gap
-        _ = mock.firstMethod(id: "test1")
-        _ = mock.secondMethod(count: 5)  // This creates a gap in strict verification
-        _ = mock.firstMethod(id: "test2")
-    
-        let inOrder = InOrder(strict: true, mock)
-        inOrder.verify(mock).firstMethod(id: "test1")
-    
-        // This should fail because we skip the secondMethod call
-        #expect(throws: Never.self) {
-            inOrder.verify(mock).firstMethod(id: "test2")
+
+        // Create many interactions
+        for i in 1...1000 {
+            if i % 2 == 0 {
+                _ = mock.firstMethod(id: "input")
+                _ = mock.firstMethod(id: "input")
+            } else {
+                _ = mock.secondMethod(count: 556)
+                _ = mock.secondMethod(count: 556)
+            }
         }
+
+        let inOrder = InOrder(strict: strict, mock)
+
+        for i in 1...1000 {
+            if i % 2 == 0 {
+                inOrder.verify(mock, verificationMode).firstMethod(id: "input")
+            } else {
+                inOrder.verify(mock, verificationMode).secondMethod(count: 556)
+            }
+        }
+        inOrder.verifyNoMoreInteractions()
     }
+
+    // MARK: - Fatal Error Tests (Swift 6.2+)
+
+    #if swift(>=6.2)
+    // These tests require Swift 6.2+ for improved fatalError testing support
     
     @Test
-    func testVerificationFailsWhenExpectedCallsNotFound() {
-        var expectations = MockTestInOrderService.Expectations()
-        when(expectations.firstMethod(id: .any), return: "result")
-    
-        let mock = MockTestInOrderService(expectations: expectations)
-    
-        _ = mock.firstMethod(id: "actual")
-    
-        let inOrder = InOrder(strict: false, mock)
-    
-        // This should fail because "different" was never called
-        #expect(throws: Never.self) {
-            inOrder.verify(mock).firstMethod(id: "different")
+    func testMockNotInConstructorFails() async {
+        await #expect(processExitsWith: .failure) {
+            var expectations1 = MockTestInOrderService.Expectations()
+            when(expectations1.firstMethod(id: .any), return: "mock1")
+        
+            var expectations2 = MockTestInOrderService.Expectations()
+            when(expectations2.secondMethod(count: .any), return: 100)
+        
+            let mock1 = MockTestInOrderService(expectations: expectations1)
+            let mock2 = MockTestInOrderService(expectations: expectations2)
+        
+            // Only add mock1 to InOrder
+            let inOrder = InOrder(strict: false, mock1)
+        
+            // This should work
+            _ = mock1.firstMethod(id: "test")
+            inOrder.verify(mock1).firstMethod(id: "test")
+        
+            // This should fail with fatalError
+            _ = mock2.secondMethod(count: 20)
+            inOrder.verify(mock2).secondMethod(count: 20)
         }
     }
-    
-    @Test
-    func testInsufficientCallsForTimesVerification() {
-        var expectations = MockTestInOrderService.Expectations()
-        when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-    
-        let mock = MockTestInOrderService(expectations: expectations)
-    
-        _ = mock.firstMethod(id: "test1")
-        _ = mock.firstMethod(id: "test2")  // Only 2 calls
-    
-        let inOrder = InOrder(strict: false, mock)
-    
-        // This should fail because we expect 3 but only have 2
-        #expect(throws: Never.self) {
-            inOrder.verify(mock, additionalTimes: 3).firstMethod(id: .any)
-        }
-    }
-    
-    @Test
-    func testAtMostFailsWhenTooManyCalls() {
-        var expectations = MockTestInOrderService.Expectations()
-        when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
-    
-        let mock = MockTestInOrderService(expectations: expectations)
-    
-        _ = mock.firstMethod(id: "test1")
-        _ = mock.firstMethod(id: "test2")
-        _ = mock.firstMethod(id: "test3")
-        _ = mock.firstMethod(id: "test4")  // 4 calls
-    
-        let inOrder = InOrder(strict: false, mock)
-    
-        // This should fail because we have 4 calls but expect at most 2
-        #expect(throws: Never.self) {
-            inOrder.verify(mock, additionalAtMost: 2).firstMethod(id: .any)
-        }
-    }
-    */
+    #endif
 
     // MARK: - Unhappy Path Tests
 
