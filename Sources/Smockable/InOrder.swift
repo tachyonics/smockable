@@ -9,14 +9,32 @@ import Testing
 import Synchronization
 #endif
 
+/// Verification modes for InOrder verification, specifying how many additional times an interaction should occur.
+///
+/// These modes work similarly to `VerificationMode` but are specifically designed for ordered verification
+/// where you want to verify additional occurrences of interactions in sequence.
+///
+/// ## Example
+/// ```swift
+/// let inOrder = InOrder(strict: false, mock1, mock2)
+/// inOrder.verify(mock1, .additionalTimes(2)).method1()
+/// inOrder.verify(mock2, .additionalAtLeast(1)).method2()
+/// ```
 public enum InOrderVerificationMode: Sendable {
-    case additionalTimes(Int)  // Exactly N times
-    case additionalAtLeast(Int)  // At least N times
-    case additionalAtMost(Int)  // At most N times
-    case additionalNone  // Never called (0 times)
-    case additionalAtLeastOnce  // At least once (>= 1)
-    case additionalRange(ClosedRange<Int>)  // Within a range
+    /// Verifies the interaction occurred exactly the specified number of additional times.
+    case additionalTimes(Int)
+    /// Verifies the interaction occurred at least the specified number of additional times.
+    case additionalAtLeast(Int)
+    /// Verifies the interaction occurred at most the specified number of additional times.
+    case additionalAtMost(Int)
+    /// Verifies the interaction never occurred again (0 additional times).
+    case additionalNone
+    /// Verifies the interaction occurred at least once more (>= 1 additional time).
+    case additionalAtLeastOnce
+    /// Verifies the interaction occurred within the specified range of additional times.
+    case additionalRange(ClosedRange<Int>)
 
+    /// Converts this InOrder verification mode to a standard VerificationMode.
     var verificationMode: VerificationMode {
         return switch self {
         case .additionalTimes(let times):
@@ -35,7 +53,38 @@ public enum InOrderVerificationMode: Sendable {
     }
 }
 
-/// InOrder verification class for verifying mock interactions in a specific order
+/// A class for verifying that mock interactions occurred in a specific order.
+///
+/// Use `InOrder` when you need to verify that methods were called in a particular sequence
+/// across one or more mocks. This is useful for testing workflows where the order of
+/// operations is important.
+///
+/// ## Usage
+///
+/// ### Basic Ordered Verification
+/// ```swift
+/// let inOrder = InOrder(strict: false, mockService, mockLogger)
+/// 
+/// // Execute operations
+/// mockService.login()
+/// mockLogger.log("User logged in")
+/// mockService.fetchData()
+/// 
+/// // Verify they occurred in order
+/// inOrder.verify(mockService).login()
+/// inOrder.verify(mockLogger).log("User logged in") 
+/// inOrder.verify(mockService).fetchData()
+/// inOrder.verifyNoMoreInteractions()
+/// ```
+///
+/// ### Strict vs Non-Strict Mode
+/// - **Strict mode**: Every interaction must be verified in the exact order they occurred
+/// - **Non-strict mode**: You can skip interactions as long as what you verify is in order
+///
+/// ## Important Notes
+/// - All mocks must be provided to the InOrder constructor to be tracked
+/// - Interactions with mocks not in the constructor will cause fatal errors
+/// - Use `verifyNoMoreInteractions()` to ensure no unexpected interactions occurred
 public class InOrder {
     private static func handleExpectation(
         condition: Bool,
@@ -64,10 +113,26 @@ public class InOrder {
     private var localIndexProgress: [String: Int]
     private var previousFunctionName: String?
 
-    /// Initialize InOrder verification with a set of mocks
+    /// Initializes InOrder verification with a set of mocks to track.
+    ///
+    /// ## Parameters
+    /// - **strict**: Controls verification behavior:
+    ///   - `true`: Every interaction with the provided mocks must be verified in exact order
+    ///   - `false`: Allows skipping interactions as long as verified calls are in order
+    /// - **mocks**: All mocks that will participate in ordered verification
+    ///
+    /// ## Example
+    /// ```swift
+    /// let inOrder = InOrder(strict: true, mockA, mockB, mockC)
+    /// let inOrder = InOrder(strict: false, servicesMock, loggerMock)
+    /// ```
+    ///
+    /// ## Important
+    /// Only mocks provided to this constructor can be used with this InOrder instance.
+    /// Attempting to verify mocks not in the constructor will result in a fatal error.
+    ///
     /// - Parameters:
-    ///   - strict: If true, verification must account for every interaction with the mocks in order.
-    ///            If false, interactions can be skipped as long as what is verfied is verified in order.
+    ///   - strict: Whether to require strict ordering of all interactions
     ///   - mocks: The mocks to track for ordered verification
     public init(strict: Bool, _ mocks: any VerifiableSmock...) {
         self.strict = strict
@@ -80,7 +145,22 @@ public class InOrder {
         self.localIndexProgress = mockDict
     }
 
-    /// Verify a mock interaction with exactly `additionalTimes` occurrences
+    /// Verifies a mock interaction occurred exactly the specified number of additional times.
+    ///
+    /// This is the most commonly used verification method for InOrder. It verifies that
+    /// the next interaction(s) in sequence match the specified call.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockService).login()
+    /// inOrder.verify(mockService, additionalTimes: 3).fetchData()
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - mock: The mock to verify (must be in InOrder constructor)
+    ///   - additionalTimes: Number of additional times to verify (default: 1)
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    /// - Returns: A verifier for chaining method/property calls
     public func verify<T: VerifiableSmock>(
         _ mock: T,
         additionalTimes: Int = 1,
@@ -89,7 +169,22 @@ public class InOrder {
         return verify(mock, .additionalTimes(additionalTimes), sourceLocation: sourceLocation)
     }
 
-    /// Verify a mock interaction with a specific verification mode
+    /// Verifies a mock interaction using a specific InOrder verification mode.
+    ///
+    /// This is the most flexible verification method, allowing you to specify exactly
+    /// how many times an interaction should have occurred using verification modes.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockService, .additionalAtLeast(2)).processData()
+    /// inOrder.verify(mockLogger, .additionalNone).debugLog()
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - mock: The mock to verify (must be in InOrder constructor)
+    ///   - mode: The verification mode specifying expected interaction count
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    /// - Returns: A verifier for chaining method/property calls
     public func verify<T: VerifiableSmock>(
         _ mock: T,
         _ mode: InOrderVerificationMode,
@@ -102,7 +197,21 @@ public class InOrder {
         return mock.getVerifier(mode: mode.verificationMode, sourceLocation: sourceLocation, inOrder: self)
     }
 
-    /// Verify a mock interaction with at least `additionalAtLeast` occurrences (greedy matching)
+    /// Verifies a mock interaction occurred at least the specified number of additional times.
+    ///
+    /// Uses greedy matching - will consume as many matching interactions as possible
+    /// up to the next non-matching interaction.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockService, additionalAtLeast: 1).retryOperation()
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - mock: The mock to verify (must be in InOrder constructor)
+    ///   - additionalAtLeast: Minimum number of additional times to verify
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    /// - Returns: A verifier for chaining method/property calls
     public func verify<T: VerifiableSmock>(
         _ mock: T,
         additionalAtLeast: Int,
@@ -111,7 +220,18 @@ public class InOrder {
         return verify(mock, .additionalAtLeast(additionalAtLeast), sourceLocation: sourceLocation)
     }
 
-    /// Verify a mock interaction with at most `additionalAtMost` occurrences
+    /// Verifies a mock interaction occurred at most the specified number of additional times.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockService, additionalAtMost: 3).pollForUpdates()
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - mock: The mock to verify (must be in InOrder constructor)
+    ///   - additionalAtMost: Maximum number of additional times to verify
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    /// - Returns: A verifier for chaining method/property calls
     public func verify<T: VerifiableSmock>(
         _ mock: T,
         additionalAtMost: Int,
@@ -120,7 +240,18 @@ public class InOrder {
         return verify(mock, .additionalAtMost(additionalAtMost), sourceLocation: sourceLocation)
     }
 
-    /// Verify a mock interaction with at most `additionalRange` occurrences
+    /// Verifies a mock interaction occurred within the specified range of additional times.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockService, additionalRange: 2...5).batchProcess()
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - mock: The mock to verify (must be in InOrder constructor)
+    ///   - additionalRange: Range of acceptable additional times
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    /// - Returns: A verifier for chaining method/property calls
     public func verify<T: VerifiableSmock>(
         _ mock: T,
         additionalRange: ClosedRange<Int>,
@@ -129,7 +260,19 @@ public class InOrder {
         return verify(mock, .additionalRange(additionalRange), sourceLocation: sourceLocation)
     }
 
-    /// Verify that no more interactions occurred on any of the tracked mocks
+    /// Verifies that no more unverified interactions occurred on any tracked mocks.
+    ///
+    /// Call this at the end of your ordered verification to ensure no unexpected
+    /// interactions occurred after the ones you explicitly verified.
+    ///
+    /// ## Example
+    /// ```swift
+    /// inOrder.verify(mockA).method1()
+    /// inOrder.verify(mockB).method2()
+    /// inOrder.verifyNoMoreInteractions() // Ensures no other calls happened
+    /// ```
+    ///
+    /// - Parameter sourceLocation: Source location for error reporting (automatically captured)
     public func verifyNoMoreInteractions(sourceLocation: SourceLocation = #_sourceLocation) {
         // the range is off-by-1
         let calls = smockableGlobalCallIndex.getCalls(for: self.globalIndexProgress...)

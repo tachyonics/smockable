@@ -5,12 +5,12 @@ import SwiftSyntaxMacrosTestSupport
 import Testing
 
 @Smock
-public protocol Service1Protocol {
+protocol Service1Protocol {
     func initialize(name: String, secondName: String?) async -> String
 }
 
 @Smock
-public protocol Service2Protocol {
+protocol Service2Protocol {
     func initialize(name: String, secondName: String?) -> String
 }
 
