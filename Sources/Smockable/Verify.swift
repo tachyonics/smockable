@@ -141,7 +141,7 @@ public struct VerificationHelper {
 ///
 /// This protocol provides the interface for verifying mock interactions and is
 /// automatically implemented by the `@Smock` macro for generated mock classes.
-/// Users of mocks shouldn't interact interact with this protocol directly.
+/// Users of mocks shouldn't interact with this protocol directly.
 public protocol VerifiableSmock {
     /// The type of verifier returned for this mock.
     associatedtype VerifierType

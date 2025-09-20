@@ -38,4 +38,5 @@ public class GlobalCallIndex: @unchecked Sendable {
 }
 
 /// Internal singleton of theGlobal CallIndex class
+/// Users of mocks shouldn't interact with this singleton directly.
 public let smockableGlobalCallIndex = GlobalCallIndex()
