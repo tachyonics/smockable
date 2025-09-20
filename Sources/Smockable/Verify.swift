@@ -10,6 +10,8 @@ import Testing
 import Synchronization
 #endif
 
+public typealias SourceLocation = Testing.SourceLocation
+
 /// Verification modes for specifying how many times a mock interaction should have occurred.
 ///
 /// Use these modes with the `verify()` function to assert that mock methods or properties
@@ -48,7 +50,7 @@ private func times<IntegerType: BinaryInteger>(_ count: IntegerType) -> String {
 ///
 /// This struct provides internal functionality for handling verification failures
 /// and integrating with the testing framework.
-/// Users of mocks typically don't interact with this type directly.
+/// Users of mocks shouldn't interact with this type directly.
 public struct VerificationHelper {
     private static func handleExpectation(
         condition: Bool,
@@ -122,7 +124,7 @@ public struct VerificationHelper {
         }
     }
 
-    package static func performNoInteractionVerification(
+    public static func performNoInteractionVerification(
         interactionCount: Int,
         mockName: String,
         sourceLocation: SourceLocation
@@ -139,7 +141,7 @@ public struct VerificationHelper {
 ///
 /// This protocol provides the interface for verifying mock interactions and is
 /// automatically implemented by the `@Smock` macro for generated mock classes.
-/// Users of mocks typically don't interact with this protocol directly.
+/// Users of mocks shouldn't interact interact with this protocol directly.
 public protocol VerifiableSmock {
     /// The type of verifier returned for this mock.
     associatedtype VerifierType
@@ -219,6 +221,7 @@ public func verify<T: VerifiableSmock>(
 }
 
 /// Global verify function that returns verifier for function-style verification, specifying an exact number of invocations
+/// with a default of 1 time.
 ///
 /// This function provides an API for performing verification assertions.
 
@@ -229,7 +232,7 @@ public func verify<T: VerifiableSmock>(
 /// ```
 public func verify<T: VerifiableSmock>(
     _ mock: T,
-    times: Int,
+    times: Int = 1,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> T.VerifierType {
     return mock.getVerifier(mode: VerificationMode.times(times), sourceLocation: sourceLocation, inOrder: nil)

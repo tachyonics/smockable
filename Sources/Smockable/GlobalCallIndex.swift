@@ -3,12 +3,16 @@
 //  smockable
 //
 
-@_exported import Synchronization
+import Synchronization
 
-package class GlobalCallIndex: @unchecked Sendable {
+public typealias Mutex = Synchronization.Mutex
+
+/// Internal class for keeping track of the global order of all mock interactions
+/// Users of mocks shouldn't interact with this class directly.
+public class GlobalCallIndex: @unchecked Sendable {
     private let mutex: Mutex<[(String, Int)]> = .init([])
 
-    package func getCurrentIndex(mockIdentifier: String, localCallIndex: Int) -> Int {
+    public func getCurrentIndex(mockIdentifier: String, localCallIndex: Int) -> Int {
         return self.mutex.withLock { list in
             list.append((mockIdentifier, localCallIndex))
 
@@ -33,4 +37,5 @@ package class GlobalCallIndex: @unchecked Sendable {
     }
 }
 
-package let smockableGlobalCallIndex = GlobalCallIndex()
+/// Internal singleton of theGlobal CallIndex class
+public let smockableGlobalCallIndex = GlobalCallIndex()
