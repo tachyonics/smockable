@@ -19,7 +19,7 @@ requirements explicitly declared in that protocol.
 protocol BaseService {
     func connect() async throws
     func disconnect() async throws
-    func isConnected() async -> Bool
+    func getConnectionStatus() async -> Bool
 }
 
 @Smock
@@ -29,7 +29,7 @@ protocol DataService: BaseService {
 }
 
 // MockDataService will only have fetchData and saveData methods
-// connect, disconnect, and isConnected will be missing!
+// connect, disconnect, and getConnectionStatus will be missing!
 ```
 
 ### The Workaround: Mirror Inherited Requirements
@@ -108,7 +108,7 @@ protocol MyNetworkService: ExternalNetworkService {
 
 @Test
 func testExternalProtocolWorkaround() async throws {
-    let expectations = MockMyNetworkService.Expectations()
+    var expectations = MockMyNetworkService.Expectations()
     
     // Configure external protocol methods
     when(expectations.handleDataReceived(.any), complete: .withSuccess)
@@ -203,22 +203,6 @@ func testMultipleInheritanceWorkaround() async throws {
 }
 ```
 
-## Limitation 4: Static Function and Property Restrictions
+## See Also
 
-### Static Properties Not Supported
-
-Smockable does not support static functions or properties. Only instance functions and properties can be mocked.
-
-```swift
-@Smock
-protocol ConfigService {
-    var instanceProperty: String { get set }  // ✅ Supported
-    func instanceFunction()  // ✅ Supported
-    static var staticProperty: String { get } // ❌ Not supported
-    static func staticFunction()  // ❌ Not supported
-}
-```
-
-## Next Steps
-
-- Learn about <doc:AssociatedTypes> for generic protocol support
+- <doc:AssociatedTypes>

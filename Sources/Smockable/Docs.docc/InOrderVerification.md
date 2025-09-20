@@ -223,6 +223,6 @@ verify(mock).anyTimeMethod()  // Order doesn't matter
 
 ## See Also
 
-- <doc:Verification> - Standard verification techniques
-- <doc:Expectations> - Setting up mock expectations
-- <doc:FrameworkLimitations> - Current limitations and workarounds
+- <doc:Verification> 
+- <doc:Expectations> 
+- <doc:FrameworkLimitations>

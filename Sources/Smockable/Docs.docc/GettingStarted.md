@@ -171,10 +171,10 @@ struct WeatherApp<Service: WeatherService> {
 }
 ```
 
-## Next Steps
+## See Also
 
 This guide walked through how to test a basic implementation with only a couple of code paths. More complex
 implementations will likely have significantly more code paths but can be tested using Smockable in the same way.
 
-- **<doc:Expectations>**: Learn about advanced expectation patterns
-- **<doc:Verification>**: Discover comprehensive verification techniques  
+- <doc:Expectations>
+- <doc:Verification>  

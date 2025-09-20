@@ -426,6 +426,6 @@ protocol CollectionService {
 }
 ```
 
-## Next Steps
+## See Also
 
-- Learn about <doc:Verification> to check how your mocks were used
+- <doc:Verification>

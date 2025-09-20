@@ -1,4 +1,4 @@
-# Overview
+# Capabilities
 
 This overview will demonstrate the core capabilities of Smockable by creating a mocked protocol and using it in some tests.
 Note that these are not tests that you would write yourself as they are only testing the functionality of the mock
@@ -236,8 +236,8 @@ protocol DataService {
 }
 ```
 
-## Next Steps
+## See Also
 
-- <doc:GettingStarted> for installing and using Smockable
-- <doc:Verification> for standard verification techniques
-- <doc:InOrderVerification> for verifying interactions occur in a specific sequence
+- <doc:GettingStarted>
+- <doc:Verification>
+- <doc:InOrderVerification>

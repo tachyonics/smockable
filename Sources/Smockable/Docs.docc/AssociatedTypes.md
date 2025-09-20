@@ -279,6 +279,6 @@ func testUserEventHandler() async throws {
 }
 ```
 
-## Next Steps
+## See Also
 
-- Review <doc:FrameworkLimitations> for a discussion of Smockable's limitations and possible workarounds
+- <doc:FrameworkLimitations>
