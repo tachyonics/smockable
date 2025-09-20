@@ -64,15 +64,15 @@ public enum InOrderVerificationMode: Sendable {
 /// ### Basic Ordered Verification
 /// ```swift
 /// let inOrder = InOrder(strict: false, mockService, mockLogger)
-/// 
+///
 /// // Execute operations
 /// mockService.login()
 /// mockLogger.log("User logged in")
 /// mockService.fetchData()
-/// 
+///
 /// // Verify they occurred in order
 /// inOrder.verify(mockService).login()
-/// inOrder.verify(mockLogger).log("User logged in") 
+/// inOrder.verify(mockLogger).log("User logged in")
 /// inOrder.verify(mockService).fetchData()
 /// inOrder.verifyNoMoreInteractions()
 /// ```

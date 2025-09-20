@@ -7,15 +7,15 @@ enum AccessLevel: String, Sendable, CaseIterable {
     case `internal` = "internal"
     case `fileprivate` = "fileprivate"
     case `private` = "private"
-    
+
     /// The default access level for generated mocks
     static let `default`: AccessLevel = .public
-    
+
     /// Returns the appropriate DeclModifierSyntax for this access level
     var declModifier: DeclModifierSyntax {
         return DeclModifierSyntax(name: TokenSyntax.keyword(keyword))
     }
-    
+
     /// Returns the keyword token for this access level
     private var keyword: Keyword {
         switch self {

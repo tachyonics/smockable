@@ -46,7 +46,7 @@ public protocol FieldOptionsProtocol {
     /// Updates how many times this expectation can be matched.
     /// - Parameter times: Maximum number of matches, or `nil` for unlimited
     func update(times: Int?)
-    
+
     /// Updates the expectation to use a custom closure when matched.
     /// - Parameter using: The closure to execute when the expectation is matched
     func update(using: UsingFunctionType)

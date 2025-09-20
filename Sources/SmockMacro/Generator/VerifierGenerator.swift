@@ -305,7 +305,8 @@ enum VerifierGenerator {
             )
         }
 
-        return try FunctionDeclSyntax("\(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature))") {
+        return try FunctionDeclSyntax("\(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature))")
+        {
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
                 bindings: PatternBindingListSyntax([

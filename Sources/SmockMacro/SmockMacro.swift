@@ -1,6 +1,6 @@
 import SwiftSyntax
-import SwiftSyntaxMacros
 import SwiftSyntaxBuilder
+import SwiftSyntaxMacros
 
 public enum SmockMacro: PeerMacro {
     public static func expansion(
@@ -34,7 +34,7 @@ public enum SmockMacro: PeerMacro {
             return [DeclSyntax(mockDeclaration)]
         }
     }
-    
+
     @MemberBlockItemListBuilder
     private static func mockDeclarationDecls(
         mockDeclaration: StructDeclSyntax

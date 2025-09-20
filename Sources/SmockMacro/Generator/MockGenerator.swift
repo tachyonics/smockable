@@ -177,7 +177,7 @@ enum MockGenerator {
         parameters originalParameters: MacroParameters = .default
     ) throws -> StructDeclSyntax {
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
-        
+
         let originalAccessLevel = originalParameters.accessLevel
         let parameters: MacroParameters
         switch originalAccessLevel {
@@ -240,7 +240,9 @@ enum MockGenerator {
                     )
                 }
 
-                try InitializerDeclSyntax("\(raw: parameters.accessLevel.rawValue) init(expectations: consuming Expectations = .init()) { ") {
+                try InitializerDeclSyntax(
+                    "\(raw: parameters.accessLevel.rawValue) init(expectations: consuming Expectations = .init()) { "
+                ) {
                     ExprSyntax(
                         """
                         self.state = .init(expectedResponses: .init(expectations: expectations))
@@ -383,7 +385,10 @@ enum MockGenerator {
                     )
                 }
 
-                try StorageGenerator.verifyNoInteractions(mockName: identifier.description, accessLevel: parameters.accessLevel)
+                try StorageGenerator.verifyNoInteractions(
+                    mockName: identifier.description,
+                    accessLevel: parameters.accessLevel
+                )
                 try StorageGenerator.getMockIdentifier(accessLevel: parameters.accessLevel)
             }
         )
