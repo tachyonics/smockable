@@ -32,7 +32,45 @@ enum FunctionImplementationGenerator {
         functionDeclaration: FunctionDeclSyntax,
         parameterList: FunctionParameterListSyntax
     ) throws -> CodeBlockSyntax {
-        try CodeBlockSyntax {
+        var methodInterpolationParameters: [String] = []
+        for parameter in parameterList {
+            let paramName = (parameter.secondName?.text ?? parameter.firstName.text).trimmingCharacters(in: .whitespacesAndNewlines)
+            let paramNameForSignature: String
+            if let secondName = parameter.secondName?.text {
+                paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
+            } else {
+                paramNameForSignature = parameter.firstName.text
+            }
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            let isOptional = paramType.hasSuffix("?")
+            
+            if paramType == "String" {
+                methodInterpolationParameters.append(
+                    """
+                    \(paramNameForSignature): \\"\\(\(paramName))\\"
+                    """
+                )
+            } else if paramType == "String?" {
+                methodInterpolationParameters.append(
+                    """
+                    \(paramNameForSignature): \\(\(paramName).map {"\\"\\($0)\\""} ?? "nil")
+                    """
+                )
+            } else if isOptional {
+                methodInterpolationParameters.append(
+                    """
+                    \(paramNameForSignature): \\(\(paramName).map {"\\($0)"} ?? "nil")
+                    """
+                )
+            } else {
+                methodInterpolationParameters.append("\(paramNameForSignature): \\(\(paramName))")
+            }
+        }
+        let methodInterpolation = methodInterpolationParameters.joined(separator: ", ")
+        let functionName = functionDeclaration.name.text
+        let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
+        
+        return try CodeBlockSyntax {
             let withLockCall = try getWithLockCall(
                 variablePrefix: variablePrefix,
                 typePrefix: typePrefix,
@@ -55,6 +93,7 @@ enum FunctionImplementationGenerator {
 
             self.switchExpression(
                 variablePrefix: variablePrefix,
+                functionInterpolationSignature: functionInterpolationSignature,
                 functionDeclaration: functionDeclaration
             )
         }
@@ -196,6 +235,7 @@ enum FunctionImplementationGenerator {
 
     private static func switchExpression(
         variablePrefix: String,
+        functionInterpolationSignature: String,
         functionDeclaration: FunctionDeclSyntax
     ) -> SwitchExprSyntax {
         SwitchExprSyntax(
@@ -246,7 +286,7 @@ enum FunctionImplementationGenerator {
                 SwitchCaseSyntax(
                     """
                     case nil:
-                        fatalError("\(raw: variablePrefix) without a matching expectation.")
+                        fatalError("\(raw: functionInterpolationSignature) called without a matching expectation.")
                     """
                 )
             }
