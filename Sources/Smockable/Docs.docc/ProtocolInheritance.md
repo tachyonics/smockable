@@ -202,3 +202,7 @@ func testMultipleInheritanceWorkaround() async throws {
     #expect(secureData.count > 0)
 }
 ```
+
+## See Also
+
+- <doc:AssociatedTypes>
