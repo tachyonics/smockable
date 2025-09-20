@@ -8,10 +8,11 @@ enum VerifierGenerator {
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = "",
         storagePrefix: String = "",
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        accessLevel: AccessLevel
     ) throws -> StructDeclSyntax {
         try StructDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             name: "\(raw: typePrefix)Verifier",
             memberBlockBuilder: {
                 try VariableDeclSyntax(
@@ -41,7 +42,7 @@ enum VerifierGenerator {
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
-                        let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Verifier
+                        \(raw: accessLevel.rawValue) let \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Verifier
                         """
                     )
                 }
@@ -65,7 +66,8 @@ enum VerifierGenerator {
                     functionDeclarations: functionDeclarations,
                     typePrefix: typePrefix,
                     storagePrefix: storagePrefix,
-                    typeConformanceProvider: typeConformanceProvider
+                    typeConformanceProvider: typeConformanceProvider,
+                    accessLevel: accessLevel
                 )
             }
         )
@@ -76,7 +78,8 @@ enum VerifierGenerator {
         functionDeclarations: [FunctionDeclSyntax],
         typePrefix: String,
         storagePrefix: String,
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        accessLevel: AccessLevel
     ) throws -> MemberBlockItemListSyntax {
         // Generate verifier methods for each function
         for functionDeclaration in functionDeclarations {
@@ -95,7 +98,7 @@ enum VerifierGenerator {
                 // Function with no parameters
                 try FunctionDeclSyntax(
                     """
-                    public func \(raw: functionName)() {
+                    \(raw: accessLevel.rawValue) func \(raw: functionName)() {
                         let invocations = self.state.mutex.withLock { storage in
                             return storage.receivedInvocations.\(raw: storagePrefix)\(raw: variablePrefix)
                         }
@@ -126,7 +129,8 @@ enum VerifierGenerator {
                         functionDeclaration: functionDeclaration,
                         parameterSequence: parameterSequence,
                         typePrefix: typePrefix,
-                        storagePrefix: storagePrefix
+                        storagePrefix: storagePrefix,
+                        accessLevel: accessLevel
                     )
                 }
             }
@@ -258,7 +262,8 @@ enum VerifierGenerator {
             FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
         )],
         typePrefix: String,
-        storagePrefix: String
+        storagePrefix: String,
+        accessLevel: AccessLevel
     ) throws -> FunctionDeclSyntax {
         let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
             if case .explicitMatcher = entry.2 {
@@ -293,14 +298,14 @@ enum VerifierGenerator {
         if !allParametersAreMatchers {
             return try FunctionDeclSyntax(
                 """
-                public func \(raw: functionName)(\(raw: methodSignature)) {
+                \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) {
                     return \(raw: functionName)(\(raw: matcherInit))
                 }
                 """
             )
         }
 
-        return try FunctionDeclSyntax("public func \(raw: functionName)(\(raw: methodSignature))") {
+        return try FunctionDeclSyntax("\(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature))") {
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
                 bindings: PatternBindingListSyntax([

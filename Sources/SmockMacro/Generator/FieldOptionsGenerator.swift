@@ -5,7 +5,8 @@ enum FieldOptionsGenerator {
     static func fieldOptionsClassDeclaration(
         variablePrefix: String,
         functionSignature: FunctionSignatureSyntax,
-        typePrefix: String = ""
+        typePrefix: String = "",
+        accessLevel: AccessLevel
     ) throws -> ClassDeclSyntax {
 
         var genericParameterClauseElements: [String] = []
@@ -20,7 +21,7 @@ enum FieldOptionsGenerator {
         }
 
         return try ClassDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions",
             genericParameterClause: genericParameterClauseElements.count > 0
                 ? ": \(raw: genericParameterClauseElements.joined(separator: ", ")) " : nil,
@@ -39,7 +40,7 @@ enum FieldOptionsGenerator {
 
                 try FunctionDeclSyntax(
                     """
-                    public func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) {
+                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) {
                       self.expectedResponse = .closure(closure)
                     }
                     """
@@ -48,7 +49,7 @@ enum FieldOptionsGenerator {
                 if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                     try FunctionDeclSyntax(
                         """
-                        public func update(error: Swift.Error) {
+                        \(raw: accessLevel.rawValue) func update(error: Swift.Error) {
                           self.expectedResponse = .error(error)
                         }
                         """
@@ -58,7 +59,7 @@ enum FieldOptionsGenerator {
                 if let returnType = functionSignature.returnClause?.type {
                     try FunctionDeclSyntax(
                         """
-                        public func update(value: \(returnType)) {
+                        \(raw: accessLevel.rawValue) func update(value: \(returnType)) {
                           self.expectedResponse = .value(value)
                         }
                         """
@@ -66,7 +67,7 @@ enum FieldOptionsGenerator {
                 } else {
                     try FunctionDeclSyntax(
                         """
-                        public func success() {
+                        \(raw: accessLevel.rawValue) func success() {
                           self.expectedResponse = .success
                         }
                         """
@@ -75,7 +76,7 @@ enum FieldOptionsGenerator {
 
                 try FunctionDeclSyntax(
                     """
-                    public func update(times: Int?) {
+                    \(raw: accessLevel.rawValue) func update(times: Int?) {
                       self.times = times
                     }
                     """

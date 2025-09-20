@@ -8,6 +8,7 @@ enum InputMatcherGenerator {
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
         typePrefix: String = "",
+        accessLevel: AccessLevel,
         typeConformanceProvider: (String) -> TypeConformance
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
@@ -17,7 +18,7 @@ enum InputMatcherGenerator {
         let parameters = Array(parameterList)
 
         return try StructDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             name: TokenSyntax.identifier(structName),
             inheritanceClause: InheritanceClauseSyntax {
                 InheritedTypeSyntax(type: IdentifierTypeSyntax(name: "Sendable"))

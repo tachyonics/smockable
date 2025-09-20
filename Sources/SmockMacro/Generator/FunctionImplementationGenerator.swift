@@ -4,13 +4,14 @@ import SwiftSyntaxBuilder
 enum FunctionImplementationGenerator {
     static func functionDeclaration(
         variablePrefix: String,
-        functionDeclaration: FunctionDeclSyntax
+        functionDeclaration: FunctionDeclSyntax,
+        accessLevel: AccessLevel
     ) throws -> FunctionDeclSyntax {
         var mockFunctionDeclaration = functionDeclaration
 
         mockFunctionDeclaration.modifiers =
             functionDeclaration.modifiers.removingMutatingKeyword
-        mockFunctionDeclaration.modifiers += [DeclModifierSyntax(name: "public")]
+        mockFunctionDeclaration.modifiers += [accessLevel.declModifier]
         mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
         let parameterList = functionDeclaration.signature.parameterClause.parameters

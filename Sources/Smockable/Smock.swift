@@ -28,11 +28,20 @@
 /// verify(mock).getUser(id: "123")
 /// ```
 ///
-/// - Parameter name: Optional custom name for the generated mock class. 
-///   If not provided, the mock will be named "Mock" + protocol name.
+/// - Parameters:
+///    - accessLevel: The access modifier for the generated mock definition. Public if not specified
+///    - preprocessorFlag: If specified the generated mock definition will be wrapped in a preprocessor flag
 @attached(peer, names: prefixed(Mock))
-public macro Smock(named name: String? = nil) =
+public macro Smock(accessLevel: AccessLevel? = nil, preprocessorFlag: String? = nil) =
     #externalMacro(
         module: "SmockMacro",
         type: "SmockMacro"
     )
+
+public enum AccessLevel {
+    case `public`
+    case `package`
+    case `internal`
+    case `fileprivate`
+    case `private`
+}

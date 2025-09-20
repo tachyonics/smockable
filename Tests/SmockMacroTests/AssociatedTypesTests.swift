@@ -74,7 +74,7 @@ struct SerializedUserData: Codable, Equatable, Sendable, Comparable {
     }
 }
 
-public protocol EventProtocol: Sendable {
+protocol EventProtocol: Sendable {
     var timestamp: String { get }  // Changed from Date to String
     var eventId: String { get }
 }
@@ -149,8 +149,8 @@ protocol Serializer {
     func deserialize(_ output: Output) async throws -> Input
 }
 
-@Smock
-public protocol EventHandler {
+@Smock(accessLevel: .private)
+protocol EventHandler {
     associatedtype Event: EventProtocol & Comparable
 
     func handle(_ event: Event) async throws
