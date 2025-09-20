@@ -22,7 +22,7 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 ### Getting Started
 
-- <doc:Overview>
+- <doc:Capabilities>
 - <doc:GettingStarted>
 
 ### Core Concepts
