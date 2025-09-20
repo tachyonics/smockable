@@ -11,6 +11,10 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
     case onlyApplicableToProtocol
     case variableDeclInProtocolWithNotSingleBinding
     case variableDeclInProtocolWithNotIdentifierPattern
+    case invalidMacroArguments
+    case unknownMacroParameter
+    case invalidAccessLevel
+    case invalidPreprocessorFlag
 
     var message: String {
         switch self {
@@ -20,6 +24,14 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
             "Variable declaration in a 'protocol' with the '@Smock' attribute must have exactly one binding"
         case .variableDeclInProtocolWithNotIdentifierPattern:
             "Variable declaration in a 'protocol' with the '@Smock' attribute must have identifier pattern"
+        case .invalidMacroArguments:
+            "Invalid arguments provided to '@Smock' macro"
+        case .unknownMacroParameter:
+            "Unknown parameter provided to '@Smock' macro. Valid parameters are: accessLevel, preprocessorFlag"
+        case .invalidAccessLevel:
+            "Invalid access level. Valid values are: .public, .package, .internal, .fileprivate, .private"
+        case .invalidPreprocessorFlag:
+            "Preprocessor flag must be a string literal"
         }
     }
 
@@ -28,6 +40,10 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
         case .onlyApplicableToProtocol: .error
         case .variableDeclInProtocolWithNotSingleBinding: .error
         case .variableDeclInProtocolWithNotIdentifierPattern: .error
+        case .invalidMacroArguments: .error
+        case .unknownMacroParameter: .error
+        case .invalidAccessLevel: .error
+        case .invalidPreprocessorFlag: .error
         }
     }
 

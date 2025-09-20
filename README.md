@@ -80,7 +80,19 @@ protocol UserService {
     func fetchUsers(ids: [String]) async throws -> [User]
     func updateUser(_ user: User) async throws
 }
+
+// Creates a mock with an internal access modifier
+@Smock(accessLevel: .internal)
+protocol InternalService { }
+
+// wraps the generated mock type in conditional compilation
+@Smock(preprocessorFlag: "DEBUG")
+protocol DebugOnlyService { }
 ```
+
+The `@Smock` macro supports these optional parameters:
+- `accessLevel`: Controls mock visibility (`.public`, `.package`, `.internal`, `.fileprivate`, `.private`)
+- `preprocessorFlag`: Wraps mock in conditional compilation (e.g., `"DEBUG"`, `"TESTING"`)
 
 ### 2. Create and Configure a Mock
 

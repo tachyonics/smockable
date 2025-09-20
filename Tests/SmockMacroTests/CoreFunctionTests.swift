@@ -587,7 +587,7 @@ struct CoreFunctionTests {
             // Create mock with no expectations
             let expectations = MockTestFunctionService.Expectations()
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = mock.syncFunction(id: "test")
         }
@@ -598,9 +598,9 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestFunctionService.Expectations()
             when(expectations.syncFunction(id: "expected"), return: "result")
-            
+
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since parameter doesn't match
             _ = mock.syncFunction(id: "different")
         }
@@ -611,12 +611,12 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestFunctionService.Expectations()
             when(expectations.syncFunction(id: .any), times: 1, return: "result")
-            
+
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // First call should work
             _ = mock.syncFunction(id: "test")
-            
+
             // Second call should fail with fatalError since expectation is exhausted
             _ = mock.syncFunction(id: "test")
         }
@@ -627,7 +627,7 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestFunctionService.Expectations()
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = await mock.asyncFunction(id: "test")
         }
@@ -638,9 +638,9 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestFunctionService.Expectations()
             when(expectations.throwingFunction(id: "expected"), return: "result")
-            
+
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since parameter doesn't match
             _ = try mock.throwingFunction(id: "different")
         }
@@ -651,12 +651,12 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestFunctionService.Expectations()
             when(expectations.syncVoidFunction(), times: 1, complete: .withSuccess)
-            
+
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // First call should work
             mock.syncVoidFunction()
-            
+
             // Second call should fail with fatalError since expectation is exhausted
             mock.syncVoidFunction()
         }
@@ -667,9 +667,9 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestFunctionService.Expectations()
             when(expectations.syncMultiParam(name: "john", count: 1...10, score: .any), return: "result")
-            
+
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since count is outside range
             _ = mock.syncMultiParam(name: "john", count: 15, score: 5.0)
         }
@@ -680,7 +680,7 @@ struct CoreFunctionTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestFunctionService.Expectations()
             let mock = MockTestFunctionService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = try await mock.asyncThrowingFunction(id: "test")
         }

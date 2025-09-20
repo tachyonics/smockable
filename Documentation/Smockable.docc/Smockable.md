@@ -33,5 +33,6 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 ### Advanced Topics
 
+- <doc:MacroParameters>
 - <doc:AssociatedTypes>
 - <doc:FrameworkLimitations>

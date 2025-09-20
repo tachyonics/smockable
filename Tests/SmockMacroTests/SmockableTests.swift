@@ -4,12 +4,12 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import Testing
 
-@Smock
+@Smock(accessLevel: .internal, preprocessorFlag: "DEBUG")
 protocol Service1Protocol {
     func initialize(name: String, secondName: String?) async -> String
 }
 
-@Smock
+@Smock(accessLevel: .package, preprocessorFlag: "DEBUG")
 protocol Service2Protocol {
     func initialize(name: String, secondName: String?) -> String
 }

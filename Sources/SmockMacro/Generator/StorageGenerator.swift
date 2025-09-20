@@ -7,22 +7,23 @@ enum StorageGenerator {
         functionDeclarations: [FunctionDeclSyntax],
         typePrefix: String = "",
         propertyDeclarations: [PropertyDeclaration] = [],
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        accessLevel: AccessLevel
     ) throws
         -> StructDeclSyntax
     {
         return try StructDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             name: "\(raw: typePrefix)Expectations",
             memberBlockBuilder: {
-                try InitializerDeclSyntax("public init() {") {
+                try InitializerDeclSyntax("\(raw: accessLevel.rawValue) init() {") {
                     // nothing
                 }
 
                 for propertyDeclaration in propertyDeclarations {
                     try VariableDeclSyntax(
                         """
-                        var \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Expectations = .init()
+                        \(raw: accessLevel.rawValue) var \(raw: propertyDeclaration.name): \(raw: propertyDeclaration.typePrefix)Expectations = .init()
                         """
                     )
                 }
@@ -46,6 +47,7 @@ enum StorageGenerator {
                     let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
                         for: functionDeclaration,
                         typePrefix: typePrefix,
+                        accessLevel: accessLevel,
                         typeConformanceProvider: typeConformanceProvider
                     )
                     for method in methods {
@@ -223,11 +225,11 @@ enum StorageGenerator {
         )
     }
 
-    static func verifyNoInteractions(mockName: String) throws -> FunctionDeclSyntax {
+    static func verifyNoInteractions(mockName: String, accessLevel: AccessLevel) throws -> FunctionDeclSyntax {
         // Function with no parameters
         try FunctionDeclSyntax(
             """
-            public func verifyNoInteractions(sourceLocation: SourceLocation) {
+            \(raw: accessLevel.rawValue) func verifyNoInteractions(sourceLocation: SourceLocation) {
                 let combinedCallCount = self.state.mutex.withLock { storage in
                     return storage.combinedCallCount
                 }
@@ -242,11 +244,11 @@ enum StorageGenerator {
         )
     }
 
-    static func getMockIdentifier() throws -> FunctionDeclSyntax {
+    static func getMockIdentifier(accessLevel: AccessLevel) throws -> FunctionDeclSyntax {
         // Function with no parameters
         try FunctionDeclSyntax(
             """
-            public func getMockIdentifier() -> String {
+            \(raw: accessLevel.rawValue) func getMockIdentifier() -> String {
                 return self.state.mockIdentifier
             }
             """

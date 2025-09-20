@@ -7,6 +7,7 @@ enum FunctionStyleExpectationsGenerator {
     static func generateExpectationMethods(
         for functionDeclaration: FunctionDeclSyntax,
         typePrefix: String,
+        accessLevel: AccessLevel,
         typeConformanceProvider: (String) -> TypeConformance
     ) throws -> [FunctionDeclSyntax] {
         let parameterList = functionDeclaration.signature.parameterClause.parameters
@@ -19,7 +20,8 @@ enum FunctionStyleExpectationsGenerator {
                 try generateNoParameterMethod(
                     functionName: functionDeclaration.name.text,
                     expectationClassName: expectationClassName,
-                    variablePrefix: variablePrefix
+                    variablePrefix: variablePrefix,
+                    accessLevel: accessLevel
                 )
             ]
         }
@@ -31,6 +33,7 @@ enum FunctionStyleExpectationsGenerator {
             expectationClassName: expectationClassName,
             typePrefix: typePrefix,
             variablePrefix: variablePrefix,
+            accessLevel: accessLevel,
             typeConformanceProvider: typeConformanceProvider
         )
     }
@@ -39,11 +42,12 @@ enum FunctionStyleExpectationsGenerator {
     private static func generateNoParameterMethod(
         functionName: String,
         expectationClassName: String,
-        variablePrefix: String
+        variablePrefix: String,
+        accessLevel: AccessLevel
     ) throws -> FunctionDeclSyntax {
         return try FunctionDeclSyntax(
             """
-            public mutating func \(raw: functionName)() -> \(raw: expectationClassName) {
+            \(raw: accessLevel.rawValue) mutating func \(raw: functionName)() -> \(raw: expectationClassName) {
                 let matcher = AlwaysMatcher()
                 let fieldOptions = \(raw: expectationClassName)()
                 _\(raw: variablePrefix).append((fieldOptions, matcher))
@@ -61,6 +65,7 @@ enum FunctionStyleExpectationsGenerator {
         expectationClassName: String,
         typePrefix: String,
         variablePrefix: String,
+        accessLevel: AccessLevel,
         typeConformanceProvider: (String) -> TypeConformance
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
@@ -78,7 +83,8 @@ enum FunctionStyleExpectationsGenerator {
                 parameterSequence: parameterSequence,
                 expectationClassName: expectationClassName,
                 typePrefix: typePrefix,
-                variablePrefix: variablePrefix
+                variablePrefix: variablePrefix,
+                accessLevel: accessLevel
             )
             methods.append(method)
         }
@@ -94,7 +100,8 @@ enum FunctionStyleExpectationsGenerator {
         )],
         expectationClassName: String,
         typePrefix: String,
-        variablePrefix: String
+        variablePrefix: String,
+        accessLevel: AccessLevel
     ) throws -> FunctionDeclSyntax {
         var methodParameters: [String] = []
         var matcherInitializers: [String] = []
@@ -153,7 +160,7 @@ enum FunctionStyleExpectationsGenerator {
 
         return try FunctionDeclSyntax(
             """
-            public mutating func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: expectationClassName) {
+            \(raw: accessLevel.rawValue) mutating func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: expectationClassName) {
                 let matcher = \(raw: inputMatcherType)(\(raw: matcherInit))
                 let fieldOptions = \(raw: expectationClassName)()
                 _\(raw: variablePrefix).append((fieldOptions, matcher))

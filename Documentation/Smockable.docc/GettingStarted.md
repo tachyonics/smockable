@@ -46,6 +46,41 @@ struct WeatherDay {
 }
 ```
 
+### Advanced @Smock Configuration
+
+The `@Smock` macro supports additional parameters to customize the generated mock:
+
+```swift
+// Default behavior - generates public mock
+@Smock
+protocol DefaultService { }
+
+// Custom access level - generates internal mock
+@Smock(accessLevel: .internal)
+protocol InternalService { }
+
+// Conditional compilation - only generates mock when DEBUG is defined
+@Smock(preprocessorFlag: "DEBUG")
+protocol DebugOnlyService { }
+
+// Combined parameters - internal mock only in testing builds
+@Smock(accessLevel: .internal, preprocessorFlag: "TESTING")
+protocol TestingService { }
+```
+
+**Available Parameters:**
+
+- `accessLevel`: Controls the access level of the generated mock struct
+  - `.public` (default): Mock is publicly accessible
+  - `.package`: Mock has package-level access
+  - `.internal`: Mock is internal to the module
+  - `.fileprivate`: Mock is accessible only within the same file
+  - `.private`: Mock is private to the enclosing declaration
+
+- `preprocessorFlag`: Wraps the generated mock in conditional compilation
+  - Pass a string literal (e.g., `"DEBUG"`, `"TESTING"`) to only generate the mock when that flag is defined
+  - Useful for excluding mocks from release builds
+
 ## Step 3: Create an implementation that needs to be tested
 
 The point of creating mock implementations is to allow you to easily test your own code and how it uses it an underlying

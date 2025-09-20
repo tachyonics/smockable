@@ -753,7 +753,7 @@ struct CorePropertyTests {
             // Create mock with no expectations
             let expectations = MockTestPropertyService.Expectations()
             let mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = mock.syncName
         }
@@ -764,7 +764,7 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestPropertyService.Expectations()
             var mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             mock.syncName = "test"
         }
@@ -775,12 +775,12 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestPropertyService.Expectations()
             when(expectations.syncName.get(), times: 1, return: "value")
-            
+
             let mock = MockTestPropertyService(expectations: expectations)
-            
+
             // First call should work
             _ = mock.syncName
-            
+
             // Second call should fail with fatalError since expectation is exhausted
             _ = mock.syncName
         }
@@ -791,9 +791,9 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestPropertyService.Expectations()
             when(expectations.syncName.set("expected"), complete: .withSuccess)
-            
+
             var mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since parameter doesn't match
             mock.syncName = "different"
         }
@@ -804,12 +804,12 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestPropertyService.Expectations()
             when(expectations.syncName.set(.any), times: 1, complete: .withSuccess)
-            
+
             var mock = MockTestPropertyService(expectations: expectations)
-            
+
             // First call should work
             mock.syncName = "test1"
-            
+
             // Second call should fail with fatalError since expectation is exhausted
             mock.syncName = "test2"
         }
@@ -820,7 +820,7 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestPropertyService.Expectations()
             let mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = await mock.asyncName
         }
@@ -831,7 +831,7 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestPropertyService.Expectations()
             let mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = try mock.throwingName
         }
@@ -842,7 +842,7 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             let expectations = MockTestPropertyService.Expectations()
             let mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since no expectations are set
             _ = try await mock.asyncThrowingName
         }
@@ -853,9 +853,9 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestComplexPropertyService.Expectations()
             when(expectations.syncArray.set(["expected"]), complete: .withSuccess)
-            
+
             var mock = MockTestComplexPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since parameter doesn't match
             mock.syncArray = ["different"]
         }
@@ -866,12 +866,12 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestComplexPropertyService.Expectations()
             when(expectations.syncDictionary.get(), times: 1, return: ["key": "value"])
-            
+
             let mock = MockTestComplexPropertyService(expectations: expectations)
-            
+
             // First call should work
             _ = mock.syncDictionary
-            
+
             // Second call should fail with fatalError since expectation is exhausted
             _ = mock.syncDictionary
         }
@@ -882,9 +882,9 @@ struct CorePropertyTests {
         await #expect(processExitsWith: .failure) {
             var expectations = MockTestPropertyService.Expectations()
             when(expectations.syncOptional.set("specific"), complete: .withSuccess)
-            
+
             var mock = MockTestPropertyService(expectations: expectations)
-            
+
             // This should fail with fatalError since parameter doesn't match (nil vs specific string)
             mock.syncOptional = nil
         }

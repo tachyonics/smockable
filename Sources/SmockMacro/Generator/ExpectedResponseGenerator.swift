@@ -5,10 +5,11 @@ enum ExpectedResponseGenerator {
     static func expectedResponseEnumDeclaration(
         typePrefix: String = "",
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax
+        functionSignature: FunctionSignatureSyntax,
+        accessLevel: AccessLevel
     ) throws -> EnumDeclSyntax {
         try EnumDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {

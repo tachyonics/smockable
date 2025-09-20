@@ -20,7 +20,8 @@ struct PropertyDeclaration {
 enum PropertyImplementationGenerator {
     @MemberBlockItemListBuilder
     static func propertyDeclaration(
-        propertyDeclaration: PropertyDeclaration
+        propertyDeclaration: PropertyDeclaration,
+        accessLevel: AccessLevel
     ) throws
         -> MemberBlockItemListSyntax
     {
@@ -28,7 +29,8 @@ enum PropertyImplementationGenerator {
         if let binding = bindings.first, bindings.count == 1 {
             try self.propertyDeclarationWithGetterAndSetter(
                 binding: binding,
-                propertyDeclaration: propertyDeclaration
+                propertyDeclaration: propertyDeclaration,
+                accessLevel: accessLevel
             )
         } else {
             // As far as I know variable declaration in a protocol should have exactly one binding.
@@ -38,7 +40,8 @@ enum PropertyImplementationGenerator {
 
     private static func propertyDeclarationWithGetterAndSetter(
         binding: PatternBindingSyntax,
-        propertyDeclaration: PropertyDeclaration
+        propertyDeclaration: PropertyDeclaration,
+        accessLevel: AccessLevel
     )
         throws -> VariableDeclSyntax
     {
@@ -75,7 +78,7 @@ enum PropertyImplementationGenerator {
         }
 
         return VariableDeclSyntax(
-            modifiers: [DeclModifierSyntax(name: "public")],
+            modifiers: [accessLevel.declModifier],
             bindingSpecifier: .keyword(.var),
             bindings: [
                 PatternBindingSyntax(
