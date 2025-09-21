@@ -28,6 +28,10 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 - ✅ **Protocol property requirements** with full get/set/async/throws support
 - ✅ **Collection expectations and verification** for Arrays, Dictionaries, and Sets (include Equatable checks when the Collection is Equatable)
 
+## Documentation
+
+For detailed documentation, examples, and advanced usage patterns, see the [documentation](https://swiftpackageindex.com/tachyonics/smockable/main/documentation/smockable).
+
 ## Requirements
 
 - Swift 6.1+
@@ -43,7 +47,7 @@ Add Smockable to your project using Swift Package Manager:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/tachyonics/smockable.git", from: "1.0.0")
+    .package(url: "https://github.com/tachyonics/smockable.git", from: "0.5.0")
 ]
 ```
 
@@ -219,10 +223,6 @@ verify(mock, atMost: 2).getUserProfile(name: "A"..."Z", age: 18...65)
 verify(mock, times: 1).getUserProfile(name: "John", age: 25)
 verify(mock, atMost: 5).getUserProfile(name: "Jane", age: nil)
 ```
-
-## Documentation
-
-For detailed documentation, examples, and advanced usage patterns, see the [Documentation](Documentation/) folder or visit our [DocC documentation](link-to-docc-when-available).
 
 ## Contributing
 
