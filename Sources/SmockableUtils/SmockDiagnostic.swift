@@ -7,7 +7,7 @@ import SwiftDiagnostics
 ///
 /// - Note: The `SmockDiagnostic` enum can be expanded to include more diagnostic cases as
 ///         the Smock system grows and needs to handle more error types.
-enum SmockDiagnostic: String, DiagnosticMessage, Error {
+package enum SmockDiagnostic: String, DiagnosticMessage, Error {
     case onlyApplicableToProtocol
     case variableDeclInProtocolWithNotSingleBinding
     case variableDeclInProtocolWithNotIdentifierPattern
@@ -16,7 +16,7 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
     case invalidAccessLevel
     case invalidPreprocessorFlag
 
-    var message: String {
+    package var message: String {
         switch self {
         case .onlyApplicableToProtocol:
             "'@Smock' can only be applied to a 'protocol'"
@@ -27,7 +27,7 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
         case .invalidMacroArguments:
             "Invalid arguments provided to '@Smock' macro"
         case .unknownMacroParameter:
-            "Unknown parameter provided to '@Smock' macro. Valid parameters are: accessLevel, preprocessorFlag"
+            "Unknown parameter provided to '@Smock' macro. Valid parameters are: accessLevel, preprocessorFlag, additionalComparableTypes, additionalEquatableTypes"
         case .invalidAccessLevel:
             "Invalid access level. Valid values are: .public, .package, .internal, .fileprivate, .private"
         case .invalidPreprocessorFlag:
@@ -35,7 +35,7 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
         }
     }
 
-    var severity: DiagnosticSeverity {
+    package var severity: DiagnosticSeverity {
         switch self {
         case .onlyApplicableToProtocol: .error
         case .variableDeclInProtocolWithNotSingleBinding: .error
@@ -47,7 +47,7 @@ enum SmockDiagnostic: String, DiagnosticMessage, Error {
         }
     }
 
-    var diagnosticID: MessageID {
+    package var diagnosticID: MessageID {
         MessageID(domain: "SmockMacro", id: rawValue)
     }
 }

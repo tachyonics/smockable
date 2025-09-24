@@ -1,4 +1,5 @@
 import Foundation
+import SwiftSyntax
 
 private let arrayStart = "Array<"
 private let setStart = "Set<"
@@ -11,7 +12,9 @@ package enum TypeConformanceProvider {
     /// Type conformance provider that handles collections, optionals, and nested types
     package static func get(
         comparableAssociatedTypes: [String],
-        equatableAssociatedTypes: [String]
+        equatableAssociatedTypes: [String],
+        additionalComparableTypes: [TypeSyntax] = [],
+        additionalEquatableTypes: [TypeSyntax] = []
     ) -> (String) -> TypeConformance {
 
         let builtInComparableTypes = [
@@ -24,8 +27,16 @@ package enum TypeConformanceProvider {
             "CGPoint", "CGSize", "CGRect", "CGVector",
         ]
 
-        let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes)
-        let equatableTypes = Set(equatableAssociatedTypes + builtInEquatableOnlyTypes)
+        // Convert TypeSyntax arrays to string arrays for internal processing
+        let additionalComparableTypeStrings = additionalComparableTypes.map {
+            $0.description.trimmingCharacters(in: .whitespaces)
+        }
+        let additionalEquatableTypeStrings = additionalEquatableTypes.map {
+            $0.description.trimmingCharacters(in: .whitespaces)
+        }
+
+        let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes + additionalComparableTypeStrings)
+        let equatableTypes = Set(equatableAssociatedTypes + builtInEquatableOnlyTypes + additionalEquatableTypeStrings)
 
         return { baseType in
             return determineTypeConformance(

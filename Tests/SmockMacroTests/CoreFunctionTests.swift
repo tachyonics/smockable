@@ -3,7 +3,25 @@ import Testing
 
 @testable import Smockable
 
-@Smock
+struct ComparableType {
+    let value: Int
+}
+
+extension ComparableType: Comparable {
+    static func < (lhs: ComparableType, rhs: ComparableType) -> Bool {
+        return lhs.value < rhs.value
+    }
+}
+
+struct EquatableType: Equatable {
+    let value: Bool
+}
+
+@Smock(
+    accessLevel: .internal,
+    additionalComparableTypes: [ComparableType.self],
+    additionalEquatableTypes: [EquatableType.self]
+)
 protocol TestFunctionService {
     // Sync functions
     func syncFunction(id: String) -> String
@@ -26,6 +44,10 @@ protocol TestFunctionService {
     func asyncThrowingFunction(id: String) async throws -> String
     func asyncThrowingVoidFunction() async throws
     func asyncThrowingMultiParam(name: String, count: Int) async throws -> String
+
+    // custom types
+    func customComparableType(input: ComparableType) -> Bool
+    func customEquatableType(input: EquatableType) -> Bool
 }
 
 enum TestFunctionError: Error, Equatable {
@@ -576,6 +598,24 @@ struct CoreFunctionTests {
     }
     #endif
 
+    // MARK: - Custom Type Tests
+
+    @Test
+    func testCustomTypesExpectationAndVerification() {
+        var expectations = MockTestFunctionService.Expectations()
+        when(expectations.syncFunction(id: .any), return: "sync result")
+        when(expectations.syncVoidFunction(), complete: .withSuccess)
+
+        let mock = MockTestFunctionService(expectations: expectations)
+
+        let result = mock.syncFunction(id: "test")
+        mock.syncVoidFunction()
+
+        #expect(result == "sync result")
+        verify(mock, times: 1).syncFunction(id: "test")
+        verify(mock, times: 1).syncVoidFunction()
+    }
+
     // MARK: - Fatal Error Tests (Swift 6.2+)
 
     #if swift(>=6.2)
@@ -685,5 +725,109 @@ struct CoreFunctionTests {
             _ = try await mock.asyncThrowingFunction(id: "test")
         }
     }
+
     #endif
+
+    // MARK: - Custom Type Tests
+
+    @Test
+    func testCustomComparableTypeWithValueMatchers() {
+        var expectations = MockTestFunctionService.Expectations()
+
+        let type1 = ComparableType(value: 5)
+        let type2 = ComparableType(value: 10)
+        let type3 = ComparableType(value: 15)
+
+        // Test exact value matching
+        when(expectations.customComparableType(input: type1), return: true)
+
+        // Test range matching for comparable types
+        when(expectations.customComparableType(input: type2...type3), return: false)
+
+        let mock = MockTestFunctionService(expectations: expectations)
+
+        let result1 = mock.customComparableType(input: type1)
+        let result2 = mock.customComparableType(input: ComparableType(value: 12))
+
+        #expect(result1 == true)
+        #expect(result2 == false)
+
+        // Verify exact value
+        verify(mock, times: 1).customComparableType(input: type1)
+        // Verify range
+        verify(mock, times: 1).customComparableType(input: type2...type3)
+    }
+
+    @Test
+    func testCustomEquatableTypeWithValueMatchers() {
+        var expectations = MockTestFunctionService.Expectations()
+
+        let type1 = EquatableType(value: true)
+        let type2 = EquatableType(value: false)
+
+        // Test exact value matching
+        when(expectations.customEquatableType(input: type1), return: true)
+        when(expectations.customEquatableType(input: type2), return: false)
+
+        // Test .any matcher
+        when(expectations.customEquatableType(input: .any), return: true)
+
+        let mock = MockTestFunctionService(expectations: expectations)
+
+        let result1 = mock.customEquatableType(input: type1)
+        let result2 = mock.customEquatableType(input: type2)
+        let result3 = mock.customEquatableType(input: EquatableType(value: true))
+
+        #expect(result1 == true)
+        #expect(result2 == false)
+        #expect(result3 == true)
+
+        // Verify exact values
+        verify(mock, times: 2).customEquatableType(input: type1)
+        verify(mock, times: 1).customEquatableType(input: type2)
+        // Verify .any matcher
+        verify(mock, times: 3).customEquatableType(input: .any)
+    }
+
+    @Test
+    func testCustomComparableTypeAnyMatcher() {
+        var expectations = MockTestFunctionService.Expectations()
+
+        // Test .any matcher works with comparable types
+        when(expectations.customComparableType(input: .any), times: 2, return: true)
+
+        let mock = MockTestFunctionService(expectations: expectations)
+
+        let result1 = mock.customComparableType(input: ComparableType(value: 1))
+        let result2 = mock.customComparableType(input: ComparableType(value: 100))
+
+        #expect(result1 == true)
+        #expect(result2 == true)
+
+        verify(mock, times: 2).customComparableType(input: .any)
+    }
+
+    @Test
+    func testCustomTypeVerificationWithSpecificValues() {
+        var expectations = MockTestFunctionService.Expectations()
+
+        let comparableType = ComparableType(value: 42)
+        let equatableType = EquatableType(value: true)
+
+        when(expectations.customComparableType(input: .any), return: true)
+        when(expectations.customEquatableType(input: .any), return: false)
+
+        let mock = MockTestFunctionService(expectations: expectations)
+
+        _ = mock.customComparableType(input: comparableType)
+        _ = mock.customEquatableType(input: equatableType)
+
+        // Verify with specific values
+        verify(mock, times: 1).customComparableType(input: comparableType)
+        verify(mock, times: 1).customEquatableType(input: equatableType)
+
+        // Verify with .any
+        verify(mock, times: 1).customComparableType(input: .any)
+        verify(mock, times: 1).customEquatableType(input: .any)
+    }
 }

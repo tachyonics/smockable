@@ -1,7 +1,7 @@
 import SwiftSyntax
 
 /// Represents the access level for generated mock structures
-enum AccessLevel: String, Sendable, CaseIterable {
+package enum AccessLevel: String, Sendable, CaseIterable {
     case `public` = "public"
     case `package` = "package"
     case `internal` = "internal"
@@ -9,10 +9,10 @@ enum AccessLevel: String, Sendable, CaseIterable {
     case `private` = "private"
 
     /// The default access level for generated mocks
-    static let `default`: AccessLevel = .public
+    package static let `default`: AccessLevel = .public
 
     /// Returns the appropriate DeclModifierSyntax for this access level
-    var declModifier: DeclModifierSyntax {
+    package var declModifier: DeclModifierSyntax {
         return DeclModifierSyntax(name: TokenSyntax.keyword(keyword))
     }
 

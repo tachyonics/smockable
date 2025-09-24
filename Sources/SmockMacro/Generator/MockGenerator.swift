@@ -185,7 +185,12 @@ enum MockGenerator {
             parameters = originalParameters
         case .fileprivate, .private:
             // for fileprivate and private access modifiers, internal components should still use internal
-            parameters = .init(accessLevel: .internal, preprocessorFlag: originalParameters.preprocessorFlag)
+            parameters = .init(
+                accessLevel: .internal,
+                preprocessorFlag: originalParameters.preprocessorFlag,
+                additionalComparableTypes: originalParameters.additionalComparableTypes,
+                additionalEquatableTypes: originalParameters.additionalEquatableTypes
+            )
         }
 
         let propertyDeclarations = try protocolDeclaration.memberBlock.members
@@ -206,7 +211,9 @@ enum MockGenerator {
 
         let typeConformanceProvider = TypeConformanceProvider.get(
             comparableAssociatedTypes: comparableAssociatedTypes,
-            equatableAssociatedTypes: equatableAssociatedTypes
+            equatableAssociatedTypes: equatableAssociatedTypes,
+            additionalComparableTypes: parameters.additionalComparableTypes,
+            additionalEquatableTypes: parameters.additionalEquatableTypes
         )
 
         return try StructDeclSyntax(

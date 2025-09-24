@@ -3,7 +3,25 @@ import Testing
 
 @testable import Smockable
 
-@Smock
+struct ComparableProperty {
+    let value: Int
+}
+
+extension ComparableProperty: Comparable {
+    static func < (lhs: ComparableProperty, rhs: ComparableProperty) -> Bool {
+        return lhs.value < rhs.value
+    }
+}
+
+struct EquatableProperty: Equatable {
+    let value: String
+}
+
+@Smock(
+    accessLevel: .internal,
+    additionalComparableTypes: [ComparableProperty.self],
+    additionalEquatableTypes: [EquatableProperty.self]
+)
 protocol TestPropertyService {
     // Sync properties
     var syncName: String { get set }
@@ -11,6 +29,10 @@ protocol TestPropertyService {
     var syncOptional: String? { get set }
     var syncBool: Bool { get set }
     var syncData: Data { get set }
+
+    // Custom type properties
+    var customComparableProperty: ComparableProperty { get set }
+    var customEquatableProperty: EquatableProperty { get set }
 
     // Async properties (read-only only)
     var asyncName: String { get async }
@@ -889,5 +911,159 @@ struct CorePropertyTests {
             mock.syncOptional = nil
         }
     }
+
     #endif
+
+    // MARK: - Custom Type Property Tests
+
+    @Test
+    func testCustomComparablePropertyWithValueMatchers() {
+        var expectations = MockTestPropertyService.Expectations()
+
+        let prop1 = ComparableProperty(value: 5)
+        let prop2 = ComparableProperty(value: 10)
+        let prop3 = ComparableProperty(value: 15)
+
+        // Test exact value matching for getter
+        when(expectations.customComparableProperty.get(), return: prop1)
+
+        // Test exact value matching for setter
+        when(expectations.customComparableProperty.set(prop1), complete: .withSuccess)
+
+        // Test range matching for setter
+        when(expectations.customComparableProperty.set(prop2...prop3), complete: .withSuccess)
+
+        // Test getter after range set
+        when(expectations.customComparableProperty.get(), return: prop3)
+
+        var mock = MockTestPropertyService(expectations: expectations)
+
+        // Test getter with exact value
+        let result1 = mock.customComparableProperty
+        #expect(result1.value == 5)
+
+        // Test setter with exact value
+        mock.customComparableProperty = prop1
+
+        // Test setter with range value
+        mock.customComparableProperty = ComparableProperty(value: 12)
+
+        // Test getter after range set
+        let result2 = mock.customComparableProperty
+        #expect(result2.value == 15)
+
+        // Verify calls
+        verify(mock, times: 2).customComparableProperty.get()
+        verify(mock, times: 1).customComparableProperty.set(prop1)
+        verify(mock, times: 1).customComparableProperty.set(prop2...prop3)
+    }
+
+    @Test
+    func testCustomEquatablePropertyWithValueMatchers() {
+        var expectations = MockTestPropertyService.Expectations()
+
+        let prop1 = EquatableProperty(value: "hello")
+        let prop2 = EquatableProperty(value: "world")
+
+        // Test exact value matching for getter
+        when(expectations.customEquatableProperty.get(), return: prop1)
+
+        // Test exact value matching for setter
+        when(expectations.customEquatableProperty.set(prop1), complete: .withSuccess)
+        when(expectations.customEquatableProperty.set(prop2), complete: .withSuccess)
+
+        // Test .any matcher for setter
+        when(expectations.customEquatableProperty.set(.any), complete: .withSuccess)
+
+        // Test getter after any set
+        when(expectations.customEquatableProperty.get(), return: prop2)
+
+        var mock = MockTestPropertyService(expectations: expectations)
+
+        // Test getter with exact value
+        let result1 = mock.customEquatableProperty
+        #expect(result1.value == "hello")
+
+        // Test setter with exact values
+        mock.customEquatableProperty = prop1
+        mock.customEquatableProperty = prop2
+
+        // Test setter with .any matcher
+        mock.customEquatableProperty = EquatableProperty(value: "test")
+
+        // Test getter after any set
+        let result2 = mock.customEquatableProperty
+        #expect(result2.value == "world")
+
+        // Verify exact values
+        verify(mock, times: 1).customEquatableProperty.set(prop1)
+        verify(mock, times: 1).customEquatableProperty.set(prop2)
+
+        // Verify .any matcher captures all calls
+        verify(mock, times: 3).customEquatableProperty.set(.any)
+
+        // Verify getters
+        verify(mock, times: 2).customEquatableProperty.get()
+    }
+
+    @Test
+    func testCustomComparablePropertyAnyMatcher() {
+        var expectations = MockTestPropertyService.Expectations()
+
+        // Test .any matcher works with comparable types
+        when(expectations.customComparableProperty.set(.any), times: 2, complete: .withSuccess)
+        when(expectations.customComparableProperty.get(), return: ComparableProperty(value: 100))
+
+        var mock = MockTestPropertyService(expectations: expectations)
+
+        // Test setter with different values
+        mock.customComparableProperty = ComparableProperty(value: 1)
+        mock.customComparableProperty = ComparableProperty(value: 50)
+
+        // Test getter
+        let result = mock.customComparableProperty
+        #expect(result.value == 100)
+
+        // Verify .any matcher captured both calls
+        verify(mock, times: 2).customComparableProperty.set(.any)
+        verify(mock, times: 1).customComparableProperty.get()
+    }
+
+    @Test
+    func testCustomTypePropertyVerificationWithSpecificValues() {
+        var expectations = MockTestPropertyService.Expectations()
+
+        let comparableValue = ComparableProperty(value: 42)
+        let equatableValue = EquatableProperty(value: "test")
+
+        when(expectations.customComparableProperty.set(.any), complete: .withSuccess)
+        when(expectations.customEquatableProperty.set(.any), complete: .withSuccess)
+        when(expectations.customComparableProperty.get(), return: comparableValue)
+        when(expectations.customEquatableProperty.get(), return: equatableValue)
+
+        var mock = MockTestPropertyService(expectations: expectations)
+
+        // Set specific values
+        mock.customComparableProperty = comparableValue
+        mock.customEquatableProperty = equatableValue
+
+        // Get the values back
+        let resultComparable = mock.customComparableProperty
+        let resultEquatable = mock.customEquatableProperty
+
+        #expect(resultComparable.value == 42)
+        #expect(resultEquatable.value == "test")
+
+        // Verify with specific values
+        verify(mock, times: 1).customComparableProperty.set(comparableValue)
+        verify(mock, times: 1).customEquatableProperty.set(equatableValue)
+
+        // Verify with .any
+        verify(mock, times: 1).customComparableProperty.set(.any)
+        verify(mock, times: 1).customEquatableProperty.set(.any)
+
+        // Verify getters
+        verify(mock, times: 1).customComparableProperty.get()
+        verify(mock, times: 1).customEquatableProperty.get()
+    }
 }

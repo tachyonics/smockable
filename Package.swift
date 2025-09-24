@@ -24,7 +24,6 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
                 .target(name: "SmockableUtils"),
             ]
         ),
@@ -37,7 +36,10 @@ let package = Package(
         ),
         .target(
             name: "SmockableUtils",
-            dependencies: []
+            dependencies: [
+                .product(name: "SwiftDiagnostics", package: "swift-syntax"),
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+            ]
         ),
         .testTarget(
             name: "SmockMacroTests",
@@ -53,7 +55,8 @@ let package = Package(
         .testTarget(
             name: "SmockableUtilsTests",
             dependencies: [
-                .target(name: "SmockableUtils")
+                .target(name: "SmockableUtils"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
             ]
         ),
     ]
