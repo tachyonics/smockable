@@ -31,8 +31,16 @@
 /// - Parameters:
 ///    - accessLevel: The access modifier for the generated mock definition. Public if not specified
 ///    - preprocessorFlag: If specified the generated mock definition will be wrapped in a preprocessor flag
+///    - additionalComparableTypes: An Array of additional types to be considered conforming to Comparable
+///    - additionalEquatableTypes: An Array of additional types to be considered conforming to Equatable
+
 @attached(peer, names: prefixed(Mock))
-public macro Smock(accessLevel: AccessLevel? = nil, preprocessorFlag: String? = nil) =
+public macro Smock(
+    accessLevel: AccessLevel? = nil,
+    preprocessorFlag: String? = nil,
+    additionalComparableTypes: [any Comparable.Type]? = nil,
+    additionalEquatableTypes: [any Equatable.Type]? = nil
+) =
     #externalMacro(
         module: "SmockMacro",
         type: "SmockMacro"

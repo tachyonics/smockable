@@ -1,8 +1,24 @@
+import SwiftSyntax
 import Testing
 
 @testable import SmockableUtils
 
 struct TypeConformanceProviderTests {
+
+    // Helper function to create TypeSyntax from string
+    private func createTypeSyntax(_ typeString: String) -> TypeSyntax {
+        if typeString.contains(".") {
+            let components = typeString.split(separator: ".")
+            if components.count == 2 {
+                let memberType = MemberTypeSyntax(
+                    baseType: TypeSyntax(IdentifierTypeSyntax(name: .identifier(String(components[0])))),
+                    name: .identifier(String(components[1]))
+                )
+                return TypeSyntax(memberType)
+            }
+        }
+        return TypeSyntax(IdentifierTypeSyntax(name: .identifier(typeString)))
+    }
 
     // MARK: - Basic Type Tests
 
@@ -461,5 +477,169 @@ struct TypeConformanceProviderTests {
         #expect(provider("Dictionary<Array<String>, Dictionary<String, Int>>") == .onlyEquatable)
         #expect(provider("Array<Dictionary<String, Array<String>>>") == .onlyEquatable)
         #expect(provider("Dictionary<String, Array<Dictionary<String, String>>>") == .onlyEquatable)
+    }
+
+    // MARK: - Additional Types Tests
+
+    @Test
+    func testAdditionalComparableTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("CustomID"), createTypeSyntax("Timestamp")],
+            additionalEquatableTypes: []
+        )
+
+        #expect(provider("CustomID") == .comparableAndEquatable)
+        #expect(provider("Timestamp") == .comparableAndEquatable)
+    }
+
+    @Test
+    func testAdditionalEquatableTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile"), createTypeSyntax("Settings")]
+        )
+
+        #expect(provider("UserProfile") == .onlyEquatable)
+        #expect(provider("Settings") == .onlyEquatable)
+    }
+
+    @Test
+    func testAdditionalTypesWithBuiltInTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("CustomID")],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile")]
+        )
+
+        // Built-in comparable types still work
+        #expect(provider("String") == .comparableAndEquatable)
+        #expect(provider("Int") == .comparableAndEquatable)
+
+        // Built-in equatable-only types still work
+        #expect(provider("Bool") == .onlyEquatable)
+        #expect(provider("UUID") == .onlyEquatable)
+
+        // Additional types work as expected
+        #expect(provider("CustomID") == .comparableAndEquatable)
+        #expect(provider("UserProfile") == .onlyEquatable)
+    }
+
+    @Test
+    func testAdditionalTypesWithAssociatedTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: ["AssociatedComparable"],
+            equatableAssociatedTypes: ["AssociatedEquatable"],
+            additionalComparableTypes: [createTypeSyntax("CustomID")],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile")]
+        )
+
+        // Associated types work
+        #expect(provider("AssociatedComparable") == .comparableAndEquatable)
+        #expect(provider("AssociatedEquatable") == .onlyEquatable)
+
+        // Additional types work
+        #expect(provider("CustomID") == .comparableAndEquatable)
+        #expect(provider("UserProfile") == .onlyEquatable)
+    }
+
+    @Test
+    func testAdditionalComparableTypesOverrideBuiltIn() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("Bool")],  // Bool is normally equatable-only
+            additionalEquatableTypes: []
+        )
+
+        // Bool should now be comparable and equatable due to additionalComparableTypes
+        #expect(provider("Bool") == .comparableAndEquatable)
+    }
+
+    @Test
+    func testCollectionsWithAdditionalTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("CustomID")],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile")]
+        )
+
+        // Arrays with additional types
+        #expect(provider("Array<CustomID>") == .onlyEquatable)
+        #expect(provider("Array<UserProfile>") == .onlyEquatable)
+        #expect(provider("[CustomID]") == .onlyEquatable)
+        #expect(provider("[UserProfile]") == .onlyEquatable)
+
+        // Sets with additional types
+        #expect(provider("Set<CustomID>") == .onlyEquatable)
+        #expect(provider("Set<UserProfile>") == .onlyEquatable)
+
+        // Dictionaries with additional types
+        #expect(provider("Dictionary<CustomID, UserProfile>") == .onlyEquatable)
+        #expect(provider("[CustomID: UserProfile]") == .onlyEquatable)
+    }
+
+    @Test
+    func testComplexNestedTypesWithAdditionalTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("CustomID")],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile")]
+        )
+
+        // Nested collections
+        #expect(provider("Array<Array<CustomID>>") == .onlyEquatable)
+        #expect(provider("[[CustomID]]") == .onlyEquatable)
+        #expect(provider("Dictionary<CustomID, Array<UserProfile>>") == .onlyEquatable)
+        #expect(provider("[CustomID: [UserProfile]]") == .onlyEquatable)
+
+        // Optional types
+        #expect(provider("CustomID?") == .comparableAndEquatable)
+        #expect(provider("UserProfile?") == .onlyEquatable)
+        #expect(provider("Array<CustomID>?") == .onlyEquatable)
+    }
+
+    @Test
+    func testModuleQualifiedTypeNames() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [
+                createTypeSyntax("MyModule.CustomID"), createTypeSyntax("ThirdParty.SomeType"),
+            ],
+            additionalEquatableTypes: [createTypeSyntax("Foundation.CustomStruct")]
+        )
+
+        #expect(provider("MyModule.CustomID") == .comparableAndEquatable)
+        #expect(provider("ThirdParty.SomeType") == .comparableAndEquatable)
+        #expect(provider("Foundation.CustomStruct") == .onlyEquatable)
+
+        // Collections with module-qualified types
+        #expect(provider("Array<MyModule.CustomID>") == .onlyEquatable)
+        #expect(provider("[ThirdParty.SomeType: Foundation.CustomStruct]") == .onlyEquatable)
+    }
+
+    @Test
+    func testUnknownTypesRemainUnchangedWithAdditionalTypes() {
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            additionalComparableTypes: [createTypeSyntax("CustomID")],
+            additionalEquatableTypes: [createTypeSyntax("UserProfile")]
+        )
+
+        // Unknown types should still be neither comparable nor equatable
+        #expect(provider("UnknownType") == .neitherComparableNorEquatable)
+        #expect(provider("SomeRandomType") == .neitherComparableNorEquatable)
+
+        // Collections of unknown types
+        #expect(provider("Array<UnknownType>") == .neitherComparableNorEquatable)
+        #expect(provider("[String: UnknownType]") == .neitherComparableNorEquatable)
     }
 }

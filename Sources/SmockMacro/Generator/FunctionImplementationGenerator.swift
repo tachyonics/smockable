@@ -1,3 +1,4 @@
+import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
 
@@ -34,7 +35,9 @@ enum FunctionImplementationGenerator {
     ) throws -> CodeBlockSyntax {
         var methodInterpolationParameters: [String] = []
         for parameter in parameterList {
-            let paramName = (parameter.secondName?.text ?? parameter.firstName.text).trimmingCharacters(in: .whitespacesAndNewlines)
+            let paramName = (parameter.secondName?.text ?? parameter.firstName.text).trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
             let paramNameForSignature: String
             if let secondName = parameter.secondName?.text {
                 paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
@@ -43,7 +46,7 @@ enum FunctionImplementationGenerator {
             }
             let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             let isOptional = paramType.hasSuffix("?")
-            
+
             if paramType == "String" {
                 methodInterpolationParameters.append(
                     """
@@ -69,7 +72,7 @@ enum FunctionImplementationGenerator {
         let methodInterpolation = methodInterpolationParameters.joined(separator: ", ")
         let functionName = functionDeclaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
-        
+
         return try CodeBlockSyntax {
             let withLockCall = try getWithLockCall(
                 variablePrefix: variablePrefix,
