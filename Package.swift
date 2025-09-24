@@ -32,10 +32,7 @@ let package = Package(
             dependencies: [
                 .target(name: "SmockMacro")
             ],
-            swiftSettings: [
-                .define("SMOCKABLE_UNHAPPY_PATH_TESTING")
-            ]
-            //swiftSettings: swiftSettingsForTopLevelPackage()
+            swiftSettings: swiftSettingsForTopLevelPackage()
         ),
         .target(
             name: "SmockableUtils",
