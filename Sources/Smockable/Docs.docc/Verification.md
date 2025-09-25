@@ -142,6 +142,75 @@ verify(mock, .never).dangerousOperation(.any)
 verify(mock, .never).fetchUser(id: "admin")
 ```
 
+## Custom Matcher Verification
+
+Custom matchers can be used in verification just like in expectations, allowing you to verify calls with complex matching logic:
+
+```swift
+// Verify calls with custom matcher conditions
+verify(mock, times: 2).processNumber(value: .matching { $0 % 2 == 0 })  // Even numbers
+verify(mock, atLeast: 1).validateEmail(email: .matching { $0.contains("@") })  // Email format
+verify(mock, .never).uploadData(data: .matching { $0.count > 1000000 })  // Large uploads
+
+// Complex verification conditions
+verify(mock, times: 1).processText(text: .matching { text in
+    let words = text.split(separator: " ")
+    return words.count >= 3 && words.allSatisfy { $0.count > 2 }
+})
+
+// Mix custom matchers with other verification types
+verify(mock, times: 1).complexMethod(
+    id: .matching { $0 > 100 },       // Custom condition
+    name: "user"..."zebra",           // Range matching
+    data: .matching { $0.count > 0 }, // Another custom condition
+    flag: true                        // Exact matching
+)
+```
+
+These matchers are useful for verifying parameter formats, ranges, computed properties or partially verifying inputs.
+
+**Note:** Verifications will return the total number of matching invocations across the lifetime of the mock and regardless of 
+what other verifications have occurred. This is different to how expectations work - where the first matching expectation will
+be used for an invocation. 
+
+
+```swift
+var expectations = MockTestValueMatcherService.Expectations()
+
+// Test that first matching custom expectation takes priority
+when(
+    expectations.customMatcherInt(value: .matching { $0 > 0 }),     // First: positive numbers
+    return: "positive"
+)
+when(
+    expectations.customMatcherInt(value: .matching { $0 % 2 == 0 }), // Second: even numbers
+    return: "even"
+)
+
+let mock = MockTestValueMatcherService(expectations: expectations)
+
+// Value 4 matches both conditions, should use first expectation
+let result1 = mock.customMatcherInt(value: 4)
+// Value 4 again, should now use second expectation (first is consumed)
+let result2 = mock.customMatcherInt(value: 4)
+
+#expect(result1 == "positive")
+#expect(result2 == "even")
+
+// both calls match to both parameter matcher expressions
+verify(mock, times: 2).customMatcherInt(value: .matching { $0 > 0 })
+verify(mock, times: 2).customMatcherInt(value: .matching { $0 % 2 == 0 })
+```
+
+In this case `InOrder` verification can provide a more equivalent experience.
+
+```swift
+let inOrder = InOrder(strict: true, mock)
+inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 > 0 })
+inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 % 2 == 0 })
+inOrder.verifyNoAdditionalInteractions()
+```
+
 ## Working with Complex Parameters
 
 ### Custom Types
