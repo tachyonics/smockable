@@ -21,6 +21,13 @@ protocol TestValueMatcherService {
     // Edge cases
     func optionalCategories(name: String?, count: Int?, enabled: Bool?) -> String
     func mixedOptionalCategories(name: String, optionalFlag: Bool?, data: Data) -> String
+
+    // Custom matcher tests
+    func customMatcherInt(value: Int) -> String
+    func customMatcherString(text: String) -> String
+    func customMatcherData(data: Data) -> String
+    func customMatcherOptional(value: Int?) -> String
+    func customMatcherMixed(id: Int, name: String, data: Data) -> String
 }
 
 struct ValueMatcherCategoryTests {
@@ -432,6 +439,287 @@ struct ValueMatcherCategoryTests {
         verify(mock, times: 1).allCategories(name: "all4", count: 4, enabled: false, data: .any, sendable: .any)
     }
 
+    // MARK: - Custom Matcher Tests
+
+    @Test
+    func testComparableCustomMatcher() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test custom matcher for even numbers
+        when(
+            expectations.customMatcherInt(value: .matching { $0 % 2 == 0 }),
+            times: 2,
+            return: "even number"
+        )
+
+        // Test custom matcher for numbers greater than 50
+        when(
+            expectations.customMatcherInt(value: .matching { $0 > 50 }),
+            return: "large number"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result1 = mock.customMatcherInt(value: 4)  // even
+        let result2 = mock.customMatcherInt(value: 75)  // > 50
+        let result3 = mock.customMatcherInt(value: 10)  // even
+
+        #expect(result1 == "even number")
+        #expect(result2 == "large number")
+        #expect(result3 == "even number")
+
+        verify(mock, times: 2).customMatcherInt(value: .matching { $0 % 2 == 0 })
+        verify(mock, times: 1).customMatcherInt(value: .matching { $0 > 50 })
+    }
+
+    @Test
+    func testStringCustomMatcher() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test custom matcher for strings containing specific substring
+        when(
+            expectations.customMatcherString(text: .matching { $0.contains("test") }),
+            times: 2,
+            return: "contains test"
+        )
+
+        // Test custom matcher for long strings
+        when(
+            expectations.customMatcherString(text: .matching { $0.count > 10 }),
+            return: "long string"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result1 = mock.customMatcherString(text: "this is a test")  // contains "test" (is also length > 10)
+        let result2 = mock.customMatcherString(text: "this is a very long string")  // length > 10
+        let result3 = mock.customMatcherString(text: "testing123")  // contains "test"
+
+        #expect(result1 == "contains test")
+        #expect(result2 == "long string")
+        #expect(result3 == "contains test")
+
+        verify(mock, times: 2).customMatcherString(text: .matching { $0.contains("test") })
+        // 2 of the calls match this verification even though the order of the verifications caused the
+        // of result from the same matching logic
+        verify(mock, times: 2).customMatcherString(text: .matching { $0.count > 10 })
+    }
+
+    @Test
+    func testNonComparableCustomMatcher() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test custom matcher for Data with specific size
+        when(
+            expectations.customMatcherData(data: .matching { $0.count > 5 }),
+            times: 2,
+            return: "large data"
+        )
+
+        // Test custom matcher for Data containing specific byte
+        when(
+            expectations.customMatcherData(data: .matching { $0.contains(42) }),
+            return: "contains 42"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result1 = mock.customMatcherData(data: Data([1, 2, 3, 4, 5, 6, 7]))  // count > 5
+        let result2 = mock.customMatcherData(data: Data([10, 42, 30]))  // contains 42
+        let result3 = mock.customMatcherData(data: Data([1, 2, 3, 4, 5, 6]))  // count > 5
+
+        #expect(result1 == "large data")
+        #expect(result2 == "contains 42")
+        #expect(result3 == "large data")
+
+        verify(mock, times: 2).customMatcherData(data: .matching { $0.count > 5 })
+        verify(mock, times: 1).customMatcherData(data: .matching { $0.contains(42) })
+    }
+
+    @Test
+    func testOptionalCustomMatcher() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test custom matcher for positive non-nil values
+        when(
+            expectations.customMatcherOptional(
+                value: .matching {
+                    guard let val = $0 else { return false }
+                    return val > 0
+                }
+            ),
+            times: 2,
+            return: "positive non-nil"
+        )
+
+        // Test custom matcher for nil values
+        when(
+            expectations.customMatcherOptional(value: .matching { $0 == nil }),
+            return: "is nil"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result1 = mock.customMatcherOptional(value: 5)  // positive non-nil
+        let result2 = mock.customMatcherOptional(value: nil)  // nil
+        let result3 = mock.customMatcherOptional(value: 10)  // positive non-nil
+
+        #expect(result1 == "positive non-nil")
+        #expect(result2 == "is nil")
+        #expect(result3 == "positive non-nil")
+
+        verify(mock, times: 2).customMatcherOptional(
+            value: .matching {
+                guard let val = $0 else { return false }
+                return val > 0
+            }
+        )
+        verify(mock, times: 1).customMatcherOptional(value: .matching { $0 == nil })
+    }
+
+    @Test
+    func testMixedCustomMatchers() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test mixing custom matchers with other matcher types
+        when(
+            expectations.customMatcherMixed(
+                id: .matching { $0 > 100 },  // custom matcher
+                name: "test"..."zebra",  // range matcher
+                data: .matching { $0.count > 0 }  // custom matcher
+            ),
+            return: "mixed matchers"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result = mock.customMatcherMixed(
+            id: 150,
+            name: "user",
+            data: Data([1, 2, 3])
+        )
+
+        #expect(result == "mixed matchers")
+
+        verify(mock, times: 1).customMatcherMixed(
+            id: .matching { $0 > 100 },
+            name: "test"..."zebra",
+            data: .matching { $0.count > 0 }
+        )
+    }
+
+    @Test
+    func testCustomMatcherPriority() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test that first matching custom expectation takes priority
+        when(
+            expectations.customMatcherInt(value: .matching { $0 > 0 }),  // First: positive numbers
+            return: "positive"
+        )
+        when(
+            expectations.customMatcherInt(value: .matching { $0 % 2 == 0 }),  // Second: even numbers
+            return: "even"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        // Value 4 matches both conditions, should use first expectation
+        let result1 = mock.customMatcherInt(value: 4)
+        // Value 4 again, should now use second expectation (first is consumed)
+        let result2 = mock.customMatcherInt(value: 4)
+
+        #expect(result1 == "positive")
+        #expect(result2 == "even")
+
+        // both calls match to both parameter matcher expressions
+        verify(mock, times: 2).customMatcherInt(value: .matching { $0 > 0 })
+        verify(mock, times: 2).customMatcherInt(value: .matching { $0 % 2 == 0 })
+    }
+
+    @Test
+    func testInOrderCustomMatcherPriority() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test that first matching custom expectation takes priority
+        when(
+            expectations.customMatcherInt(value: .matching { $0 > 0 }),  // First: positive numbers
+            return: "positive"
+        )
+        when(
+            expectations.customMatcherInt(value: .matching { $0 % 2 == 0 }),  // Second: even numbers
+            return: "even"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        // Value 4 matches both conditions, should use first expectation
+        let result1 = mock.customMatcherInt(value: 4)
+        // Value 4 again, should now use second expectation (first is consumed)
+        let result2 = mock.customMatcherInt(value: 4)
+
+        #expect(result1 == "positive")
+        #expect(result2 == "even")
+
+        let inOrder = InOrder(strict: true, mock)
+        inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 > 0 })
+        inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 % 2 == 0 })
+        inOrder.verifyNoMoreInteractions()
+    }
+
+    @Test
+    func testComplexCustomMatcherLogic() {
+        var expectations = MockTestValueMatcherService.Expectations()
+
+        // Test complex custom matcher with multiple conditions
+        when(
+            expectations.customMatcherString(
+                text: .matching { text in
+                    let words = text.split(separator: " ")
+                    return words.count >= 3 && words.contains(where: { $0.count > 5 }) && text.contains("important")
+                }
+            ),
+            return: "complex match"
+        )
+
+        // Fallback for non-matching strings
+        when(
+            expectations.customMatcherString(text: .any),
+            return: "no match"
+        )
+
+        let mock = MockTestValueMatcherService(expectations: expectations)
+
+        let result1 = mock.customMatcherString(text: "this important message contains information")
+        let result2 = mock.customMatcherString(text: "short text")
+
+        #expect(result1 == "complex match")
+        #expect(result2 == "no match")
+
+        verify(mock, times: 1).customMatcherString(
+            text: .matching { text in
+                let words = text.split(separator: " ")
+                return words.count >= 3 && words.contains(where: { $0.count > 5 }) && text.contains("important")
+            }
+        )
+        verify(mock, times: 2).customMatcherString(text: .any)
+    }
+
+    @Test
+    func testCustomMatcherDescriptions() {
+        // Test that custom matchers have appropriate descriptions
+        let intMatcher: ValueMatcher<Int> = .matching { $0 > 0 }
+        let stringMatcher: ValueMatcher<String> = .matching { $0.contains("test") }
+        let dataMatcher: NonComparableValueMatcher<Data> = .matching { $0.count > 0 }
+        let optionalMatcher: OptionalValueMatcher<Int> = .matching { $0 != nil }
+
+        #expect(intMatcher.description == "custom")
+        #expect(stringMatcher.description == "custom")
+        #expect(stringMatcher.stringSpecficDescription == "custom")
+        #expect(dataMatcher.description == "custom")
+        #expect(optionalMatcher.description == "custom")
+    }
+
     // MARK: - Unhappy Path Tests
 
     #if SMOCKABLE_UNHAPPY_PATH_TESTING
@@ -628,6 +916,53 @@ struct ValueMatcherCategoryTests {
 
             // Verify with range that doesn't match - should fail since call was outside range
             verify(mock, times: 1).comparableOnly(string: "a"..."m", int: 1...100, double: 0.0...10.0)
+        }
+    }
+
+    @Test
+    func testCustomMatcherVerificationFailures() {
+        expectVerificationFailures(messages: [
+            "Expected customMatcherInt(value: custom) to be called exactly 2 times, but was called 1 time"
+        ]) {
+            var expectations = MockTestValueMatcherService.Expectations()
+            when(
+                expectations.customMatcherInt(value: .any),
+                times: .unbounded,
+                return: "result"
+            )
+
+            let mock = MockTestValueMatcherService(expectations: expectations)
+
+            // Call once with even number but verify custom matcher twice - should fail
+            _ = mock.customMatcherInt(value: 4)
+
+            verify(mock, times: 2).customMatcherInt(value: .matching { $0 % 2 == 0 })
+        }
+    }
+
+    @Test
+    func testMixedMatcherVerificationFailures() {
+        expectVerificationFailures(messages: [
+            "Expected customMatcherMixed(id: custom, name: \"test\"...\"zebra\", data: custom) to never be called, but was called 1 time"
+        ]) {
+            var expectations = MockTestValueMatcherService.Expectations()
+            when(
+                expectations.customMatcherMixed(id: .any, name: .any, data: .any),
+                times: .unbounded,
+                return: "result"
+            )
+
+            let mock = MockTestValueMatcherService(expectations: expectations)
+
+            // Call with values that match the custom matchers
+            _ = mock.customMatcherMixed(id: 150, name: "user", data: Data([1, 2, 3]))
+
+            // Verify never called but it was called - should fail
+            verify(mock, .never).customMatcherMixed(
+                id: .matching { $0 > 100 },
+                name: "test"..."zebra",
+                data: .matching { $0.count > 0 }
+            )
         }
     }
     #endif

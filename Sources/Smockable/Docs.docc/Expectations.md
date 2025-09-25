@@ -84,6 +84,46 @@ when(expectations.deleteUser(id: "user123"), complete: .withSuccess)
 when(expectations.fetchUser(id: .any), return: defaultUser)
 ```
 
+### Custom Matcher Closures
+
+For complex matching logic that goes beyond ranges and exact values, you can use custom matcher closures with the `.matching` case:
+
+```swift
+var expectations = MockUserService.Expectations()
+
+// Match even user IDs
+when(expectations.fetchUser(id: .matching { Int($0) != nil && Int($0)! % 2 == 0 }), return: evenUser)
+
+// Match email addresses (strings containing @ and .)
+when(expectations.updateEmail(email: .matching { $0.contains("@") && $0.contains(".") }), return: success)
+
+// Match large data uploads
+when(expectations.uploadData(data: .matching { $0.count > 1024 }), return: "large upload")
+
+// Complex validation logic
+when(expectations.validateInput(text: .matching { text in
+    let words = text.split(separator: " ")
+    return words.count >= 3 && words.allSatisfy { $0.count > 2 }
+}), return: "valid input")
+
+// Optional custom matchers can handle nil values
+when(expectations.processOptional(value: .matching { 
+    guard let val = $0 else { return false }  // Handle nil case
+    return val > 0
+}), return: "positive value")
+
+// Or specifically match nil values
+when(expectations.processOptional(value: .matching { $0 == nil }), return: "nil value")
+
+// Mix custom matchers with other matcher types
+when(expectations.complexMethod(
+    id: .matching { $0 > 100 },       // Custom matcher
+    name: "user"..."zebra",           // Range matcher  
+    data: .matching { $0.count > 0 }, // Another custom matcher
+    flag: true                        // Exact matcher
+), return: "mixed matching")
+```
+
 ### Optional Parameter Matching
 
 ```swift

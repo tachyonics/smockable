@@ -32,6 +32,8 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConver
     case range(ClosedRange<T>)
     /// Matches only the exact specified value.
     case exact(T)
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T) -> Bool)
 
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
@@ -44,6 +46,8 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConver
             return range.contains(value)
         case .exact(let match):
             return value == match
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -56,6 +60,8 @@ public enum ValueMatcher<T: Comparable & Sendable>: Sendable, CustomStringConver
             return range.description
         case .exact(let match):
             return "\(match)"
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -70,6 +76,8 @@ extension ValueMatcher where T == String {
             return "\"\(range.lowerBound)\"...\"\(range.upperBound)\""
         case .exact(let match):
             return "\"\(match)\""
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -86,6 +94,8 @@ extension ValueMatcher where T == String {
 public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConvertible {
     /// Matches any value of type T.
     case any
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T) -> Bool)
 
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
@@ -94,6 +104,8 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConver
         switch self {
         case .any:
             return true
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -102,6 +114,8 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConver
         switch self {
         case .any:
             return "any"
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -121,6 +135,8 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
     case any
     /// Matches only the exact specified value.
     case exact(T)
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T) -> Bool)
 
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
@@ -131,6 +147,8 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
             return true
         case .exact(let match):
             return value == match
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -141,6 +159,8 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
             return "any"
         case .exact(let match):
             return "\(match)"
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -163,6 +183,8 @@ public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStri
     case range(ClosedRange<T>)
     /// Matches the exact specified value (which may be nil).
     case exact(T?)
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T?) -> Bool)
 
     /// Check if the given optional value matches this matcher.
     /// - Parameter value: The optional value to test against this matcher
@@ -176,6 +198,8 @@ public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStri
             return range.contains(unwrapped)
         case .exact(let match):
             return value == match
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -192,6 +216,8 @@ public enum OptionalValueMatcher<T: Comparable & Sendable>: Sendable, CustomStri
             } else {
                 return "nil"
             }
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -210,6 +236,8 @@ extension OptionalValueMatcher where T == String {
             } else {
                 return "nil"
             }
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -226,6 +254,8 @@ extension OptionalValueMatcher where T == String {
 public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConvertible {
     /// Matches any value (nil or non-nil).
     case any
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T?) -> Bool)
 
     /// Check if the given optional value matches this matcher.
     /// - Parameter value: The optional value to test against this matcher
@@ -234,6 +264,8 @@ public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStri
         switch self {
         case .any:
             return true
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -242,6 +274,8 @@ public enum OptionalNonComparableValueMatcher<T: Sendable>: Sendable, CustomStri
         switch self {
         case .any:
             return "any"
+        case .matching:
+            return "custom"
         }
     }
 }
@@ -262,6 +296,8 @@ public enum OptionalOnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable
     case any
     /// Matches the exact specified value (which may be nil).
     case exact(T?)
+    /// Uses a closure for custom matching logic
+    case matching(_ matcher: @Sendable (T?) -> Bool)
 
     /// Check if the given optional value matches this matcher.
     /// - Parameter value: The optional value to test against this matcher
@@ -272,6 +308,8 @@ public enum OptionalOnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable
             return true
         case .exact(let match):
             return value == match
+        case .matching(let matcher):
+            return matcher(value)
         }
     }
 
@@ -286,6 +324,8 @@ public enum OptionalOnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable
             } else {
                 return "nil"
             }
+        case .matching:
+            return "custom"
         }
     }
 }
