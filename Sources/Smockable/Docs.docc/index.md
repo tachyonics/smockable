@@ -14,9 +14,8 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 - Provides an expectations-based API for configuring behavior
 - Tracks all method calls for verification
 - Is thread-safe and Sendable
-- Supports async/await and throwing functions
-
-**Note:** The due to the need for the mock implementations to be thread safe and Sendable, non-async functions and properties are not supported.
+- Supports sync, async/await and throwing functions
+- Supports property getters (including async and/or throwing) and setters
 
 ## Topics
 
