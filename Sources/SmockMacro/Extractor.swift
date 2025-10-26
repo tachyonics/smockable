@@ -1,4 +1,3 @@
-import SmockableUtils
 import SwiftSyntax
 
 /// `Extractor` is designed to extract a `ProtocolDeclSyntax` instance

@@ -1,4 +1,3 @@
-import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros

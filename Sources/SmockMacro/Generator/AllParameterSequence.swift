@@ -3,7 +3,6 @@
 //  smockable
 //
 
-import SmockableUtils
 import SwiftSyntax
 import SwiftSyntaxBuilder
 
