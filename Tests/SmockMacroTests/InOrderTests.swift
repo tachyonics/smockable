@@ -456,6 +456,88 @@ struct InOrderTests {
         inOrder.verifyNoMoreInteractions()
     }
 
+    // MARK: - Trailing Closure Shorthand Tests
+
+    @Test
+    func testTrailingClosureNonStrict() {
+        var expectations = MockTestInOrderService.Expectations()
+        when(expectations.firstMethod(id: .any), return: "first")
+        when(expectations.secondMethod(count: .any), return: 42)
+        when(expectations.thirdMethod(), return: true)
+
+        let mock = MockTestInOrderService(expectations: expectations)
+
+        _ = mock.firstMethod(id: "test1")
+        _ = mock.secondMethod(count: 10)
+        _ = mock.thirdMethod()
+
+        InOrder(strict: false, mock) { inOrder in
+            inOrder.verify(mock).firstMethod(id: "test1")
+            inOrder.verify(mock).secondMethod(count: 10)
+            inOrder.verify(mock).thirdMethod()
+        }
+    }
+
+    @Test
+    func testTrailingClosureStrict() {
+        var expectations = MockTestInOrderService.Expectations()
+        when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
+        when(expectations.secondMethod(count: .any), times: .unbounded, return: 1)
+
+        let mock = MockTestInOrderService(expectations: expectations)
+
+        _ = mock.firstMethod(id: "test1")
+        _ = mock.firstMethod(id: "test2")
+        _ = mock.secondMethod(count: 5)
+
+        InOrder(strict: true, mock) { inOrder in
+            inOrder.verify(mock).firstMethod(id: "test1")
+            inOrder.verify(mock).firstMethod(id: "test2")
+            inOrder.verify(mock).secondMethod(count: 5)
+        }
+    }
+
+    @Test
+    func testTrailingClosureMultipleMocks() {
+        var expectations1 = MockTestInOrderService.Expectations()
+        when(expectations1.firstMethod(id: .any), return: "mock1")
+
+        var expectations2 = MockTestInOrderService.Expectations()
+        when(expectations2.secondMethod(count: .any), return: 100)
+
+        let mock1 = MockTestInOrderService(expectations: expectations1)
+        let mock2 = MockTestInOrderService(expectations: expectations2)
+
+        _ = mock1.firstMethod(id: "test")
+        _ = mock2.secondMethod(count: 20)
+
+        InOrder(strict: false, mock1, mock2) { inOrder in
+            inOrder.verify(mock1).firstMethod(id: "test")
+            inOrder.verify(mock2).secondMethod(count: 20)
+        }
+    }
+
+    @Test
+    func testTrailingClosureWithVerificationModes() {
+        var expectations = MockTestInOrderService.Expectations()
+        when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
+        when(expectations.secondMethod(count: .any), times: .unbounded, return: 1)
+
+        let mock = MockTestInOrderService(expectations: expectations)
+
+        _ = mock.firstMethod(id: "test1")
+        _ = mock.firstMethod(id: "test2")
+        _ = mock.firstMethod(id: "test3")
+        _ = mock.secondMethod(count: 5)
+        _ = mock.secondMethod(count: 6)
+        _ = mock.secondMethod(count: 7)
+
+        InOrder(strict: false, mock) { inOrder in
+            inOrder.verify(mock, .additionalTimes(3)).firstMethod(id: .any)
+            inOrder.verify(mock, .additionalAtLeast(1)).secondMethod(count: .any)
+        }
+    }
+
     // MARK: - Fatal Error Tests (Swift 6.2+)
 
     #if swift(>=6.2)
@@ -649,6 +731,27 @@ struct InOrderTests {
             // Verify the first and third calls - should fail in strict mode
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: "first")
             inOrder.verify(mock, additionalTimes: 1).firstMethod(id: "second")
+        }
+    }
+
+    @Test
+    func testTrailingClosureImplicitVerifyNoMoreInteractionsFailure() {
+        expectVerificationFailures(messages: [
+            "Expected no remaining unverified mock interactions but interactions occurred 1 time"
+        ]) {
+            var expectations = MockTestInOrderService.Expectations()
+            when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
+            when(expectations.secondMethod(count: .any), times: .unbounded, return: 42)
+
+            let mock = MockTestInOrderService(expectations: expectations)
+
+            _ = mock.firstMethod(id: "test1")
+            _ = mock.secondMethod(count: 5)
+
+            InOrder(strict: false, mock) { inOrder in
+                inOrder.verify(mock).firstMethod(id: .any)
+                // secondMethod is not verified — implicit verifyNoMoreInteractions should fail
+            }
         }
     }
 

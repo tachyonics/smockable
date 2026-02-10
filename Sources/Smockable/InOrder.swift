@@ -77,6 +77,18 @@ public enum InOrderVerificationMode: Sendable {
 /// inOrder.verifyNoMoreInteractions()
 /// ```
 ///
+/// ### Trailing Closure Shorthand
+///
+/// Use the trailing closure form to automatically call `verifyNoMoreInteractions()` when the closure completes:
+///
+/// ```swift
+/// InOrder(strict: false, mockService, mockLogger) { inOrder in
+///     inOrder.verify(mockService).login()
+///     inOrder.verify(mockLogger).log("User logged in")
+///     inOrder.verify(mockService).fetchData()
+/// }
+/// ```
+///
 /// ### Strict vs Non-Strict Mode
 /// - **Strict mode**: Every interaction must be verified in the exact order they occurred
 /// - **Non-strict mode**: You can skip interactions as long as what you verify is in order
@@ -134,7 +146,7 @@ public class InOrder {
     /// - Parameters:
     ///   - strict: Whether to require strict ordering of all interactions
     ///   - mocks: The mocks to track for ordered verification
-    public init(strict: Bool, _ mocks: any VerifiableSmock...) {
+    private init(strict: Bool, mocks: [any VerifiableSmock]) {
         self.strict = strict
 
         var mockDict: [String: Int] = [:]
@@ -143,6 +155,40 @@ public class InOrder {
             mockDict[id] = 0
         }
         self.localIndexProgress = mockDict
+    }
+
+    public convenience init(strict: Bool, _ mocks: any VerifiableSmock...) {
+        self.init(strict: strict, mocks: mocks)
+    }
+
+    /// Initializes InOrder verification and automatically calls `verifyNoMoreInteractions()` after the closure completes.
+    ///
+    /// This is a shorthand for creating an InOrder instance, performing verifications, and ensuring
+    /// no more unverified interactions remain.
+    ///
+    /// ## Example
+    /// ```swift
+    /// InOrder(strict: true, mock) { inOrder in
+    ///     inOrder.verify(mock).login()
+    ///     inOrder.verify(mock).fetchData()
+    /// }
+    /// ```
+    ///
+    /// - Parameters:
+    ///   - strict: Whether to require strict ordering of all interactions
+    ///   - mocks: The mocks to track for ordered verification
+    ///   - sourceLocation: Source location for error reporting (automatically captured)
+    ///   - perform: A closure that receives the InOrder instance for performing verifications
+    @discardableResult
+    public convenience init(
+        strict: Bool,
+        _ mocks: any VerifiableSmock...,
+        sourceLocation: SourceLocation = #_sourceLocation,
+        perform body: (InOrder) -> Void
+    ) {
+        self.init(strict: strict, mocks: mocks)
+        body(self)
+        verifyNoMoreInteractions(sourceLocation: sourceLocation)
     }
 
     /// Verifies a mock interaction occurred exactly the specified number of additional times.
