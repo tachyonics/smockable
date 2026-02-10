@@ -45,14 +45,14 @@ func testAuthenticationFlow() async throws {
     when(expectations.validateCredentials(username: .any, password: .any), return: true)
     when(expectations.generateToken(userId: .any), return: "auth-token")
     when(expectations.logActivity(event: .any), complete: .withSuccess)
-    
+
     let mockAuth = MockAuthenticationService(expectations: expectations)
-    
+
     // Execute authentication flow
     let isValid = try await mockAuth.validateCredentials(username: "user", password: "pass")
     let token = try await mockAuth.generateToken(userId: "user123")
     try await mockAuth.logActivity(event: "login")
-    
+
     // Verify interactions occurred in correct order
     let inOrder = InOrder(strict: false, mockAuth)
     inOrder.verify(mockAuth).validateCredentials(username: "user", password: "pass")
@@ -61,6 +61,31 @@ func testAuthenticationFlow() async throws {
     inOrder.verifyNoMoreInteractions()
 }
 ```
+
+### Trailing Closure Shorthand
+
+Use the trailing closure form to automatically call `verifyNoMoreInteractions()` when the closure completes:
+
+```swift
+@Test
+func testAuthenticationFlow() async throws {
+    // Setup expectations...
+
+    // Execute authentication flow
+    let isValid = try await mockAuth.validateCredentials(username: "user", password: "pass")
+    let token = try await mockAuth.generateToken(userId: "user123")
+    try await mockAuth.logActivity(event: "login")
+
+    // Verify interactions occurred in correct order
+    InOrder(strict: false, mockAuth) { inOrder in
+        inOrder.verify(mockAuth).validateCredentials(username: "user", password: "pass")
+        inOrder.verify(mockAuth).generateToken(userId: "user123")
+        inOrder.verify(mockAuth).logActivity(event: "login")
+    }
+}
+```
+
+This is equivalent to the explicit form above but is more concise — `verifyNoMoreInteractions()` is called implicitly at the end of the closure.
 
 ## Verification Modes
 
@@ -196,6 +221,7 @@ func testMultipleMockOrdering() {
 ## Unverified Interactions
 
 It is recommended to call `verifyNoMoreInteractions` as the final verification to guard against expected interactions following the verified sequence.
+When using the trailing closure shorthand, this is done automatically.
 
 ```swift
 inOrder.verifyNoMoreInteractions()

@@ -205,10 +205,10 @@ verify(mock, times: 2).customMatcherInt(value: .matching { $0 % 2 == 0 })
 In this case `InOrder` verification can provide a more equivalent experience.
 
 ```swift
-let inOrder = InOrder(strict: true, mock)
-inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 > 0 })
-inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 % 2 == 0 })
-inOrder.verifyNoAdditionalInteractions()
+InOrder(strict: true, mock) { inOrder in
+    inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 > 0 })
+    inOrder.verify(mock, additionalTimes: 1).customMatcherInt(value: .matching { $0 % 2 == 0 })
+}
 ```
 
 ## Working with Complex Parameters
