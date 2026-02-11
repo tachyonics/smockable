@@ -79,7 +79,7 @@ enum MockGenerator {
 
         let getter =
             hasGetter
-            ? try getPropertyFunction(
+            ? try makePropertyFunction(
                 propertyFunctionType: .get,
                 propertyType: propertyType,
                 isAsync: isAsync,
@@ -88,7 +88,7 @@ enum MockGenerator {
             : nil
         let setter =
             hasSetter
-            ? try getPropertyFunction(
+            ? try makePropertyFunction(
                 propertyFunctionType: .set,
                 propertyType: propertyType,
                 isAsync: isAsync,
@@ -136,55 +136,12 @@ enum MockGenerator {
         )
     }
 
-    enum PropertyFunctionType {
-        case get
-        case set
-    }
-
-    private static func getPropertyFunction(
-        propertyFunctionType: PropertyFunctionType,
-        propertyType: TypeSyntax,
-        isAsync: Bool,
-        isThrowing: Bool
-    ) throws -> FunctionDeclSyntax {
-        var signature = "func "
-
-        switch propertyFunctionType {
-        case .get:
-            signature += "get()"
-        case .set:
-            signature += "set(_ newValue: \(propertyType)"
-        }
-
-        if isAsync {
-            signature += " async"
-        }
-        if isThrowing {
-            signature += " throws"
-        }
-
-        if case .get = propertyFunctionType {
-            signature += " -> \(propertyType)"
-        }
-
-        return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
-    }
-
-    static func inheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax) -> Bool {
-        guard let inheritanceClause = protocolDeclaration.inheritanceClause else {
-            return false
-        }
-        return inheritanceClause.inheritedTypes.contains { inheritedType in
-            inheritedType.type.as(IdentifierTypeSyntax.self)?.name.text == "Actor"
-        }
-    }
-
     // swiftlint:disable function_body_length
     static func declaration(
         for protocolDeclaration: ProtocolDeclSyntax,
         parameters originalParameters: MacroParameters = .default
     ) throws -> DeclSyntax {
-        let isActor = inheritsFromActor(protocolDeclaration)
+        let isActor = protocolInheritsFromActor(protocolDeclaration)
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
 
         let originalAccessLevel = originalParameters.accessLevel
@@ -247,9 +204,10 @@ enum MockGenerator {
             // VerifiableSmock conformance
             try TypeAliasDeclSyntax("\(raw: parameters.accessLevel.rawValue) typealias VerifierType = Verifier")
 
-            try FunctionDeclSyntax(
-                "\(raw: nonisolatedPrefix)\(raw: parameters.accessLevel.rawValue) func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
-            ) {
+            let verifierSig = nonisolatedPrefix + parameters.accessLevel.rawValue
+                + " func getVerifier(mode: VerificationMode,"
+                + " sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
+            try FunctionDeclSyntax("\(raw: verifierSig)") {
                 ReturnStmtSyntax(
                     expression: ExprSyntax(
                         "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation, inOrder: inOrder)"
@@ -433,4 +391,47 @@ enum MockGenerator {
         }
     }
     // swiftlint:enable function_body_length
+}
+
+private func protocolInheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax) -> Bool {
+    guard let inheritanceClause = protocolDeclaration.inheritanceClause else {
+        return false
+    }
+    return inheritanceClause.inheritedTypes.contains { inheritedType in
+        inheritedType.type.as(IdentifierTypeSyntax.self)?.name.text == "Actor"
+    }
+}
+
+private enum PropertyFunctionType {
+    case get
+    case set
+}
+
+private func makePropertyFunction(
+    propertyFunctionType: PropertyFunctionType,
+    propertyType: TypeSyntax,
+    isAsync: Bool,
+    isThrowing: Bool
+) throws -> FunctionDeclSyntax {
+    var signature = "func "
+
+    switch propertyFunctionType {
+    case .get:
+        signature += "get()"
+    case .set:
+        signature += "set(_ newValue: \(propertyType)"
+    }
+
+    if isAsync {
+        signature += " async"
+    }
+    if isThrowing {
+        signature += " throws"
+    }
+
+    if case .get = propertyFunctionType {
+        signature += " -> \(propertyType)"
+    }
+
+    return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
 }
