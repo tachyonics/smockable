@@ -232,7 +232,11 @@ enum StorageGenerator {
         }
     }
 
-    static func verifyNoInteractions(mockName: String, accessLevel: AccessLevel, isActor: Bool = false) throws -> FunctionDeclSyntax {
+    static func verifyNoInteractions(
+        mockName: String,
+        accessLevel: AccessLevel,
+        isActor: Bool = false
+    ) throws -> FunctionDeclSyntax {
         let nonisolatedPrefix = isActor ? "nonisolated " : ""
         // Function with no parameters
         return try FunctionDeclSyntax(
