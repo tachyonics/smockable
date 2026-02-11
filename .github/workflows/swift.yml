@@ -30,3 +30,14 @@ jobs:
       - uses: actions/checkout@v6
       - name: GitHub Action for SwiftLint
         uses: norio-nomura/action-swiftlint@3.2.1
+  SwiftFormat:
+    name: swift-format
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2.0-noble
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run swift-format
+        run: swift-format format --recursive --in-place Sources/ Tests/
+      - name: Check for formatting differences
+        run: git diff --exit-code
