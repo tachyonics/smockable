@@ -261,6 +261,42 @@ protocol MyActorService: Actor {
 }
 ```
 
+## Capturing Arguments
+
+Verifier methods for functions with parameters return an array of the captured arguments, allowing you to inspect the values passed to each matching invocation. This can be used to optionally capture one or more of the arugments provided to the 
+invocation.
+
+For a single-parameter function, the return type is an array of that parameter's type:
+
+```swift
+// Returns [String] — one entry per matching invocation
+let capturedCities = verify(mock, times: 2).getCurrentTemperature(for: .any)
+#expect(capturedCities == ["London", "Paris"])
+```
+
+For multi-parameter functions, the return type is an array of labeled tuples:
+
+```swift
+// Returns [(for: String, days: Int)]
+let captured = verify(mock).getForecast(for: .any, days: .any)
+#expect(captured.first!.for == "London")
+#expect(captured.first!.days == 5)
+
+let (_, days) = verify(mock).getForecast(for: .any, days: .any).first!
+#expect(days == 5)
+```
+
+You can combine exact matchers with `.any` to capture only matching invocations:
+
+```swift
+// Only captures invocations where city == "London"
+let londonDays = verify(mock).getForecast(for: "London", days: .any)
+#expect(londonDays.first!.days == 5)
+```
+
+Note that exact matchers don't affect what arguments are returned (in this case the same two-value tuple will be returned
+even though the value of "for" has been exactly matched).
+
 ## See Also
 
 - <doc:GettingStarted>
