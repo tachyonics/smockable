@@ -203,7 +203,46 @@ func testMultipleInheritanceWorkaround() async throws {
 }
 ```
 
-## Limitation 4: Static Function and Property Restrictions
+## Limitation 4: Actor Protocol Detection
+
+### The Limitation
+
+Smockable automatically detects `Actor` inheritance and generates an `actor` mock type when a protocol directly inherits from `Actor`. However, the macro can only detect direct inheritance — it cannot detect indirect conformance through parent protocols.
+
+```swift
+// ✅ Direct Actor inheritance — detected correctly
+@Smock
+protocol MyActorService: Actor {
+    func process(id: String) async -> String
+}
+
+// ❌ Indirect Actor inheritance — NOT detected
+protocol BaseActorService: Actor { }
+
+@Smock
+protocol MyService: BaseActorService {
+    func process(id: String) async -> String
+}
+// MockMyService will be a struct, not an actor
+```
+
+### The Workaround
+
+Add `Actor` directly to the protocol's inheritance clause alongside any other parent protocols:
+
+```swift
+protocol BaseActorService: Actor { }
+
+@Smock
+protocol MyService: BaseActorService, Actor {
+    // Mirror BaseActorService requirements
+    func process(id: String) async -> String
+}
+```
+
+This is consistent with other inheritance limitations — the macro can only see what is explicitly declared in the protocol it is applied to.
+
+## Limitation 5: Static Function and Property Restrictions
 
 ### Static Properties Not Supported
 
