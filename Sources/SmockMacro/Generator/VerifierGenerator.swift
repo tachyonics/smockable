@@ -293,19 +293,23 @@ enum VerifierGenerator {
         let functionName = functionDeclaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
+        let returnTypeString = captureReturnType(parameters: parameters)!
+        let mapExpression = captureMapExpression(parameters: parameters)!
+
         // if this is not a varient with all matcher inputs
         if !allParametersAreMatchers {
             return try FunctionDeclSyntax(
                 """
-                \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) {
+                @discardableResult \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: returnTypeString) {
                     return \(raw: functionName)(\(raw: matcherInit))
                 }
                 """
             )
         }
 
-        return try FunctionDeclSyntax("\(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature))")
-        {
+        return try FunctionDeclSyntax(
+            "@discardableResult \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: returnTypeString)"
+        ) {
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
                 bindings: PatternBindingListSyntax([
@@ -339,6 +343,11 @@ enum VerifierGenerator {
                 storagePrefix: storagePrefix,
                 functionInterpolationSignature: functionInterpolationSignature
             )
+
+            ReturnStmtSyntax(
+                returnKeyword: .keyword(.return, leadingTrivia: .newline),
+                expression: ExprSyntax("\(raw: mapExpression)")
+            )
         }
     }
 
@@ -364,6 +373,48 @@ enum VerifierGenerator {
             }
             """
         )
+    }
+}
+
+private extension VerifierGenerator {
+    static func captureReturnType(parameters: [FunctionParameterSyntax]) -> String? {
+        guard !parameters.isEmpty else { return nil }
+
+        if parameters.count == 1 {
+            let param = parameters[0]
+            let type = strippedParameterType(param)
+            return "[\(type)]"
+        } else {
+            let tupleElements = parameters.map { param in
+                let name = (param.secondName ?? param.firstName).text
+                let type = strippedParameterType(param)
+                return "\(name): \(type)"
+            }
+            return "[(\(tupleElements.joined(separator: ", ")))]"
+        }
+    }
+
+    static func captureMapExpression(parameters: [FunctionParameterSyntax]) -> String? {
+        guard !parameters.isEmpty else { return nil }
+
+        if parameters.count == 1 {
+            let param = parameters[0]
+            let name = (param.secondName ?? param.firstName).text
+            return "matchingInvocations.map { $0.\(name) }"
+        } else {
+            let tupleElements = parameters.map { param in
+                let name = (param.secondName ?? param.firstName).text
+                return "\(name): $0.\(name)"
+            }
+            return "matchingInvocations.map { (\(tupleElements.joined(separator: ", "))) }"
+        }
+    }
+
+    static func strippedParameterType(_ parameter: FunctionParameterSyntax) -> String {
+        if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
+            return attributedType.baseType.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

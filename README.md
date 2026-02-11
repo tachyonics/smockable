@@ -23,7 +23,7 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 
 - ✅ **Type-safe mocks** generated at compile time using Swift macros
 - ✅ **Expectation-based testing** with parameter matching and support for multiple calls, return values, errors, and custom closures
-- ✅ **Call verification** with detailed invocation tracking
+- ✅ **Call verification** with detailed invocation tracking and optional argument capture
 - ✅ **Thread-safe** mock implementations with Sendable conformance
 - ✅ **Flexible verifications** with parameter matching and InOrder verification to verify invocation sequence (including across multiple mocks)
 - ✅ **Protocol inheritance** and associated types support
