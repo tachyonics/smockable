@@ -79,7 +79,7 @@ enum MockGenerator {
 
         let getter =
             hasGetter
-            ? try getPropertyFunction(
+            ? try makePropertyFunction(
                 propertyFunctionType: .get,
                 propertyType: propertyType,
                 isAsync: isAsync,
@@ -88,7 +88,7 @@ enum MockGenerator {
             : nil
         let setter =
             hasSetter
-            ? try getPropertyFunction(
+            ? try makePropertyFunction(
                 propertyFunctionType: .set,
                 propertyType: propertyType,
                 isAsync: isAsync,
@@ -136,45 +136,12 @@ enum MockGenerator {
         )
     }
 
-    enum PropertyFunctionType {
-        case get
-        case set
-    }
-
-    private static func getPropertyFunction(
-        propertyFunctionType: PropertyFunctionType,
-        propertyType: TypeSyntax,
-        isAsync: Bool,
-        isThrowing: Bool
-    ) throws -> FunctionDeclSyntax {
-        var signature = "func "
-
-        switch propertyFunctionType {
-        case .get:
-            signature += "get()"
-        case .set:
-            signature += "set(_ newValue: \(propertyType)"
-        }
-
-        if isAsync {
-            signature += " async"
-        }
-        if isThrowing {
-            signature += " throws"
-        }
-
-        if case .get = propertyFunctionType {
-            signature += " -> \(propertyType)"
-        }
-
-        return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
-    }
-
     // swiftlint:disable function_body_length
     static func declaration(
         for protocolDeclaration: ProtocolDeclSyntax,
         parameters originalParameters: MacroParameters = .default
-    ) throws -> StructDeclSyntax {
+    ) throws -> DeclSyntax {
+        let isActor = protocolInheritsFromActor(protocolDeclaration)
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
 
         let originalAccessLevel = originalParameters.accessLevel
@@ -215,189 +182,256 @@ enum MockGenerator {
             additionalEquatableTypes: parameters.additionalEquatableTypes
         )
 
-        return try StructDeclSyntax(
-            modifiers: [originalAccessLevel.declModifier],
-            name: identifier,
-            genericParameterClause: genericParameterClause,
-            inheritanceClause: InheritanceClauseSyntax {
-                InheritedTypeSyntax(
-                    type: IdentifierTypeSyntax(name: protocolDeclaration.name)
-                )
+        let nonisolatedPrefix = isActor ? "nonisolated " : ""
 
+        let inheritanceClause = InheritanceClauseSyntax {
+            InheritedTypeSyntax(
+                type: IdentifierTypeSyntax(name: protocolDeclaration.name)
+            )
+
+            if !isActor {
                 InheritedTypeSyntax(
                     type: IdentifierTypeSyntax(name: "Sendable")
                 )
+            }
 
-                InheritedTypeSyntax(
-                    type: IdentifierTypeSyntax(name: "VerifiableSmock")
+            InheritedTypeSyntax(
+                type: IdentifierTypeSyntax(name: "VerifiableSmock")
+            )
+        }
+
+        let memberBlock = try MemberBlockSyntax {
+            // VerifiableSmock conformance
+            try TypeAliasDeclSyntax("\(raw: parameters.accessLevel.rawValue) typealias VerifierType = Verifier")
+
+            let verifierSig = nonisolatedPrefix + parameters.accessLevel.rawValue
+                + " func getVerifier(mode: VerificationMode,"
+                + " sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
+            try FunctionDeclSyntax("\(raw: verifierSig)") {
+                ReturnStmtSyntax(
+                    expression: ExprSyntax(
+                        "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation, inOrder: inOrder)"
+                    )
                 )
-            },
-            memberBlockBuilder: {
-                // VerifiableSmock conformance
-                try TypeAliasDeclSyntax("\(raw: parameters.accessLevel.rawValue) typealias VerifierType = Verifier")
+            }
 
-                try FunctionDeclSyntax(
-                    "\(raw: parameters.accessLevel.rawValue) func getVerifier(mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
-                ) {
-                    ReturnStmtSyntax(
-                        expression: ExprSyntax(
-                            "Verifier(state: self.state, mode: mode, sourceLocation: sourceLocation, inOrder: inOrder)"
-                        )
-                    )
-                }
+            try InitializerDeclSyntax(
+                "\(raw: parameters.accessLevel.rawValue) init(expectations: consuming Expectations = .init()) { "
+            ) {
+                ExprSyntax(
+                    """
+                    self.state = .init(expectedResponses: .init(expectations: expectations))
+                    """
+                )
+            }
 
-                try InitializerDeclSyntax(
-                    "\(raw: parameters.accessLevel.rawValue) init(expectations: consuming Expectations = .init()) { "
-                ) {
-                    ExprSyntax(
-                        """
-                        self.state = .init(expectedResponses: .init(expectations: expectations))
-                        """
-                    )
-                }
-
-                for propertyDeclaration in propertyDeclarations {
-                    let propertyFunctionDeclarations = [
-                        propertyDeclaration.get?.function, propertyDeclaration.set?.function,
-                    ].compactMap { $0 }
-
-                    try StorageGenerator.expectationsDeclaration(
-                        functionDeclarations: propertyFunctionDeclarations,
-                        typePrefix: propertyDeclaration.typePrefix,
-                        typeConformanceProvider: typeConformanceProvider,
-                        accessLevel: parameters.accessLevel
-                    )
-
-                    try StorageGenerator.expectedResponsesDeclaration(
-                        functionDeclarations: propertyFunctionDeclarations,
-                        typePrefix: propertyDeclaration.typePrefix
-                    )
-
-                    try StorageGenerator.receivedInvocationsDeclaration(
-                        functionDeclarations: propertyFunctionDeclarations,
-                        typePrefix: propertyDeclaration.typePrefix
-                    )
-
-                    try VerifierGenerator.verifierStructDeclaration(
-                        functionDeclarations: propertyFunctionDeclarations,
-                        typePrefix: propertyDeclaration.typePrefix,
-                        storagePrefix: propertyDeclaration.storagePrefix,
-                        typeConformanceProvider: typeConformanceProvider,
-                        accessLevel: parameters.accessLevel
-                    )
-
-                    if let get = propertyDeclaration.get {
-                        try FieldOptionsGenerator.fieldOptionsClassDeclaration(
-                            variablePrefix: get.variablePrefix,
-                            functionSignature: get.function.signature,
-                            typePrefix: propertyDeclaration.typePrefix,
-                            accessLevel: parameters.accessLevel
-                        )
-
-                        try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
-                            typePrefix: propertyDeclaration.typePrefix,
-                            variablePrefix: get.variablePrefix,
-                            functionSignature: get.function.signature,
-                            accessLevel: parameters.accessLevel
-                        )
-                    }
-
-                    if let set = propertyDeclaration.set {
-                        try FieldOptionsGenerator.fieldOptionsClassDeclaration(
-                            variablePrefix: set.variablePrefix,
-                            functionSignature: set.function.signature,
-                            typePrefix: propertyDeclaration.typePrefix,
-                            accessLevel: parameters.accessLevel
-                        )
-
-                        try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
-                            typePrefix: propertyDeclaration.typePrefix,
-                            variablePrefix: set.variablePrefix,
-                            functionSignature: set.function.signature,
-                            accessLevel: parameters.accessLevel
-                        )
-
-                        if let setterInputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
-                            variablePrefix: set.variablePrefix,
-                            parameterList: set.parameterList,
-                            typePrefix: propertyDeclaration.typePrefix,
-                            accessLevel: parameters.accessLevel,
-                            typeConformanceProvider: typeConformanceProvider
-                        ) {
-                            setterInputMatcherStruct
-                        }
-                    }
-
-                    try PropertyImplementationGenerator.propertyDeclaration(
-                        propertyDeclaration: propertyDeclaration,
-                        accessLevel: parameters.accessLevel
-                    )
-                }
+            for propertyDeclaration in propertyDeclarations {
+                let propertyFunctionDeclarations = [
+                    propertyDeclaration.get?.function, propertyDeclaration.set?.function,
+                ].compactMap { $0 }
 
                 try StorageGenerator.expectationsDeclaration(
-                    functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations,
+                    functionDeclarations: propertyFunctionDeclarations,
+                    typePrefix: propertyDeclaration.typePrefix,
                     typeConformanceProvider: typeConformanceProvider,
                     accessLevel: parameters.accessLevel
                 )
+
                 try StorageGenerator.expectedResponsesDeclaration(
-                    functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations
+                    functionDeclarations: propertyFunctionDeclarations,
+                    typePrefix: propertyDeclaration.typePrefix
                 )
+
                 try StorageGenerator.receivedInvocationsDeclaration(
-                    functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations
+                    functionDeclarations: propertyFunctionDeclarations,
+                    typePrefix: propertyDeclaration.typePrefix
                 )
-                try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
-                try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
-                try StorageGenerator.variableDeclaration()
 
                 try VerifierGenerator.verifierStructDeclaration(
-                    functionDeclarations: functionDeclarations,
-                    propertyDeclarations: propertyDeclarations,
+                    functionDeclarations: propertyFunctionDeclarations,
+                    typePrefix: propertyDeclaration.typePrefix,
+                    storagePrefix: propertyDeclaration.storagePrefix,
                     typeConformanceProvider: typeConformanceProvider,
                     accessLevel: parameters.accessLevel
                 )
 
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-                    let parameterList = functionDeclaration.signature.parameterClause.parameters
-
+                if let get = propertyDeclaration.get {
                     try FieldOptionsGenerator.fieldOptionsClassDeclaration(
-                        variablePrefix: variablePrefix,
-                        functionSignature: functionDeclaration.signature,
-                        accessLevel: parameters.accessLevel
-                    )
-                    try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
-                        variablePrefix: variablePrefix,
-                        functionSignature: functionDeclaration.signature,
+                        variablePrefix: get.variablePrefix,
+                        functionSignature: get.function.signature,
+                        typePrefix: propertyDeclaration.typePrefix,
                         accessLevel: parameters.accessLevel
                     )
 
-                    // Generate input matcher struct for functions with parameters
-                    if let inputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
-                        variablePrefix: variablePrefix,
-                        parameterList: parameterList,
+                    try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
+                        typePrefix: propertyDeclaration.typePrefix,
+                        variablePrefix: get.variablePrefix,
+                        functionSignature: get.function.signature,
+                        accessLevel: parameters.accessLevel
+                    )
+                }
+
+                if let set = propertyDeclaration.set {
+                    try FieldOptionsGenerator.fieldOptionsClassDeclaration(
+                        variablePrefix: set.variablePrefix,
+                        functionSignature: set.function.signature,
+                        typePrefix: propertyDeclaration.typePrefix,
+                        accessLevel: parameters.accessLevel
+                    )
+
+                    try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
+                        typePrefix: propertyDeclaration.typePrefix,
+                        variablePrefix: set.variablePrefix,
+                        functionSignature: set.function.signature,
+                        accessLevel: parameters.accessLevel
+                    )
+
+                    if let setterInputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
+                        variablePrefix: set.variablePrefix,
+                        parameterList: set.parameterList,
+                        typePrefix: propertyDeclaration.typePrefix,
                         accessLevel: parameters.accessLevel,
                         typeConformanceProvider: typeConformanceProvider
                     ) {
-                        inputMatcherStruct
+                        setterInputMatcherStruct
                     }
-
-                    try FunctionImplementationGenerator.functionDeclaration(
-                        variablePrefix: variablePrefix,
-                        functionDeclaration: functionDeclaration,
-                        accessLevel: parameters.accessLevel
-                    )
                 }
 
-                try StorageGenerator.verifyNoInteractions(
-                    mockName: identifier.description,
+                try PropertyImplementationGenerator.propertyDeclaration(
+                    propertyDeclaration: propertyDeclaration,
                     accessLevel: parameters.accessLevel
                 )
-                try StorageGenerator.getMockIdentifier(accessLevel: parameters.accessLevel)
             }
-        )
+
+            try StorageGenerator.expectationsDeclaration(
+                functionDeclarations: functionDeclarations,
+                propertyDeclarations: propertyDeclarations,
+                typeConformanceProvider: typeConformanceProvider,
+                accessLevel: parameters.accessLevel
+            )
+            try StorageGenerator.expectedResponsesDeclaration(
+                functionDeclarations: functionDeclarations,
+                propertyDeclarations: propertyDeclarations
+            )
+            try StorageGenerator.receivedInvocationsDeclaration(
+                functionDeclarations: functionDeclarations,
+                propertyDeclarations: propertyDeclarations
+            )
+            try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
+            try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
+            try StorageGenerator.variableDeclaration(isActor: isActor)
+
+            try VerifierGenerator.verifierStructDeclaration(
+                functionDeclarations: functionDeclarations,
+                propertyDeclarations: propertyDeclarations,
+                typeConformanceProvider: typeConformanceProvider,
+                accessLevel: parameters.accessLevel
+            )
+
+            for functionDeclaration in functionDeclarations {
+                let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                let parameterList = functionDeclaration.signature.parameterClause.parameters
+
+                try FieldOptionsGenerator.fieldOptionsClassDeclaration(
+                    variablePrefix: variablePrefix,
+                    functionSignature: functionDeclaration.signature,
+                    accessLevel: parameters.accessLevel
+                )
+                try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
+                    variablePrefix: variablePrefix,
+                    functionSignature: functionDeclaration.signature,
+                    accessLevel: parameters.accessLevel
+                )
+
+                // Generate input matcher struct for functions with parameters
+                if let inputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
+                    variablePrefix: variablePrefix,
+                    parameterList: parameterList,
+                    accessLevel: parameters.accessLevel,
+                    typeConformanceProvider: typeConformanceProvider
+                ) {
+                    inputMatcherStruct
+                }
+
+                try FunctionImplementationGenerator.functionDeclaration(
+                    variablePrefix: variablePrefix,
+                    functionDeclaration: functionDeclaration,
+                    accessLevel: parameters.accessLevel
+                )
+            }
+
+            try StorageGenerator.verifyNoInteractions(
+                mockName: identifier.description,
+                accessLevel: parameters.accessLevel,
+                isActor: isActor
+            )
+            try StorageGenerator.getMockIdentifier(accessLevel: parameters.accessLevel, isActor: isActor)
+        }
+
+        if isActor {
+            return DeclSyntax(
+                ActorDeclSyntax(
+                    modifiers: [originalAccessLevel.declModifier],
+                    name: identifier,
+                    genericParameterClause: genericParameterClause,
+                    inheritanceClause: inheritanceClause,
+                    memberBlock: memberBlock
+                )
+            )
+        } else {
+            return DeclSyntax(
+                StructDeclSyntax(
+                    modifiers: [originalAccessLevel.declModifier],
+                    name: identifier,
+                    genericParameterClause: genericParameterClause,
+                    inheritanceClause: inheritanceClause,
+                    memberBlock: memberBlock
+                )
+            )
+        }
     }
     // swiftlint:enable function_body_length
+}
+
+private func protocolInheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax) -> Bool {
+    guard let inheritanceClause = protocolDeclaration.inheritanceClause else {
+        return false
+    }
+    return inheritanceClause.inheritedTypes.contains { inheritedType in
+        inheritedType.type.as(IdentifierTypeSyntax.self)?.name.text == "Actor"
+    }
+}
+
+private enum PropertyFunctionType {
+    case get
+    case set
+}
+
+private func makePropertyFunction(
+    propertyFunctionType: PropertyFunctionType,
+    propertyType: TypeSyntax,
+    isAsync: Bool,
+    isThrowing: Bool
+) throws -> FunctionDeclSyntax {
+    var signature = "func "
+
+    switch propertyFunctionType {
+    case .get:
+        signature += "get()"
+    case .set:
+        signature += "set(_ newValue: \(propertyType)"
+    }
+
+    if isAsync {
+        signature += " async"
+    }
+    if isThrowing {
+        signature += " throws"
+    }
+
+    if case .get = propertyFunctionType {
+        signature += " -> \(propertyType)"
+    }
+
+    return try FunctionDeclSyntax("\(raw: signature) { fatalError(\"Not implemented\") }")
 }

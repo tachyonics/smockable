@@ -216,23 +216,36 @@ enum StorageGenerator {
         )
     }
 
-    static func variableDeclaration() throws -> VariableDeclSyntax {
-        try VariableDeclSyntax(
-            """
-            private let state: State
-            """
-        )
+    static func variableDeclaration(isActor: Bool = false) throws -> VariableDeclSyntax {
+        if isActor {
+            return try VariableDeclSyntax(
+                """
+                nonisolated private let state: State
+                """
+            )
+        } else {
+            return try VariableDeclSyntax(
+                """
+                private let state: State
+                """
+            )
+        }
     }
 
-    static func verifyNoInteractions(mockName: String, accessLevel: AccessLevel) throws -> FunctionDeclSyntax {
+    static func verifyNoInteractions(
+        mockName: String,
+        accessLevel: AccessLevel,
+        isActor: Bool = false
+    ) throws -> FunctionDeclSyntax {
+        let nonisolatedPrefix = isActor ? "nonisolated " : ""
         // Function with no parameters
-        try FunctionDeclSyntax(
+        return try FunctionDeclSyntax(
             """
-            \(raw: accessLevel.rawValue) func verifyNoInteractions(sourceLocation: SourceLocation) {
+            \(raw: nonisolatedPrefix)\(raw: accessLevel.rawValue) func verifyNoInteractions(sourceLocation: SourceLocation) {
                 let combinedCallCount = self.state.mutex.withLock { storage in
                     return storage.combinedCallCount
                 }
-                
+
                 VerificationHelper.performNoInteractionVerification(
                     interactionCount: combinedCallCount,
                     mockName: "\(raw: mockName)",
@@ -243,11 +256,12 @@ enum StorageGenerator {
         )
     }
 
-    static func getMockIdentifier(accessLevel: AccessLevel) throws -> FunctionDeclSyntax {
+    static func getMockIdentifier(accessLevel: AccessLevel, isActor: Bool = false) throws -> FunctionDeclSyntax {
+        let nonisolatedPrefix = isActor ? "nonisolated " : ""
         // Function with no parameters
-        try FunctionDeclSyntax(
+        return try FunctionDeclSyntax(
             """
-            \(raw: accessLevel.rawValue) func getMockIdentifier() -> String {
+            \(raw: nonisolatedPrefix)\(raw: accessLevel.rawValue) func getMockIdentifier() -> String {
                 return self.state.mockIdentifier
             }
             """

@@ -236,6 +236,31 @@ protocol DataService {
 }
 ```
 
+## Actor Protocols
+
+Smockable automatically detects protocols that inherit from `Actor` and generates an `actor` mock type instead of a `struct`. Protocol methods remain actor-isolated, while the internal verification infrastructure uses `nonisolated` access.
+
+```swift
+@Smock
+protocol MyActorService: Actor {
+    func process(id: String) async -> String
+    func fetchData() async throws -> Data
+}
+
+@Test func testActorService() async throws {
+    var expectations = MockMyActorService.Expectations()
+    when(expectations.process(id: .any), return: "done")
+    when(expectations.fetchData(), return: Data())
+
+    let mock = MockMyActorService(expectations: expectations)
+
+    let result = await mock.process(id: "123")
+    #expect(result == "done")
+
+    verify(mock, times: 1).process(id: "123")
+}
+```
+
 ## See Also
 
 - <doc:GettingStarted>

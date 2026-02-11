@@ -37,7 +37,7 @@ public enum SmockMacro: PeerMacro {
 
     @MemberBlockItemListBuilder
     private static func mockDeclarationDecls(
-        mockDeclaration: StructDeclSyntax
+        mockDeclaration: DeclSyntax
     ) -> MemberBlockItemListSyntax {
         mockDeclaration
     }
