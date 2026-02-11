@@ -5,6 +5,9 @@
 <a href="http://swift.org">
 <img src="https://img.shields.io/badge/swift-6.2|6.1-orange.svg?style=flat" alt="Swift 6.2 and 6.1 Compatible and Tested">
 </a>
+<a href="https://swiftpackageindex.com/tachyonics/smockable/documentation">
+<img src="https://img.shields.io/badge/docc-documentation-blue.svg?style=flat" alt="Package documentation">
+</a>
 <img src="https://img.shields.io/badge/ubuntu-22.04|24.04-yellow.svg?style=flat" alt="Ubuntu 22.04 and 24.04 Tested">
 <img src="https://img.shields.io/badge/license-Apache2-blue.svg?style=flat" alt="Apache 2">
 </p>
