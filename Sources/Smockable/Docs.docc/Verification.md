@@ -169,6 +169,28 @@ verify(mock, times: 1).complexMethod(
 
 These matchers are useful for verifying parameter formats, ranges, computed properties or partially verifying inputs.
 
+Defining matcher logic as a local function can be more maintainable than an inline closure:
+
+```swift
+@Test
+func testEmailValidationFlow() {
+    // Setup expectations...
+
+    mockAuth.validateEmail(email: "user@example.com")
+    mockAuth.validateEmail(email: "admin@example.com")
+    mockAuth.logActivity(event: "validation complete")
+
+    @Sendable func isValidEmail(email: String) -> Bool {
+        email.contains("@")
+    }
+
+    InOrder(strict: false, mockAuth) { inOrder in
+        inOrder.verify(mockAuth, additionalAtLeast: 1).validateEmail(email: .matching(isValidEmail))
+        inOrder.verify(mockAuth).logActivity(event: "validation complete")
+    }
+}
+```
+
 **Note:** Verifications will return the total number of matching invocations across the lifetime of the mock and regardless of 
 what other verifications have occurred. This is different to how expectations work - where the first matching expectation will
 be used for an invocation. 

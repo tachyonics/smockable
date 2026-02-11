@@ -538,6 +538,28 @@ struct InOrderTests {
         }
     }
 
+    @Test
+    func testTrailingClosureWithCustomMatcherFunction() {
+        var expectations = MockTestInOrderService.Expectations()
+        when(expectations.firstMethod(id: .any), times: .unbounded, return: "result")
+        when(expectations.secondMethod(count: .any), times: .unbounded, return: 1)
+
+        let mock = MockTestInOrderService(expectations: expectations)
+
+        _ = mock.firstMethod(id: "test1")
+        _ = mock.firstMethod(id: "test2")
+        _ = mock.secondMethod(count: 5)
+
+        @Sendable func idContainsTest(_ id: String) -> Bool {
+            id.contains("test")
+        }
+
+        InOrder(strict: false, mock) { inOrder in
+            inOrder.verify(mock, additionalAtLeast: 1).firstMethod(id: .matching(idContainsTest))
+            inOrder.verify(mock).secondMethod(count: .matching { $0 > 0 })
+        }
+    }
+
     // MARK: - Fatal Error Tests (Swift 6.2+)
 
     #if swift(>=6.2)
