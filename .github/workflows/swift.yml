@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Run swift-format
-        run: swift-format format --recursive --in-place Sources/ Tests/
+        run: swift-format format --recursive --in-place .
       - name: Check for formatting differences
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"

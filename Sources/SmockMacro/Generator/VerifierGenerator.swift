@@ -376,8 +376,8 @@ enum VerifierGenerator {
     }
 }
 
-private extension VerifierGenerator {
-    static func captureReturnType(parameters: [FunctionParameterSyntax]) -> String? {
+extension VerifierGenerator {
+    fileprivate static func captureReturnType(parameters: [FunctionParameterSyntax]) -> String? {
         guard !parameters.isEmpty else { return nil }
 
         if parameters.count == 1 {
@@ -394,7 +394,7 @@ private extension VerifierGenerator {
         }
     }
 
-    static func captureMapExpression(parameters: [FunctionParameterSyntax]) -> String? {
+    fileprivate static func captureMapExpression(parameters: [FunctionParameterSyntax]) -> String? {
         guard !parameters.isEmpty else { return nil }
 
         if parameters.count == 1 {
@@ -410,7 +410,7 @@ private extension VerifierGenerator {
         }
     }
 
-    static func strippedParameterType(_ parameter: FunctionParameterSyntax) -> String {
+    fileprivate static func strippedParameterType(_ parameter: FunctionParameterSyntax) -> String {
         if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
             return attributedType.baseType.description.trimmingCharacters(in: .whitespacesAndNewlines)
         }
