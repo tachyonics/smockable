@@ -204,7 +204,8 @@ enum MockGenerator {
             // VerifiableSmock conformance
             try TypeAliasDeclSyntax("\(raw: parameters.accessLevel.rawValue) typealias VerifierType = Verifier")
 
-            let verifierSig = nonisolatedPrefix + parameters.accessLevel.rawValue
+            let verifierSig =
+                nonisolatedPrefix + parameters.accessLevel.rawValue
                 + " func getVerifier(mode: VerificationMode,"
                 + " sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
             try FunctionDeclSyntax("\(raw: verifierSig)") {
