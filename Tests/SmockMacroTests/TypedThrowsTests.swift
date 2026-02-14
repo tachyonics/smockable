@@ -135,12 +135,16 @@ struct TypedThrowsTests {
     @Test
     func testCustomClosureWithTypedThrows() throws {
         var expectations = MockTypedThrowsService.Expectations()
-        when(expectations.typedThrowingFunction(id: .any), times: 2, use: { (id: String) throws(TypedThrowsError) -> String in
-            if id == "fail" {
-                throw TypedThrowsError.specificError
+        when(
+            expectations.typedThrowingFunction(id: .any),
+            times: 2,
+            use: { (id: String) throws(TypedThrowsError) -> String in
+                if id == "fail" {
+                    throw TypedThrowsError.specificError
+                }
+                return "processed: \(id)"
             }
-            return "processed: \(id)"
-        })
+        )
 
         let mock = MockTypedThrowsService(expectations: expectations)
 
