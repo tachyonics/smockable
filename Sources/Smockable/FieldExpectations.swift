@@ -8,9 +8,12 @@
 /// This protocol extends `FieldOptionsProtocol` to support throwing functions
 /// and properties that can fail with an error.
 public protocol ErrorableFieldOptionsProtocol: FieldOptionsProtocol {
+    /// The type of error this expectation can throw.
+    associatedtype ErrorType: Error
+
     /// Updates the expectation to throw the specified error when matched.
     /// - Parameter error: The error to throw
-    func update(error: Swift.Error)
+    func update(error: ErrorType)
 }
 
 /// Protocol for field expectations that return a value.

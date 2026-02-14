@@ -19,10 +19,11 @@ enum ExpectedResponseGenerator {
                     """
                 )
 
-                if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                    let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try EnumCaseDeclSyntax(
                         """
-                        case error(Swift.Error)
+                        case error(\(raw: errorType))
                         """
                     )
                 }

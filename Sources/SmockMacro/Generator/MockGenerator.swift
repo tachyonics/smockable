@@ -44,7 +44,6 @@ enum MockGenerator {
 
         // Parse accessor block to determine async/throws modifiers
         var isAsync = false
-        var isThrowing = false
         var hasGetter = false
         var hasSetter = false
         var effectSpecifiers: AccessorEffectSpecifiersSyntax?
@@ -57,8 +56,6 @@ enum MockGenerator {
                     case .keyword(.get):
                         hasGetter = true
                         isAsync = accessor.effectSpecifiers?.asyncSpecifier != nil
-                        isThrowing = accessor.effectSpecifiers?.throwsClause != nil
-
                         effectSpecifiers = accessor.effectSpecifiers
                     case .keyword(.set):
                         hasSetter = true
@@ -77,13 +74,15 @@ enum MockGenerator {
             hasSetter = true
         }
 
+        let throwsClause = effectSpecifiers?.throwsClause
+
         let getter =
             hasGetter
             ? try makePropertyFunction(
                 propertyFunctionType: .get,
                 propertyType: propertyType,
                 isAsync: isAsync,
-                isThrowing: isThrowing
+                throwsClause: throwsClause
             )
             : nil
         let setter =
@@ -92,7 +91,7 @@ enum MockGenerator {
                 propertyFunctionType: .set,
                 propertyType: propertyType,
                 isAsync: isAsync,
-                isThrowing: isThrowing
+                throwsClause: throwsClause
             )
             : nil
 
@@ -412,7 +411,7 @@ private func makePropertyFunction(
     propertyFunctionType: PropertyFunctionType,
     propertyType: TypeSyntax,
     isAsync: Bool,
-    isThrowing: Bool
+    throwsClause: ThrowsClauseSyntax?
 ) throws -> FunctionDeclSyntax {
     var signature = "func "
 
@@ -426,8 +425,12 @@ private func makePropertyFunction(
     if isAsync {
         signature += " async"
     }
-    if isThrowing {
-        signature += " throws"
+    if let throwsClause {
+        if let type = throwsClause.type {
+            signature += " throws(\(type.trimmed))"
+        } else {
+            signature += " throws"
+        }
     }
 
     if case .get = propertyFunctionType {

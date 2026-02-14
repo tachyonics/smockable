@@ -88,7 +88,7 @@ public func when<FieldExpectationType: ReturnableFieldOptionsProtocol>(
 public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: Int = 1,
-    throw error: Swift.Error
+    throw error: FieldExpectationType.ErrorType
 ) {
     expectation.update(error: error)
     expectation.update(times: times)
@@ -111,7 +111,7 @@ public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
 public func when<FieldExpectationType: ErrorableFieldOptionsProtocol>(
     _ expectation: FieldExpectationType,
     times: ExpectationTimes,
-    throw error: Swift.Error
+    throw error: FieldExpectationType.ErrorType
 ) {
     expectation.update(error: error)
     switch times {

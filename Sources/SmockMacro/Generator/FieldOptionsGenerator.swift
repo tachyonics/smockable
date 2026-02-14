@@ -10,7 +10,7 @@ enum FieldOptionsGenerator {
     ) throws -> ClassDeclSyntax {
 
         var genericParameterClauseElements: [String] = []
-        if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+        if functionSignature.effectSpecifiers?.throwsClause != nil {
             genericParameterClauseElements.append("ErrorableFieldOptionsProtocol")
         }
 
@@ -46,10 +46,11 @@ enum FieldOptionsGenerator {
                     """
                 )
 
-                if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                    let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try FunctionDeclSyntax(
                         """
-                        \(raw: accessLevel.rawValue) func update(error: Swift.Error) {
+                        \(raw: accessLevel.rawValue) func update(error: \(raw: errorType)) {
                           self.expectedResponse = .error(error)
                         }
                         """
