@@ -27,7 +27,7 @@ Inspired by Java's [Mockito](https://site.mockito.org) along with starting out l
 - ✅ **Thread-safe** mock implementations with Sendable conformance
 - ✅ **Flexible verifications** with parameter matching and InOrder verification to verify invocation sequence (including across multiple mocks)
 - ✅ **Protocol inheritance** and associated types support
-- ✅ **Async/await**, sync and throwing function support
+- ✅ **Async/await**, sync and throwing function support (including [typed throws](https://swiftpackageindex.com/tachyonics/smockable/main/documentation/smockable/typedthrows))
 - ✅ **Protocol property requirements** with full get/set/async/throws support
 - ✅ **Collection expectations and verification** for Arrays, Dictionaries, and Sets (include Equatable checks when the Collection is Equatable)
 

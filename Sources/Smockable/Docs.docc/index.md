@@ -14,7 +14,7 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 - Provides an expectations-based API for configuring behavior
 - Tracks all method calls for verification
 - Is thread-safe and Sendable
-- Supports sync, async/await and throwing functions
+- Supports sync, async/await and throwing functions (including typed throws)
 - Supports property getters (including async and/or throwing) and setters
 
 ## Topics
@@ -32,6 +32,7 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 
 ### Advanced Topics
 
+- <doc:TypedThrows>
 - <doc:MacroParameters>
 - <doc:AssociatedTypes>
 - <doc:FrameworkLimitations>
