@@ -6,13 +6,13 @@
 <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dswift-versions" alt="Swift Version compatibility">
 </a>
 <a href="https://swiftpackageindex.com/tachyonics/smockable/documentation">
-<img src="https://img.shields.io/badge/docc-documentation-blue.svg?style=flat" alt="Package documentation">
+<img src="https://img.shields.io/badge/docc-documentation-orange.svg?style=flat" alt="Package documentation">
 </a>
 <a href="https://codecov.io/gh/tachyonics/smockable">
 <img src="https://img.shields.io/codecov/c/github/tachyonics/smockable?logo=codecov&label=codecov" alt="Code Coverage">
 </a>
 <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dplatforms" alt="Platform Compatibility">
-<img src="https://img.shields.io/badge/license-Apache2-blue.svg?style=flat" alt="Apache 2">
+<img src="https://img.shields.io/badge/license-Apache2-yellow.svg?style=flat" alt="Apache 2">
 </p>
 
 
