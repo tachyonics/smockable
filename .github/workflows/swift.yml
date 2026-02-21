@@ -78,16 +78,17 @@ jobs:
         run: swift test --enable-code-coverage --xunit-output test-results.xml
       - name: Convert to LCOV
         run: |
-          BIN=$(swift build --show-bin-path)
+          BIN_PATH=$(swift build --show-bin-path)
+          PROFDATA=$(find .build -name 'default.profdata' -path '*/codecov/*' | head -1)
+          XCTEST=$(find "$BIN_PATH" -name '*.xctest' -type f | head -1)
           llvm-cov export \
             -format=lcov \
-            -instr-profile=.build/debug/codecov/default.profdata \
-            "$BIN/smockablePackageTests.xctest" \
+            -instr-profile="$PROFDATA" \
+            "$XCTEST" \
             -ignore-filename-regex=".build|Tests" \
             > coverage.lcov
       - name: Upload coverage
         uses: codecov/codecov-action@v5
-        if: always()
         with:
           files: coverage.lcov
           fail_ci_if_error: true
