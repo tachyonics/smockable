@@ -9,7 +9,7 @@
 <img src="https://img.shields.io/badge/docc-documentation-blue.svg?style=flat" alt="Package documentation">
 </a>
 <a href="https://codecov.io/gh/tachyonics/smockable">
-<img src="https://img.shields.io/codecov/c/github/tachyonics/smockable" alt="Code Coverage">
+<img src="https://img.shields.io/codecov/c/github/tachyonics/smockable?logo=codecov&label=codecov" alt="Code Coverage">
 </a>
 <img src="https://img.shields.io/badge/ubuntu-22.04|24.04-yellow.svg?style=flat" alt="Ubuntu 22.04 and 24.04 Tested">
 <img src="https://img.shields.io/badge/license-Apache2-blue.svg?style=flat" alt="Apache 2">
