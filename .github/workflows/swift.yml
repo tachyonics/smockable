@@ -82,7 +82,7 @@ jobs:
           llvm-cov export \
             -format=lcov \
             -instr-profile=.build/debug/codecov/default.profdata \
-            "$BIN/task-clusterPackageTests.xctest" \
+            "$BIN/smockablePackageTests.xctest" \
             -ignore-filename-regex=".build|Tests" \
             > coverage.lcov
       - name: Upload coverage
