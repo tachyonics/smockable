@@ -66,3 +66,51 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git diff --exit-code
+  Coverage:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2.3-noble
+    steps:
+      - name: Install dependencies                                                                                                                                              
+        run: apt-get update && apt-get install -y curl
+      - uses: actions/checkout@v6
+      - name: Run tests with coverage
+        run: swift test --enable-code-coverage --xunit-output test-results.xml
+      - name: Convert to LCOV
+        run: |
+          BIN=$(swift build --show-bin-path)
+          llvm-cov export \
+            -format=lcov \
+            -instr-profile=.build/debug/codecov/default.profdata \
+            "$BIN/task-clusterPackageTests.xctest" \
+            -ignore-filename-regex=".build|Tests" \
+            > coverage.lcov
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: coverage.lcov
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload test results
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: test-results.xml
+          report_type: test_results
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  APIBreakage:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2.3-noble
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Check for API breaking changes
+        run: |                                                                                                                                                                  
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"                                                                                                          
+          swift package diagnose-api-breaking-changes origin/main
