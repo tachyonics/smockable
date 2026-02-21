@@ -3,13 +3,16 @@
 <img src="https://github.com/tachyonics/smockable/actions/workflows/swift.yml/badge.svg?branch=main" alt="Build - Main Branch">
 </a>
 <a href="http://swift.org">
-<img src="https://img.shields.io/badge/swift-6.2|6.1-orange.svg?style=flat" alt="Swift 6.2 and 6.1 Compatible and Tested">
+<img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dswift-versions" alt="Swift Version compatibility">
 </a>
 <a href="https://swiftpackageindex.com/tachyonics/smockable/documentation">
-<img src="https://img.shields.io/badge/docc-documentation-blue.svg?style=flat" alt="Package documentation">
+<img src="https://img.shields.io/badge/docc-documentation-orange.svg?style=flat" alt="Package documentation">
 </a>
-<img src="https://img.shields.io/badge/ubuntu-22.04|24.04-yellow.svg?style=flat" alt="Ubuntu 22.04 and 24.04 Tested">
-<img src="https://img.shields.io/badge/license-Apache2-blue.svg?style=flat" alt="Apache 2">
+<a href="https://codecov.io/gh/tachyonics/smockable">
+<img src="https://img.shields.io/codecov/c/github/tachyonics/smockable?logo=codecov&label=codecov" alt="Code Coverage">
+</a>
+<img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dplatforms" alt="Platform Compatibility">
+<img src="https://img.shields.io/badge/license-Apache2-yellow.svg?style=flat" alt="Apache 2">
 </p>
 
 
