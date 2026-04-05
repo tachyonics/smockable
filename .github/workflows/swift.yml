@@ -5,61 +5,59 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-      
+
 jobs:
-  BuildTestAndAnalyze:
-    name: Image ${{ matrix.image }}
+  BuildAndTest:
+    name: Linux ${{ matrix.os }} / Swift ${{ matrix.swift-version }}
     strategy:
+      fail-fast: false
       matrix:
-        image: ["swift:6.2.3-noble"]
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ matrix.image }}
+        os: [ubuntu-22.04, ubuntu-24.04]
+        swift-version: ["6.2.4"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Install dependencies
-        run: apt-get update && apt-get install -y libssl-dev curl unzip
       - uses: actions/checkout@v6
+      - uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift-version }}
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev curl unzip
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Build tests
+        # -v captures compiler invocations for SwiftLint analyze; redirected
+        # to file to keep the CI log readable.
+        run: swift build --build-tests -v > build.log 2>&1
       - name: Run tests
-        run: swift test -v 2>&1 | tee build.log
+        run: swift test --skip-build
       - name: Install SwiftLint
+        # SwiftLint's prebuilt Linux binary requires a GLIBC only present on 24.04+
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           curl -sL https://github.com/realm/SwiftLint/releases/download/0.63.2/swiftlint_linux_amd64.zip -o swiftlint.zip
           unzip -o swiftlint.zip -d /usr/local/bin
           chmod +x /usr/local/bin/swiftlint
       - name: SwiftLint unused imports
+        if: matrix.os == 'ubuntu-24.04'
         run: swiftlint analyze --strict --quiet --compiler-log-path build.log
-  BuildAndTest:
-    name: Image ${{ matrix.image }}
-    strategy:
-      matrix:
-        image: ["swift:6.2.3-jammy"]
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ matrix.image }}
-    steps:
-      - name: Install libssl-dev
-        run: apt-get update && apt-get install -y libssl-dev
-      - uses: actions/checkout@v6
-      - name: Build
-        run: swift build -c release -Xswiftc -strict-concurrency=complete
-      - name: Run tests
-        run: swift test
   SwiftLint:
     name: SwiftLint version 3.2.1
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: GitHub Action for SwiftLint
         uses: norio-nomura/action-swiftlint@3.2.1
   SwiftFormat:
-    name: swift-format
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.2.3-noble
+    name: swift-format / Swift ${{ matrix.swift-version }}
+    strategy:
+      matrix:
+        swift-version: ["6.2.4"]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
+      - uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift-version }}
       - name: Run swift-format
         run: swift-format format --recursive --in-place .
       - name: Check for formatting differences
@@ -67,13 +65,18 @@ jobs:
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git diff --exit-code
   Coverage:
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.2.3-noble
+    name: Coverage / Swift ${{ matrix.swift-version }}
+    strategy:
+      matrix:
+        swift-version: ["6.2.4"]
+    runs-on: ubuntu-24.04
     steps:
-      - name: Install dependencies                                                                                                                                              
-        run: apt-get update && apt-get install -y curl
       - uses: actions/checkout@v6
+      - uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift-version }}
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y curl libssl-dev
       - name: Run tests with coverage
         run: swift test --enable-code-coverage --xunit-output test-results.xml
       - name: Convert to LCOV
@@ -104,14 +107,21 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   APIBreakage:
-    runs-on: ubuntu-latest
-    container:
-      image: swift:6.2.3-noble
+    name: API Breakage / Swift ${{ matrix.swift-version }}
+    strategy:
+      matrix:
+        swift-version: ["6.2.4"]
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift-version }}
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
       - name: Check for API breaking changes
-        run: |                                                                                                                                                                  
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"                                                                                                          
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           swift package diagnose-api-breaking-changes origin/main
