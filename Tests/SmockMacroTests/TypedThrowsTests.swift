@@ -153,7 +153,7 @@ struct TypedThrowsTests {
 
     @Test
     func testCustomClosureWithTypedThrows() throws {
-        func handler(id: String) throws(TypedThrowsError) -> String {
+        let handler: @Sendable (String) throws(TypedThrowsError) -> String = { (id: String) throws(TypedThrowsError) -> String in
             if id == "fail" {
                 throw TypedThrowsError.specificError
             }
