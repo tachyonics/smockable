@@ -145,6 +145,18 @@ package enum MacroParameterParser {
                 let typeIdentifier = IdentifierTypeSyntax(name: .identifier(typeName))
                 types.append(TypeSyntax(typeIdentifier))
             }
+            // Handle generic specialization Type<...>.self syntax (e.g., Box<Int>.self)
+            else if let memberAccess = element.expression.as(MemberAccessExprSyntax.self),
+                memberAccess.declName.baseName.text == "self",
+                let genericExpr = memberAccess.base?.as(GenericSpecializationExprSyntax.self)
+            {
+                let typeIdentifier = IdentifierTypeSyntax(
+                    name: .identifier(
+                        genericExpr.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                    )
+                )
+                types.append(TypeSyntax(typeIdentifier))
+            }
             // Handle module-qualified Type.self syntax (e.g., Foundation.Date.self)
             else if let memberAccess = element.expression.as(MemberAccessExprSyntax.self),
                 memberAccess.declName.baseName.text == "self",

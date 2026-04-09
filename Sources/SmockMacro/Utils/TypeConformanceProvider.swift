@@ -46,12 +46,14 @@ package enum TypeConformanceProvider {
             "CGPoint", "CGSize", "CGRect", "CGVector",
         ]
 
-        // Convert TypeSyntax arrays to string arrays for internal processing
+        // Convert TypeSyntax arrays to string arrays for internal processing.
+        // Strip all whitespace so generic specializations match regardless of
+        // formatting (e.g. `Foo<Bar, Baz>` and `Foo<Bar,Baz>`).
         let additionalComparableTypeStrings = additionalComparableTypes.map {
-            $0.description.trimmingCharacters(in: .whitespaces)
+            $0.description.filter { !$0.isWhitespace }
         }
         let additionalEquatableTypeStrings = additionalEquatableTypes.map {
-            $0.description.trimmingCharacters(in: .whitespaces)
+            $0.description.filter { !$0.isWhitespace }
         }
 
         let comparableTypes = Set(comparableAssociatedTypes + builtInComparableTypes + additionalComparableTypeStrings)
@@ -144,6 +146,26 @@ package enum TypeConformanceProvider {
                 remainingInput = remainingInput.dropFirst()
                 currentToken = ""
                 startOfToken = true
+                continue
+            }
+
+            // Generic parameters on non-collection types (e.g. `Foo<Bar>`) are
+            // collected as part of the current token so the full specialization
+            // (`Foo<Bar>`) is looked up in the conformance allowlist. Different
+            // specializations of the same base type are treated as distinct.
+            if first == "<" {
+                currentToken.append(first)
+                var depth = 1
+                remainingInput = remainingInput.dropFirst()
+                while let ch = remainingInput.first, depth > 0 {
+                    if ch == "<" { depth += 1 }
+                    if ch == ">" { depth -= 1 }
+                    if ch != " " {
+                        currentToken.append(ch)
+                    }
+                    remainingInput = remainingInput.dropFirst()
+                }
+                startOfToken = false
                 continue
             }
 
