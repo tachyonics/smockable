@@ -21,20 +21,26 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum ExpectedResponseGenerator {
+    /// Generate an expected response enum for a specific function.
+    ///
+    /// The generated `_ExpectedResponse` enum is intentionally `internal` regardless of
+    /// the protocol's access level. It's an implementation detail held inside
+    /// `_FieldOptions` and the storage tuples; users never reference it directly.
+    /// Keeping it internal preserves freedom to refactor the response storage shape.
     static func expectedResponseEnumDeclaration(
         typePrefix: String = "",
         variablePrefix: String,
         functionSignature: FunctionSignatureSyntax,
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        genericContext: GenericContext = .empty
     ) throws -> EnumDeclSyntax {
         try EnumDeclSyntax(
-            modifiers: [accessLevel.declModifier],
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {
                 try EnumCaseDeclSyntax(
                     """
-                    case closure(@Sendable \(ClosureGenerator.closureElements(functionSignature: functionSignature)))
+                    case closure(@Sendable \(ClosureGenerator.closureElements(functionSignature: functionSignature, genericContext: genericContext)))
                     """
                 )
 
@@ -48,9 +54,11 @@ enum ExpectedResponseGenerator {
                 }
 
                 if let returnType = functionSignature.returnClause?.type {
+                    // Substitute generic return types with their existential or Any.
+                    let valueType = Self.erasedReturnType(returnType, genericContext: genericContext)
                     try EnumCaseDeclSyntax(
                         """
-                        case value(\(returnType))
+                        case value(\(raw: valueType))
                         """
                     )
                 } else {
@@ -62,6 +70,26 @@ enum ExpectedResponseGenerator {
                 }
             }
         )
+    }
+
+    /// Substitute a generic return type with its existential or `any Sendable`.
+    /// Concrete types are returned unchanged.
+    ///
+    /// `any Sendable` is used for wrapped generic return types so the storage
+    /// remains `Sendable`-conforming. Generic parameters must include `Sendable`
+    /// in their constraints (the macro emits a diagnostic otherwise — see issue).
+    static func erasedReturnType(
+        _ returnType: TypeSyntax,
+        genericContext: GenericContext
+    ) -> String {
+        switch genericContext.classify(returnType) {
+        case .directGeneric(let info):
+            return info.storageType
+        case .wrappedGeneric:
+            return "any Sendable"
+        case .concrete:
+            return returnType.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
     }
 
     static func expectedResponseVariableDeclaration(

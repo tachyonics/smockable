@@ -137,7 +137,8 @@ enum StorageGenerator {
     static func receivedInvocationsDeclaration(
         functionDeclarations: [FunctionDeclSyntax],
         propertyDeclarations: [PropertyDeclaration] = [],
-        typePrefix: String = ""
+        typePrefix: String = "",
+        typeConformanceProvider: (String) -> TypeConformance = { _ in .neitherComparableNorEquatable }
     ) throws
         -> StructDeclSyntax
     {
@@ -155,10 +156,15 @@ enum StorageGenerator {
                 for functionDeclaration in functionDeclarations {
                     let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                     let parameterList = functionDeclaration.signature.parameterClause.parameters
+                    let genericContext = GenericContext(
+                        functionDeclaration: functionDeclaration,
+                        typeConformanceProvider: typeConformanceProvider
+                    )
 
                     try ReceivedInvocationsGenerator.variableDeclaration(
                         variablePrefix: variablePrefix,
-                        parameterList: parameterList
+                        parameterList: parameterList,
+                        genericContext: genericContext
                     )
                 }
             }

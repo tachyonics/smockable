@@ -24,7 +24,8 @@ enum FunctionImplementationGenerator {
     static func functionDeclaration(
         variablePrefix: String,
         functionDeclaration: FunctionDeclSyntax,
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        genericContext: GenericContext = .empty
     ) throws -> FunctionDeclSyntax {
         var mockFunctionDeclaration = functionDeclaration
 
@@ -38,7 +39,8 @@ enum FunctionImplementationGenerator {
         mockFunctionDeclaration.body = try getFunctionBody(
             variablePrefix: variablePrefix,
             functionDeclaration: functionDeclaration,
-            parameterList: parameterList
+            parameterList: parameterList,
+            genericContext: genericContext
         )
 
         return mockFunctionDeclaration
@@ -49,7 +51,8 @@ enum FunctionImplementationGenerator {
         typePrefix: String = "",
         storagePrefix: String = "",
         functionDeclaration: FunctionDeclSyntax,
-        parameterList: FunctionParameterListSyntax
+        parameterList: FunctionParameterListSyntax,
+        genericContext: GenericContext = .empty
     ) throws -> CodeBlockSyntax {
         var methodInterpolationParameters: [String] = []
         for parameter in parameterList {
@@ -115,7 +118,8 @@ enum FunctionImplementationGenerator {
             self.switchExpression(
                 variablePrefix: variablePrefix,
                 functionInterpolationSignature: functionInterpolationSignature,
-                functionDeclaration: functionDeclaration
+                functionDeclaration: functionDeclaration,
+                genericContext: genericContext
             )
         }
     }
@@ -254,27 +258,51 @@ enum FunctionImplementationGenerator {
         )
     }
 
+    /// Information about how the mock function's return type interacts with generic
+    /// substitution. When the declared return type is generic, the stored closure and
+    /// `.value` case return the existential storage type and need a force-cast back to
+    /// the declared generic type.
+    private struct ReturnCastInfo {
+        let needsCast: Bool
+        let returnTypeText: String
+
+        static func compute(
+            functionDeclaration: FunctionDeclSyntax,
+            genericContext: GenericContext
+        ) -> ReturnCastInfo {
+            guard let returnType = functionDeclaration.signature.returnClause?.type else {
+                return .init(needsCast: false, returnTypeText: "")
+            }
+            switch genericContext.classify(returnType) {
+            case .directGeneric, .wrappedGeneric:
+                return .init(
+                    needsCast: true,
+                    returnTypeText: returnType.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            case .concrete:
+                return .init(needsCast: false, returnTypeText: "")
+            }
+        }
+    }
+
     private static func switchExpression(
         variablePrefix: String,
         functionInterpolationSignature: String,
-        functionDeclaration: FunctionDeclSyntax
+        functionDeclaration: FunctionDeclSyntax,
+        genericContext: GenericContext = .empty
     ) -> SwitchExprSyntax {
-        SwitchExprSyntax(
+        let returnCast = ReturnCastInfo.compute(
+            functionDeclaration: functionDeclaration,
+            genericContext: genericContext
+        )
+
+        return SwitchExprSyntax(
             subject: ExprSyntax(stringLiteral: "responseProvider"),
             casesBuilder: {
-                SwitchCaseSyntax(
-                    SyntaxNodeString("case .closure(let closure):"),
-                    statementsBuilder: {
-                        ReturnStmtSyntax(
-                            expression:
-                                ClosureGenerator.callExpression(
-                                    baseName: "closure",
-                                    variablePrefix: variablePrefix,
-                                    needsLabels: false,
-                                    functionSignature: functionDeclaration.signature
-                                )
-                        )
-                    }
+                closureCase(
+                    variablePrefix: variablePrefix,
+                    functionDeclaration: functionDeclaration,
+                    returnCast: returnCast
                 )
 
                 if functionDeclaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier
@@ -288,21 +316,10 @@ enum FunctionImplementationGenerator {
                     )
                 }
 
-                if (functionDeclaration.signature.returnClause?.type) != nil {
-                    SwitchCaseSyntax(
-                        """
-                        case .value(let value):
-                            return value
-                        """
-                    )
-                } else {
-                    SwitchCaseSyntax(
-                        """
-                        case .success:
-                            return
-                        """
-                    )
-                }
+                returnOrSuccessCase(
+                    functionDeclaration: functionDeclaration,
+                    returnCast: returnCast
+                )
 
                 SwitchCaseSyntax(
                     """
@@ -312,6 +329,75 @@ enum FunctionImplementationGenerator {
                 )
             }
         )
+    }
+
+    private static func closureCase(
+        variablePrefix: String,
+        functionDeclaration: FunctionDeclSyntax,
+        returnCast: ReturnCastInfo
+    ) -> SwitchCaseSyntax {
+        SwitchCaseSyntax(
+            SyntaxNodeString("case .closure(let closure):"),
+            statementsBuilder: {
+                if returnCast.needsCast {
+                    // Closure returns the storage type; cast to the declared generic return type.
+                    CodeBlockItemSyntax(
+                        """
+                        return await closure(\(raw: closureCallArgs(functionDeclaration: functionDeclaration))) as! \(raw: returnCast.returnTypeText)
+                        """
+                    )
+                } else {
+                    ReturnStmtSyntax(
+                        expression:
+                            ClosureGenerator.callExpression(
+                                baseName: "closure",
+                                variablePrefix: variablePrefix,
+                                needsLabels: false,
+                                functionSignature: functionDeclaration.signature
+                            )
+                    )
+                }
+            }
+        )
+    }
+
+    private static func returnOrSuccessCase(
+        functionDeclaration: FunctionDeclSyntax,
+        returnCast: ReturnCastInfo
+    ) -> SwitchCaseSyntax {
+        if functionDeclaration.signature.returnClause?.type != nil {
+            if returnCast.needsCast {
+                return SwitchCaseSyntax(
+                    """
+                    case .value(let value):
+                        return value as! \(raw: returnCast.returnTypeText)
+                    """
+                )
+            } else {
+                return SwitchCaseSyntax(
+                    """
+                    case .value(let value):
+                        return value
+                    """
+                )
+            }
+        } else {
+            return SwitchCaseSyntax(
+                """
+                case .success:
+                    return
+                """
+            )
+        }
+    }
+
+    /// Build the argument list for calling the stored closure for a function with
+    /// a generic return type. We can't use ClosureGenerator.callExpression because
+    /// the result needs to be wrapped in `await` and `as!`.
+    private static func closureCallArgs(functionDeclaration: FunctionDeclSyntax) -> String {
+        functionDeclaration.signature.parameterClause.parameters.map { parameter in
+            (parameter.secondName ?? parameter.firstName).text
+        }.joined(separator: ", ")
     }
 }
 

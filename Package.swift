@@ -39,6 +39,8 @@ let package = Package(
             name: "SmockMacroTests",
             dependencies: [
                 .target(name: "Smockable"),
+                .target(name: "SmockMacro"),
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ],
             swiftSettings: [

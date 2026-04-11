@@ -334,7 +334,8 @@ enum MockGenerator {
             )
             try StorageGenerator.receivedInvocationsDeclaration(
                 functionDeclarations: functionDeclarations,
-                propertyDeclarations: propertyDeclarations
+                propertyDeclarations: propertyDeclarations,
+                typeConformanceProvider: typeConformanceProvider
             )
             try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
             try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
@@ -350,16 +351,22 @@ enum MockGenerator {
             for functionDeclaration in functionDeclarations {
                 let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
                 let parameterList = functionDeclaration.signature.parameterClause.parameters
+                let genericContext = GenericContext(
+                    functionDeclaration: functionDeclaration,
+                    typeConformanceProvider: typeConformanceProvider
+                )
 
                 try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                     variablePrefix: variablePrefix,
                     functionSignature: functionDeclaration.signature,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    genericContext: genericContext
                 )
                 try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                     variablePrefix: variablePrefix,
                     functionSignature: functionDeclaration.signature,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    genericContext: genericContext
                 )
 
                 // Generate input matcher struct for functions with parameters
@@ -367,7 +374,8 @@ enum MockGenerator {
                     variablePrefix: variablePrefix,
                     parameterList: parameterList,
                     accessLevel: parameters.accessLevel,
-                    typeConformanceProvider: typeConformanceProvider
+                    typeConformanceProvider: typeConformanceProvider,
+                    genericContext: genericContext
                 ) {
                     inputMatcherStruct
                 }
@@ -375,7 +383,8 @@ enum MockGenerator {
                 try FunctionImplementationGenerator.functionDeclaration(
                     variablePrefix: variablePrefix,
                     functionDeclaration: functionDeclaration,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    genericContext: genericContext
                 )
             }
 

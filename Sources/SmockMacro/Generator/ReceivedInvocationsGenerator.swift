@@ -62,9 +62,13 @@ import SwiftSyntaxBuilder
 enum ReceivedInvocationsGenerator {
     static func variableDeclaration(
         variablePrefix: String,
-        parameterList: FunctionParameterListSyntax
+        parameterList: FunctionParameterListSyntax,
+        genericContext: GenericContext = .empty
     ) throws -> VariableDeclSyntax {
-        let elementType = self.arrayElementType(parameterList: parameterList)
+        let elementType = self.arrayElementType(
+            parameterList: parameterList,
+            genericContext: genericContext
+        )
 
         return try VariableDeclSyntax(
             """
@@ -73,7 +77,10 @@ enum ReceivedInvocationsGenerator {
         )
     }
 
-    static func arrayElementType(parameterList: FunctionParameterListSyntax) -> TypeSyntaxProtocol {
+    static func arrayElementType(
+        parameterList: FunctionParameterListSyntax,
+        genericContext: GenericContext = .empty
+    ) -> TypeSyntaxProtocol {
         let tupleElements = TupleTypeElementListSyntax {
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__localCallIndex"),
@@ -92,10 +99,24 @@ enum ReceivedInvocationsGenerator {
                     firstName: parameter.secondName ?? parameter.firstName,
                     colon: .colonToken(),
                     type: {
-                        if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                            attributedType.baseType
-                        } else {
-                            parameter.type
+                        // Generic-aware: use existential or `any Sendable` for generic params.
+                        // `any Sendable` is required (instead of `Any`) because invocation
+                        // storage lives behind a Mutex and must be Sendable-conforming.
+                        switch genericContext.classify(parameter.type) {
+                        case .directGeneric(let info):
+                            return TypeSyntax(
+                                IdentifierTypeSyntax(name: .identifier(info.storageType))
+                            )
+                        case .wrappedGeneric:
+                            return TypeSyntax(
+                                IdentifierTypeSyntax(name: .identifier("any Sendable"))
+                            )
+                        case .concrete:
+                            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
+                                return attributedType.baseType
+                            } else {
+                                return parameter.type
+                            }
                         }
                     }()
                 )

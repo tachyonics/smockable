@@ -44,6 +44,11 @@ enum FunctionStyleExpectationsGenerator {
             ]
         }
 
+        let genericContext = GenericContext(
+            functionDeclaration: functionDeclaration,
+            typeConformanceProvider: typeConformanceProvider
+        )
+
         // Generate all overload combinations for functions with parameters
         return try generateOverloadCombinations(
             functionDeclaration: functionDeclaration,
@@ -52,7 +57,8 @@ enum FunctionStyleExpectationsGenerator {
             typePrefix: typePrefix,
             variablePrefix: variablePrefix,
             accessLevel: accessLevel,
-            typeConformanceProvider: typeConformanceProvider
+            typeConformanceProvider: typeConformanceProvider,
+            genericContext: genericContext
         )
     }
 
@@ -84,12 +90,14 @@ enum FunctionStyleExpectationsGenerator {
         typePrefix: String,
         variablePrefix: String,
         accessLevel: AccessLevel,
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        genericContext: GenericContext
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
         let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
             parameters: parameters[...],
-            typeConformanceProvider: typeConformanceProvider
+            typeConformanceProvider: typeConformanceProvider,
+            genericContext: genericContext
         )
 
         var methods: [FunctionDeclSyntax] = []
@@ -102,12 +110,86 @@ enum FunctionStyleExpectationsGenerator {
                 expectationClassName: expectationClassName,
                 typePrefix: typePrefix,
                 variablePrefix: variablePrefix,
-                accessLevel: accessLevel
+                accessLevel: accessLevel,
+                genericContext: genericContext
             )
             methods.append(method)
         }
 
         return methods
+    }
+
+    /// Generate the (parameter declaration, matcher initializer) for a single parameter
+    /// in an expectation setter, given its conformance and parameter form. Generic
+    /// parameters take precedence and are handled with the existential / `AnyValueMatcher`
+    /// substitution.
+    private static func parameterFragments(
+        parameter: FunctionParameterSyntax,
+        parameterType: TypeConformance,
+        form: AllParameterSequenceGenerator.ParameterForm,
+        genericContext: GenericContext
+    ) -> (paramDecl: String, matcherInit: String) {
+        let paramName = parameter.secondName?.text ?? parameter.firstName.text
+        let paramNameForSignature: String
+        if let secondName = parameter.secondName?.text {
+            paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
+        } else {
+            paramNameForSignature = parameter.firstName.text
+        }
+        let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isOptional = paramType.hasSuffix("?")
+
+        // Generic parameter handling — uses NonComparableValueMatcher<existential>
+        // for case 1 and AnyValueMatcher for case 2.
+        switch genericContext.classify(parameter.type) {
+        case .directGeneric(let info):
+            return (
+                "\(paramNameForSignature): NonComparableValueMatcher<\(info.storageType)>",
+                "\(paramName): \(paramName)"
+            )
+        case .wrappedGeneric:
+            return (
+                "\(paramNameForSignature): AnyValueMatcher",
+                "\(paramName): \(paramName)"
+            )
+        case .concrete:
+            break
+        }
+
+        switch form {
+        case .range:
+            let baseType = isOptional ? String(paramType.dropLast()) : paramType
+            return (
+                "\(paramNameForSignature): ClosedRange<\(baseType)>",
+                "\(paramName): .range(\(paramName))"
+            )
+        case .explicitMatcher:
+            let matcherTypePrefix: String
+            switch parameterType {
+            case .comparableAndEquatable:
+                matcherTypePrefix = ""
+            case .neitherComparableNorEquatable:
+                matcherTypePrefix = "NonComparable"
+            case .onlyEquatable:
+                matcherTypePrefix = "OnlyEquatable"
+            }
+            if isOptional {
+                return (
+                    "\(paramNameForSignature): Optional\(matcherTypePrefix)ValueMatcher<\(paramType.dropLast())>",
+                    "\(paramName): \(paramName)"
+                )
+            } else {
+                return (
+                    "\(paramNameForSignature): \(matcherTypePrefix)ValueMatcher<\(paramType)>",
+                    "\(paramName): \(paramName)"
+                )
+            }
+        case .exact:
+            return (
+                "\(paramNameForSignature): \(paramType)",
+                "\(paramName): .exact(\(paramName))"
+            )
+        }
     }
 
     /// Generate a specific method for a parameter type combination
@@ -119,55 +201,21 @@ enum FunctionStyleExpectationsGenerator {
         expectationClassName: String,
         typePrefix: String,
         variablePrefix: String,
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        genericContext: GenericContext
     ) throws -> FunctionDeclSyntax {
         var methodParameters: [String] = []
         var matcherInitializers: [String] = []
 
         for (parameter, parameterType, form) in parameterSequence {
-            let paramName = parameter.secondName?.text ?? parameter.firstName.text
-            let paramNameForSignature: String
-            if let secondName = parameter.secondName?.text {
-                paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
-            } else {
-                paramNameForSignature = parameter.firstName.text
-            }
-            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            let isOptional = paramType.hasSuffix("?")
-
-            switch form {
-            case .range:
-                if isOptional {
-                    let baseType = String(paramType.dropLast())  // Remove '?'
-                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(baseType)>")
-                    matcherInitializers.append("\(paramName): .range(\(paramName))")
-                } else {
-                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(paramType)>")
-                    matcherInitializers.append("\(paramName): .range(\(paramName))")
-                }
-            case .explicitMatcher:
-                let typePrefix: String
-                switch parameterType {
-                case .comparableAndEquatable:
-                    typePrefix = ""
-                case .neitherComparableNorEquatable:
-                    typePrefix = "NonComparable"
-                case .onlyEquatable:
-                    typePrefix = "OnlyEquatable"
-                }
-                if isOptional {
-                    methodParameters.append(
-                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(paramType.dropLast())>"
-                    )
-                    matcherInitializers.append("\(paramName): \(paramName)")
-                } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
-                    matcherInitializers.append("\(paramName): \(paramName)")
-                }
-            case .exact:
-                methodParameters.append("\(paramNameForSignature): \(paramType)")
-                matcherInitializers.append("\(paramName): .exact(\(paramName))")
-            }
+            let fragments = parameterFragments(
+                parameter: parameter,
+                parameterType: parameterType,
+                form: form,
+                genericContext: genericContext
+            )
+            methodParameters.append(fragments.paramDecl)
+            matcherInitializers.append(fragments.matcherInit)
         }
 
         let methodSignature = methodParameters.joined(separator: ", ")

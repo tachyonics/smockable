@@ -35,4 +35,5 @@ When you annotate a protocol with `@Smock`, the macro generates a corresponding 
 - <doc:TypedThrows>
 - <doc:MacroParameters>
 - <doc:AssociatedTypes>
+- <doc:GenericMethods>
 - <doc:FrameworkLimitations>

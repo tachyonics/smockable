@@ -103,9 +103,14 @@ enum VerifierGenerator {
         for functionDeclaration in functionDeclarations {
             let parameterList = functionDeclaration.signature.parameterClause.parameters
             let parameters = Array(parameterList)
+            let genericContext = GenericContext(
+                functionDeclaration: functionDeclaration,
+                typeConformanceProvider: typeConformanceProvider
+            )
             let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
                 parameters: parameters[...],
-                typeConformanceProvider: typeConformanceProvider
+                typeConformanceProvider: typeConformanceProvider,
+                genericContext: genericContext
             )
 
             if parameters.isEmpty {
@@ -148,7 +153,8 @@ enum VerifierGenerator {
                         parameterSequence: parameterSequence,
                         typePrefix: typePrefix,
                         storagePrefix: storagePrefix,
-                        accessLevel: accessLevel
+                        accessLevel: accessLevel,
+                        genericContext: genericContext
                     )
                 }
             }
@@ -159,7 +165,8 @@ enum VerifierGenerator {
         parameterSequence: [(
             FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
         )],
-        allParametersAreMatchers: Bool
+        allParametersAreMatchers: Bool,
+        genericContext: GenericContext
     )
         -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
     {
@@ -168,69 +175,16 @@ enum VerifierGenerator {
         var matcherInitializers: [String] = []
 
         for (parameter, parameterType, form) in parameterSequence {
-            let paramName = parameter.secondName?.text ?? parameter.firstName.text
-            let paramNameForSignature: String
-            let paramNameForCall: String
-            if let secondName = parameter.secondName?.text {
-                paramNameForSignature = "\(parameter.firstName.text) \(secondName)"
-                paramNameForCall = secondName
-            } else {
-                paramNameForSignature = parameter.firstName.text
-                paramNameForCall = parameter.firstName.text
-            }
-            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            let isOptional = paramType.hasSuffix("?")
-
-            var matcherInitializerPrefix: String
-            if parameter.firstName.text == "_" {
-                // when allParametersAreMatchers != true, we will delegate to the all matchers variant
-                matcherInitializerPrefix = allParametersAreMatchers ? "\(paramNameForCall): " : ""
-            } else {
-                matcherInitializerPrefix =
-                    allParametersAreMatchers ? "\(paramNameForCall): " : "\(parameter.firstName.text): "
-            }
-
-            if paramType == "String" || paramType == "String?" {
-                methodInterpolationParameters.append(
-                    "\(paramNameForSignature): \\(\(paramName).stringSpecficDescription)"
-                )
-            } else {
-                methodInterpolationParameters.append("\(paramNameForSignature): \\(\(paramName).description)")
-            }
-
-            switch form {
-            case .range:
-                if isOptional {
-                    let baseType = String(paramType.dropLast())  // Remove '?'
-                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(baseType)>")
-                    matcherInitializers.append("\(matcherInitializerPrefix).range(\(paramName))")
-                } else {
-                    methodParameters.append("\(paramNameForSignature): ClosedRange<\(paramType)>")
-                    matcherInitializers.append("\(matcherInitializerPrefix).range(\(paramName))")
-                }
-            case .explicitMatcher:
-                let typePrefix: String
-                switch parameterType {
-                case .comparableAndEquatable:
-                    typePrefix = ""
-                case .neitherComparableNorEquatable:
-                    typePrefix = "NonComparable"
-                case .onlyEquatable:
-                    typePrefix = "OnlyEquatable"
-                }
-                if isOptional {
-                    methodParameters.append(
-                        "\(paramNameForSignature): Optional\(typePrefix)ValueMatcher<\(paramType.dropLast())>"
-                    )
-                    matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
-                } else {
-                    methodParameters.append("\(paramNameForSignature): \(typePrefix)ValueMatcher<\(paramType)>")
-                    matcherInitializers.append("\(matcherInitializerPrefix)\(paramName)")
-                }
-            case .exact:
-                methodParameters.append("\(paramNameForSignature): \(paramType)")
-                matcherInitializers.append("\(matcherInitializerPrefix).exact(\(paramName))")
-            }
+            let fragments = parameterFragments(
+                parameter: parameter,
+                parameterType: parameterType,
+                form: form,
+                allParametersAreMatchers: allParametersAreMatchers,
+                genericContext: genericContext
+            )
+            methodParameters.append(fragments.paramDecl)
+            methodInterpolationParameters.append(fragments.interpolation)
+            matcherInitializers.append(fragments.matcherInit)
         }
 
         return (methodParameters, methodInterpolationParameters, matcherInitializers)
@@ -281,7 +235,8 @@ enum VerifierGenerator {
         )],
         typePrefix: String,
         storagePrefix: String,
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        genericContext: GenericContext
     ) throws -> FunctionDeclSyntax {
         let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
             if case .explicitMatcher = entry.2 {
@@ -293,7 +248,8 @@ enum VerifierGenerator {
 
         let (methodParameters, methodInterpolationParameters, matcherInitializers) = getParameters(
             parameterSequence: parameterSequence,
-            allParametersAreMatchers: allParametersAreMatchers
+            allParametersAreMatchers: allParametersAreMatchers,
+            genericContext: genericContext
         )
 
         let methodSignature = methodParameters.joined(separator: ", ")
@@ -312,7 +268,7 @@ enum VerifierGenerator {
         let functionName = functionDeclaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
-        let returnTypeString = captureReturnType(parameters: parameters)!
+        let returnTypeString = captureReturnType(parameters: parameters, genericContext: genericContext)!
         let mapExpression = captureMapExpression(parameters: parameters)!
 
         // if this is not a varient with all matcher inputs
@@ -396,17 +352,144 @@ enum VerifierGenerator {
 }
 
 extension VerifierGenerator {
-    fileprivate static func captureReturnType(parameters: [FunctionParameterSyntax]) -> String? {
+    /// Build the (param decl, interpolation, matcher init) fragments for a single
+    /// verifier parameter, taking generic substitution into account. Lives in the
+    /// extension to keep the main type body within size limits.
+    fileprivate static func parameterFragments(
+        parameter: FunctionParameterSyntax,
+        parameterType: TypeConformance,
+        form: AllParameterSequenceGenerator.ParameterForm,
+        allParametersAreMatchers: Bool,
+        genericContext: GenericContext
+    ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
+        let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
+
+        // Generic parameter handling — uses NonComparableValueMatcher<existential>
+        // for case 1 and AnyValueMatcher for case 2.
+        switch genericContext.classify(parameter.type) {
+        case .directGeneric(let info):
+            return (
+                "\(names.signature): NonComparableValueMatcher<\(info.storageType)>",
+                "\(names.signature): \\(\(names.local).description)",
+                "\(names.matcherPrefix)\(names.local)"
+            )
+        case .wrappedGeneric:
+            return (
+                "\(names.signature): AnyValueMatcher",
+                "\(names.signature): \\(\(names.local).description)",
+                "\(names.matcherPrefix)\(names.local)"
+            )
+        case .concrete:
+            return concreteParameterFragments(
+                parameter: parameter,
+                parameterType: parameterType,
+                form: form,
+                names: names
+            )
+        }
+    }
+
+    fileprivate struct ParameterNames {
+        let local: String
+        let signature: String
+        let matcherPrefix: String
+    }
+
+    fileprivate static func parameterNames(
+        _ parameter: FunctionParameterSyntax,
+        allParametersAreMatchers: Bool
+    ) -> ParameterNames {
+        let local = parameter.secondName?.text ?? parameter.firstName.text
+        let signature: String
+        let call: String
+        if let secondName = parameter.secondName?.text {
+            signature = "\(parameter.firstName.text) \(secondName)"
+            call = secondName
+        } else {
+            signature = parameter.firstName.text
+            call = parameter.firstName.text
+        }
+        let matcherPrefix: String
+        if parameter.firstName.text == "_" {
+            // when allParametersAreMatchers != true, we will delegate to the all matchers variant
+            matcherPrefix = allParametersAreMatchers ? "\(call): " : ""
+        } else {
+            matcherPrefix = allParametersAreMatchers ? "\(call): " : "\(parameter.firstName.text): "
+        }
+        return ParameterNames(local: local, signature: signature, matcherPrefix: matcherPrefix)
+    }
+
+    /// Fragment generation for non-generic parameters across the three parameter forms.
+    fileprivate static func concreteParameterFragments(
+        parameter: FunctionParameterSyntax,
+        parameterType: TypeConformance,
+        form: AllParameterSequenceGenerator.ParameterForm,
+        names: ParameterNames
+    ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
+        let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isOptional = paramType.hasSuffix("?")
+
+        let interpolation: String
+        if paramType == "String" || paramType == "String?" {
+            interpolation = "\(names.signature): \\(\(names.local).stringSpecficDescription)"
+        } else {
+            interpolation = "\(names.signature): \\(\(names.local).description)"
+        }
+
+        switch form {
+        case .range:
+            let baseType = isOptional ? String(paramType.dropLast()) : paramType
+            return (
+                "\(names.signature): ClosedRange<\(baseType)>",
+                interpolation,
+                "\(names.matcherPrefix).range(\(names.local))"
+            )
+        case .explicitMatcher:
+            let matcherTypePrefix: String
+            switch parameterType {
+            case .comparableAndEquatable:
+                matcherTypePrefix = ""
+            case .neitherComparableNorEquatable:
+                matcherTypePrefix = "NonComparable"
+            case .onlyEquatable:
+                matcherTypePrefix = "OnlyEquatable"
+            }
+            if isOptional {
+                return (
+                    "\(names.signature): Optional\(matcherTypePrefix)ValueMatcher<\(paramType.dropLast())>",
+                    interpolation,
+                    "\(names.matcherPrefix)\(names.local)"
+                )
+            } else {
+                return (
+                    "\(names.signature): \(matcherTypePrefix)ValueMatcher<\(paramType)>",
+                    interpolation,
+                    "\(names.matcherPrefix)\(names.local)"
+                )
+            }
+        case .exact:
+            return (
+                "\(names.signature): \(paramType)",
+                interpolation,
+                "\(names.matcherPrefix).exact(\(names.local))"
+            )
+        }
+    }
+
+    fileprivate static func captureReturnType(
+        parameters: [FunctionParameterSyntax],
+        genericContext: GenericContext
+    ) -> String? {
         guard !parameters.isEmpty else { return nil }
 
         if parameters.count == 1 {
             let param = parameters[0]
-            let type = strippedParameterType(param)
+            let type = strippedParameterType(param, genericContext: genericContext)
             return "[\(type)]"
         } else {
             let tupleElements = parameters.map { param in
                 let name = (param.secondName ?? param.firstName).text
-                let type = strippedParameterType(param)
+                let type = strippedParameterType(param, genericContext: genericContext)
                 return "\(name): \(type)"
             }
             return "[(\(tupleElements.joined(separator: ", ")))]"
@@ -429,11 +512,22 @@ extension VerifierGenerator {
         }
     }
 
-    fileprivate static func strippedParameterType(_ parameter: FunctionParameterSyntax) -> String {
-        if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-            return attributedType.baseType.description.trimmingCharacters(in: .whitespacesAndNewlines)
+    fileprivate static func strippedParameterType(
+        _ parameter: FunctionParameterSyntax,
+        genericContext: GenericContext
+    ) -> String {
+        // Generic-aware: substitute existential or `any Sendable` for generic params.
+        switch genericContext.classify(parameter.type) {
+        case .directGeneric(let info):
+            return info.storageType
+        case .wrappedGeneric:
+            return "any Sendable"
+        case .concrete:
+            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
+                return attributedType.baseType.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            return parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        return parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

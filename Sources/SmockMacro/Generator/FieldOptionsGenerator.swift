@@ -25,7 +25,8 @@ enum FieldOptionsGenerator {
         variablePrefix: String,
         functionSignature: FunctionSignatureSyntax,
         typePrefix: String = "",
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        genericContext: GenericContext = .empty
     ) throws -> ClassDeclSyntax {
 
         var genericParameterClauseElements: [String] = []
@@ -59,7 +60,7 @@ enum FieldOptionsGenerator {
 
                 try FunctionDeclSyntax(
                     """
-                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) {
+                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature, genericContext: genericContext))) {
                       self.expectedResponse = .closure(closure)
                     }
                     """
@@ -77,9 +78,14 @@ enum FieldOptionsGenerator {
                 }
 
                 if let returnType = functionSignature.returnClause?.type {
+                    // Substitute generic return types with their existential or Any.
+                    let valueType = ExpectedResponseGenerator.erasedReturnType(
+                        returnType,
+                        genericContext: genericContext
+                    )
                     try FunctionDeclSyntax(
                         """
-                        \(raw: accessLevel.rawValue) func update(value: \(returnType)) {
+                        \(raw: accessLevel.rawValue) func update(value: \(raw: valueType)) {
                           self.expectedResponse = .value(value)
                         }
                         """

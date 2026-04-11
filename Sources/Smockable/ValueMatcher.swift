@@ -31,6 +31,51 @@ public struct AlwaysMatcher: Sendable {
     }
 }
 
+/// A type-erased matcher used for parameters of generic methods whose type
+/// references a generic parameter inside a wrapper (e.g. `Foo<T>`).
+///
+/// Because the wrapper's specialization isn't known until invocation time, the
+/// stored matcher operates on `any Sendable`. The test author is expected to
+/// cast inside `.matching` closures.
+///
+/// ## Example
+/// ```swift
+/// when(expectations.putItem(input: .matching { (anyInput: any Sendable) in
+///     guard let typed = anyInput as? PutItemInput<MyItem> else { return false }
+///     return typed.tableName == "foo"
+/// }), complete: .withSuccess)
+/// ```
+public enum AnyValueMatcher: Sendable, CustomStringConvertible {
+    /// Matches any value.
+    case any
+    /// Uses a closure for custom matching logic. The closure receives the value
+    /// as `any Sendable`; the test author is responsible for casting to the
+    /// expected type.
+    case matching(_ matcher: @Sendable (any Sendable) -> Bool)
+
+    /// Check if the given value matches this matcher.
+    /// - Parameter value: The value to test against this matcher
+    /// - Returns: `true` if the value matches, `false` otherwise
+    public func matches(_ value: any Sendable) -> Bool {
+        switch self {
+        case .any:
+            return true
+        case .matching(let matcher):
+            return matcher(value)
+        }
+    }
+
+    /// A string representation of this matcher for debugging and error messages.
+    public var description: String {
+        switch self {
+        case .any:
+            return "any"
+        case .matching:
+            return "custom"
+        }
+    }
+}
+
 /// A matcher for non-optional parameters that can match any value, exact values, or values within a range.
 ///
 /// Use `ValueMatcher` in mock expectations to specify what parameter values should be accepted.

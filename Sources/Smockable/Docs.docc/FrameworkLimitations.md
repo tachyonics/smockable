@@ -242,7 +242,28 @@ protocol MyService: BaseActorService, Actor {
 
 This is consistent with other inheritance limitations — the macro can only see what is explicitly declared in the protocol it is applied to.
 
-## Limitation 5: Static Function and Property Restrictions
+## Limitation 5: Reduced Matching for Generic Methods
+
+Smockable supports protocol methods with their own generic parameters (see
+<doc:GenericMethods> for usage), but with a reduced set of matching capabilities compared
+to non-generic methods. Because the concrete type for the generic parameter isn't known
+until invocation time, Smockable stores values via type erasure and the following
+features are unavailable for parameters whose type references a generic parameter:
+
+- **`.exact()` matchers.** Even when the generic constraint includes `Equatable`, exact-value
+  matching is not generated because the existential storage type isn't itself `Equatable`.
+  Use `.matching` with manual equality checks instead.
+- **Range matchers (`ClosedRange`).**
+- **`additionalEquatableTypes` allowlisting** for generic parameters or their wrapper types.
+- **Return values via `update(value:)`** for generic returns. Use closure-based responses
+  instead — the macro can't construct an arbitrary `T`.
+
+Generic constraints **must** include `Sendable` because mock state lives behind a `Mutex`
+and must be `Sendable`-conforming. The generated code will fail to compile otherwise.
+
+For working examples and the supported usage patterns, see <doc:GenericMethods>.
+
+## Limitation 6: Static Function and Property Restrictions
 
 ### Static Properties Not Supported
 
