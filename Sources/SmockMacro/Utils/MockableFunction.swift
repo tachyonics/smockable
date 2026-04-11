@@ -13,19 +13,22 @@
 //===----------------------------------------------------------------------===//
 
 //
-//  GenericContext.swift
+//  MockableFunction.swift
 //  SmockMacro
 //
 
 import Foundation
 import SwiftSyntax
 
-/// Captures information about a function's generic parameters and their constraints
-/// so the mock generators can substitute generic types with appropriate storage types.
+/// A protocol method requirement together with the parsed metadata that all generators
+/// need: the function declaration itself plus the analysis of its generic parameters
+/// and constraints.
 ///
-/// For each generic parameter (e.g. `T: Encodable & Sendable`), records the existential
-/// storage type that should be used in matchers, storage tuples, and verifiers.
-package struct GenericContext {
+/// `MockGenerator` builds one `MockableFunction` per protocol method at the top of
+/// generation, and threads the resulting array through to every generator that needs
+/// to know about generic parameters. This guarantees that the generic analysis for a
+/// given function declaration runs exactly once.
+package struct MockableFunction {
     /// Information about a single generic parameter on a function.
     package struct GenericParameter {
         /// The existential type used as the storage type when this parameter is used
@@ -38,30 +41,37 @@ package struct GenericContext {
         package let isEquatable: Bool
     }
 
+    /// The underlying SwiftSyntax declaration for the protocol method.
+    package let declaration: FunctionDeclSyntax
+
     /// All generic parameters declared on the function, keyed by name.
-    package let parameters: [String: GenericParameter]
+    package let genericParameters: [String: GenericParameter]
 
-    /// An empty context for non-generic functions.
-    package static let empty = GenericContext()
+    /// The type conformance provider used to look up `additionalEquatableTypes`
+    /// allowlist entries for non-generic parameters.
+    ///
+    /// Stored on the `MockableFunction` so generators can pass a single value
+    /// around instead of threading a separate provider closure alongside.
+    package let typeConformanceProvider: (String) -> TypeConformance
 
-    private init() {
-        self.parameters = [:]
-    }
-
-    /// Build a `GenericContext` for the given function declaration.
+    /// Build a `MockableFunction` for the given function declaration.
     /// - Parameters:
-    ///   - functionDeclaration: The function whose generic clause should be parsed.
+    ///   - declaration: The function whose generic clause should be parsed.
     ///   - typeConformanceProvider: Used to determine if a constraint type appears in
-    ///     the `additionalEquatableTypes` allowlist.
+    ///     the `additionalEquatableTypes` allowlist. Stored on the resulting
+    ///     `MockableFunction` so consumers don't need to thread it separately.
     package init(
-        functionDeclaration: FunctionDeclSyntax,
-        typeConformanceProvider: (String) -> TypeConformance
+        declaration: FunctionDeclSyntax,
+        typeConformanceProvider: @escaping (String) -> TypeConformance
     ) {
+        self.declaration = declaration
+        self.typeConformanceProvider = typeConformanceProvider
+
         // Collect inline constraints from the generic parameter clause.
         // e.g. `<T: Encodable & Sendable, U: Sendable>`
         var inlineConstraints: [String: [String]] = [:]
         var declarationOrder: [String] = []
-        if let clause = functionDeclaration.genericParameterClause {
+        if let clause = declaration.genericParameterClause {
             for param in clause.parameters {
                 let name = param.name.text
                 declarationOrder.append(name)
@@ -77,7 +87,7 @@ package struct GenericContext {
 
         // Merge constraints from the where clause.
         // e.g. `where T: Equatable, U == String`
-        if let whereClause = functionDeclaration.genericWhereClause {
+        if let whereClause = declaration.genericWhereClause {
             for requirement in whereClause.requirements {
                 if let conformance = requirement.requirement.as(ConformanceRequirementSyntax.self) {
                     let leftSide =
@@ -92,7 +102,7 @@ package struct GenericContext {
         }
 
         // Build the final GenericParameter values from the merged constraints.
-        var parameters: [String: GenericParameter] = [:]
+        var genericParameters: [String: GenericParameter] = [:]
         for name in declarationOrder {
             let constraints = inlineConstraints[name] ?? []
 
@@ -126,13 +136,13 @@ package struct GenericContext {
                     typeConformanceProvider(proto) != .neitherComparableNorEquatable
                 }
 
-            parameters[name] = GenericParameter(
+            genericParameters[name] = GenericParameter(
                 storageType: storageType,
                 isEquatable: isEquatable
             )
         }
 
-        self.parameters = parameters
+        self.genericParameters = genericParameters
     }
 
     // MARK: - Parameter classification
@@ -149,17 +159,17 @@ package struct GenericContext {
         case wrappedGeneric
     }
 
-    /// Classify a parameter type relative to this context's generic parameters.
+    /// Classify a parameter type relative to this function's generic parameters.
     package func classify(_ parameterType: TypeSyntax) -> ParameterClassification {
         let typeString = parameterType.description.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Direct match: parameter type is exactly a generic parameter name.
-        if let parameter = parameters[typeString] {
+        if let parameter = genericParameters[typeString] {
             return .directGeneric(parameter)
         }
 
         // Wrapped match: type description contains a generic parameter name as a token.
-        for genericName in parameters.keys {
+        for genericName in genericParameters.keys {
             if Self.containsToken(genericName, in: typeString) {
                 return .wrappedGeneric
             }

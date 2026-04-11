@@ -23,24 +23,22 @@ import SwiftSyntaxBuilder
 enum FunctionImplementationGenerator {
     static func functionDeclaration(
         variablePrefix: String,
-        functionDeclaration: FunctionDeclSyntax,
         accessLevel: AccessLevel,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> FunctionDeclSyntax {
-        var mockFunctionDeclaration = functionDeclaration
+        var mockFunctionDeclaration = function.declaration
 
         mockFunctionDeclaration.modifiers =
-            functionDeclaration.modifiers.removingMutatingKeyword
+            function.declaration.modifiers.removingMutatingKeyword
         mockFunctionDeclaration.modifiers += [accessLevel.declModifier]
         mockFunctionDeclaration.leadingTrivia = .init(pieces: [])
 
-        let parameterList = functionDeclaration.signature.parameterClause.parameters
+        let parameterList = function.declaration.signature.parameterClause.parameters
 
         mockFunctionDeclaration.body = try getFunctionBody(
             variablePrefix: variablePrefix,
-            functionDeclaration: functionDeclaration,
             parameterList: parameterList,
-            genericContext: genericContext
+            function: function
         )
 
         return mockFunctionDeclaration
@@ -50,9 +48,8 @@ enum FunctionImplementationGenerator {
         variablePrefix: String,
         typePrefix: String = "",
         storagePrefix: String = "",
-        functionDeclaration: FunctionDeclSyntax,
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> CodeBlockSyntax {
         var methodInterpolationParameters: [String] = []
         for parameter in parameterList {
@@ -91,7 +88,7 @@ enum FunctionImplementationGenerator {
             }
         }
         let methodInterpolation = methodInterpolationParameters.joined(separator: ", ")
-        let functionName = functionDeclaration.name.text
+        let functionName = function.declaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
         return try CodeBlockSyntax {
@@ -118,8 +115,7 @@ enum FunctionImplementationGenerator {
             self.switchExpression(
                 variablePrefix: variablePrefix,
                 functionInterpolationSignature: functionInterpolationSignature,
-                functionDeclaration: functionDeclaration,
-                genericContext: genericContext
+                function: function
             )
         }
     }
@@ -266,14 +262,11 @@ enum FunctionImplementationGenerator {
         let needsCast: Bool
         let returnTypeText: String
 
-        static func compute(
-            functionDeclaration: FunctionDeclSyntax,
-            genericContext: GenericContext
-        ) -> ReturnCastInfo {
-            guard let returnType = functionDeclaration.signature.returnClause?.type else {
+        static func compute(function: MockableFunction) -> ReturnCastInfo {
+            guard let returnType = function.declaration.signature.returnClause?.type else {
                 return .init(needsCast: false, returnTypeText: "")
             }
-            switch genericContext.classify(returnType) {
+            switch function.classify(returnType) {
             case .directGeneric, .wrappedGeneric:
                 return .init(
                     needsCast: true,
@@ -288,24 +281,20 @@ enum FunctionImplementationGenerator {
     private static func switchExpression(
         variablePrefix: String,
         functionInterpolationSignature: String,
-        functionDeclaration: FunctionDeclSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> SwitchExprSyntax {
-        let returnCast = ReturnCastInfo.compute(
-            functionDeclaration: functionDeclaration,
-            genericContext: genericContext
-        )
+        let returnCast = ReturnCastInfo.compute(function: function)
 
         return SwitchExprSyntax(
             subject: ExprSyntax(stringLiteral: "responseProvider"),
             casesBuilder: {
                 closureCase(
                     variablePrefix: variablePrefix,
-                    functionDeclaration: functionDeclaration,
+                    function: function,
                     returnCast: returnCast
                 )
 
-                if functionDeclaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier
+                if function.declaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier
                     != nil
                 {
                     SwitchCaseSyntax(
@@ -317,7 +306,7 @@ enum FunctionImplementationGenerator {
                 }
 
                 returnOrSuccessCase(
-                    functionDeclaration: functionDeclaration,
+                    function: function,
                     returnCast: returnCast
                 )
 
@@ -333,7 +322,7 @@ enum FunctionImplementationGenerator {
 
     private static func closureCase(
         variablePrefix: String,
-        functionDeclaration: FunctionDeclSyntax,
+        function: MockableFunction,
         returnCast: ReturnCastInfo
     ) -> SwitchCaseSyntax {
         SwitchCaseSyntax(
@@ -343,7 +332,7 @@ enum FunctionImplementationGenerator {
                     // Closure returns the storage type; cast to the declared generic return type.
                     CodeBlockItemSyntax(
                         """
-                        return await closure(\(raw: closureCallArgs(functionDeclaration: functionDeclaration))) as! \(raw: returnCast.returnTypeText)
+                        return await closure(\(raw: closureCallArgs(function: function))) as! \(raw: returnCast.returnTypeText)
                         """
                     )
                 } else {
@@ -353,7 +342,7 @@ enum FunctionImplementationGenerator {
                                 baseName: "closure",
                                 variablePrefix: variablePrefix,
                                 needsLabels: false,
-                                functionSignature: functionDeclaration.signature
+                                function: function
                             )
                     )
                 }
@@ -362,10 +351,10 @@ enum FunctionImplementationGenerator {
     }
 
     private static func returnOrSuccessCase(
-        functionDeclaration: FunctionDeclSyntax,
+        function: MockableFunction,
         returnCast: ReturnCastInfo
     ) -> SwitchCaseSyntax {
-        if functionDeclaration.signature.returnClause?.type != nil {
+        if function.declaration.signature.returnClause?.type != nil {
             if returnCast.needsCast {
                 return SwitchCaseSyntax(
                     """
@@ -394,8 +383,8 @@ enum FunctionImplementationGenerator {
     /// Build the argument list for calling the stored closure for a function with
     /// a generic return type. We can't use ClosureGenerator.callExpression because
     /// the result needs to be wrapped in `await` and `as!`.
-    private static func closureCallArgs(functionDeclaration: FunctionDeclSyntax) -> String {
-        functionDeclaration.signature.parameterClause.parameters.map { parameter in
+    private static func closureCallArgs(function: MockableFunction) -> String {
+        function.declaration.signature.parameterClause.parameters.map { parameter in
             (parameter.secondName ?? parameter.firstName).text
         }.joined(separator: ", ")
     }

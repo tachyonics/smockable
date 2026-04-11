@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 //
-//  GenericContextTests.swift
+//  MockableFunctionTests.swift
 //  SmockMacroTests
 //
 
@@ -22,28 +22,28 @@ import Testing
 
 @testable import SmockMacro
 
-/// Direct unit tests for `GenericContext`. These exercise the constraint-parsing
+/// Direct unit tests for `MockableFunction`. These exercise the constraint-parsing
 /// logic and parameter classification without going through the `@Smock` macro
 /// expansion machinery, so they're cheap to write and read.
-struct GenericContextTests {
+struct MockableFunctionTests {
 
     // MARK: - Helpers
 
     /// Build a `FunctionDeclSyntax` from source text. Throws if parsing fails.
-    private func makeFunction(_ source: String) throws -> FunctionDeclSyntax {
+    private func makeDeclaration(_ source: String) throws -> FunctionDeclSyntax {
         try FunctionDeclSyntax("\(raw: source)")
     }
 
-    /// Build a `GenericContext` from a function declaration source string.
+    /// Build a `MockableFunction` from a function declaration source string.
     /// The default conformance provider treats no types as Equatable so that
     /// allowlist-based equatability is opt-in per-test.
-    private func context(
+    private func mockableFunction(
         _ source: String,
         equatableTypes: Set<String> = []
-    ) throws -> GenericContext {
-        let function = try makeFunction(source)
-        return GenericContext(
-            functionDeclaration: function,
+    ) throws -> MockableFunction {
+        let declaration = try makeDeclaration(source)
+        return MockableFunction(
+            declaration: declaration,
             typeConformanceProvider: { type in
                 equatableTypes.contains(type) ? .onlyEquatable : .neitherComparableNorEquatable
             }
@@ -52,147 +52,140 @@ struct GenericContextTests {
 
     /// Find a parameter on the function by its label, used to drive `classify`.
     private func parameterType(in source: String, label: String) throws -> TypeSyntax {
-        let function = try makeFunction(source)
+        let declaration = try makeDeclaration(source)
         let parameter = try #require(
-            function.signature.parameterClause.parameters.first(where: { $0.firstName.text == label }),
+            declaration.signature.parameterClause.parameters.first(where: { $0.firstName.text == label }),
             "No parameter named \(label) in: \(source)"
         )
         return parameter.type
     }
 
-    // MARK: - Empty context
+    // MARK: - Empty / non-generic
 
     @Test
-    func emptyContext() {
-        let context = GenericContext.empty
-        #expect(context.parameters.isEmpty)
-        #expect(context.classify("String") == .concrete)
-    }
-
-    @Test
-    func nonGenericFunctionProducesEmptyContext() throws {
-        let context = try self.context("func foo(item: String) -> Int")
-        #expect(context.parameters.isEmpty)
+    func nonGenericFunctionProducesNoGenericParameters() throws {
+        let function = try mockableFunction("func foo(item: String) -> Int")
+        #expect(function.genericParameters.isEmpty)
     }
 
     // MARK: - Parsing inline constraints
 
     @Test
     func singleGenericWithSingleConstraint() throws {
-        let context = try self.context("func foo<T: Encodable>(item: T)")
+        let function = try mockableFunction("func foo<T: Encodable>(item: T)")
 
-        #expect(context.parameters.count == 1)
-        let t = try #require(context.parameters["T"])
+        #expect(function.genericParameters.count == 1)
+        let t = try #require(function.genericParameters["T"])
         #expect(t.storageType == "any Encodable")
         #expect(t.isEquatable == false)
     }
 
     @Test
     func singleGenericWithComposedConstraint() throws {
-        let context = try self.context("func foo<T: Encodable & Sendable>(item: T)")
+        let function = try mockableFunction("func foo<T: Encodable & Sendable>(item: T)")
 
-        let t = try #require(context.parameters["T"])
+        let t = try #require(function.genericParameters["T"])
         #expect(t.storageType == "any Encodable & Sendable")
         #expect(t.isEquatable == false)
     }
 
     @Test
     func unconstrainedGenericProducesAnyStorage() throws {
-        let context = try self.context("func foo<T>(item: T)")
+        let function = try mockableFunction("func foo<T>(item: T)")
 
-        let t = try #require(context.parameters["T"])
+        let t = try #require(function.genericParameters["T"])
         #expect(t.storageType == "Any")
         #expect(t.isEquatable == false)
     }
 
     @Test
     func multipleGenericParameters() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T: Encodable, U: Sendable>(a: T, b: U)"
         )
 
-        #expect(context.parameters.count == 2)
-        #expect(context.parameters["T"]?.storageType == "any Encodable")
-        #expect(context.parameters["U"]?.storageType == "any Sendable")
+        #expect(function.genericParameters.count == 2)
+        #expect(function.genericParameters["T"]?.storageType == "any Encodable")
+        #expect(function.genericParameters["U"]?.storageType == "any Sendable")
     }
 
     // MARK: - Where clauses
 
     @Test
     func whereClauseAddsConstraintsToInlineParameters() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T: Encodable>(item: T) where T: Sendable"
         )
 
-        let t = try #require(context.parameters["T"])
+        let t = try #require(function.genericParameters["T"])
         // Inline constraint comes first, then where clause appended.
         #expect(t.storageType == "any Encodable & Sendable")
     }
 
     @Test
     func whereClauseOnUnconstrainedGeneric() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T>(item: T) where T: Encodable & Sendable"
         )
 
-        let t = try #require(context.parameters["T"])
+        let t = try #require(function.genericParameters["T"])
         #expect(t.storageType == "any Encodable & Sendable")
     }
 
     @Test
     func whereClauseConstraintsForMultipleGenerics() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T, U>(a: T, b: U) where T: Encodable, U: Sendable"
         )
 
-        #expect(context.parameters["T"]?.storageType == "any Encodable")
-        #expect(context.parameters["U"]?.storageType == "any Sendable")
+        #expect(function.genericParameters["T"]?.storageType == "any Encodable")
+        #expect(function.genericParameters["U"]?.storageType == "any Sendable")
     }
 
     // MARK: - Equatability detection
 
     @Test
     func equatableConstraintMarksParameterAsEquatable() throws {
-        let context = try self.context("func foo<T: Equatable>(item: T)")
-        #expect(context.parameters["T"]?.isEquatable == true)
+        let function = try mockableFunction("func foo<T: Equatable>(item: T)")
+        #expect(function.genericParameters["T"]?.isEquatable == true)
     }
 
     @Test
     func hashableConstraintMarksParameterAsEquatable() throws {
         // Hashable inherits from Equatable, so it counts.
-        let context = try self.context("func foo<T: Hashable>(item: T)")
-        #expect(context.parameters["T"]?.isEquatable == true)
+        let function = try mockableFunction("func foo<T: Hashable>(item: T)")
+        #expect(function.genericParameters["T"]?.isEquatable == true)
     }
 
     @Test
     func equatableInComposedConstraint() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T: Encodable & Equatable & Sendable>(item: T)"
         )
-        #expect(context.parameters["T"]?.isEquatable == true)
+        #expect(function.genericParameters["T"]?.isEquatable == true)
     }
 
     @Test
     func nonEquatableConstraintIsNotEquatable() throws {
-        let context = try self.context("func foo<T: Encodable & Sendable>(item: T)")
-        #expect(context.parameters["T"]?.isEquatable == false)
+        let function = try mockableFunction("func foo<T: Encodable & Sendable>(item: T)")
+        #expect(function.genericParameters["T"]?.isEquatable == false)
     }
 
     @Test
     func equatableViaAdditionalEquatableTypesAllowlist() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T: MyAllowlistedProtocol>(item: T)",
             equatableTypes: ["MyAllowlistedProtocol"]
         )
-        #expect(context.parameters["T"]?.isEquatable == true)
+        #expect(function.genericParameters["T"]?.isEquatable == true)
     }
 
     @Test
     func equatableViaWhereClause() throws {
-        let context = try self.context(
+        let function = try mockableFunction(
             "func foo<T: Encodable>(item: T) where T: Equatable"
         )
-        #expect(context.parameters["T"]?.isEquatable == true)
+        #expect(function.genericParameters["T"]?.isEquatable == true)
     }
 
     // MARK: - Classification
@@ -200,51 +193,51 @@ struct GenericContextTests {
     @Test
     func classifyDirectGenericParameter() throws {
         let source = "func foo<T: Encodable & Sendable>(item: T)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "item")
 
-        switch context.classify(type) {
+        switch function.classify(type) {
         case .directGeneric(let info):
             #expect(info.storageType == "any Encodable & Sendable")
         default:
-            Issue.record("Expected directGeneric, got \(context.classify(type))")
+            Issue.record("Expected directGeneric, got \(function.classify(type))")
         }
     }
 
     @Test
     func classifyWrappedGenericParameter() throws {
         let source = "func foo<T: Sendable>(input: PutItemInput<T>)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "input")
 
-        #expect(context.classify(type) == .wrappedGeneric)
+        #expect(function.classify(type) == .wrappedGeneric)
     }
 
     @Test
     func classifyOptionalGenericIsWrapped() throws {
         let source = "func foo<T: Sendable>(item: T?)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "item")
 
-        #expect(context.classify(type) == .wrappedGeneric)
+        #expect(function.classify(type) == .wrappedGeneric)
     }
 
     @Test
     func classifyArrayOfGenericIsWrapped() throws {
         let source = "func foo<T: Sendable>(items: [T])"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "items")
 
-        #expect(context.classify(type) == .wrappedGeneric)
+        #expect(function.classify(type) == .wrappedGeneric)
     }
 
     @Test
     func classifyConcreteParameter() throws {
         let source = "func foo<T: Sendable>(item: T, name: String)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "name")
 
-        #expect(context.classify(type) == .concrete)
+        #expect(function.classify(type) == .concrete)
     }
 
     @Test
@@ -252,28 +245,28 @@ struct GenericContextTests {
         // The generic parameter is `T`. A type called `Tree` should NOT classify as
         // wrappedGeneric — `T` only appears as a substring of an unrelated identifier.
         let source = "func foo<T: Sendable>(item: T, tree: Tree)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let treeType = try parameterType(in: source, label: "tree")
 
-        #expect(context.classify(treeType) == .concrete)
+        #expect(function.classify(treeType) == .concrete)
     }
 
     @Test
     func classifyMatchesGenericInsideNestedGenerics() throws {
         let source = "func foo<T: Sendable>(items: Dictionary<String, T>)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "items")
 
-        #expect(context.classify(type) == .wrappedGeneric)
+        #expect(function.classify(type) == .wrappedGeneric)
     }
 
     @Test
     func classifyWithMultipleGenericsMatchesAnyOfThem() throws {
         let source = "func foo<T: Sendable, U: Sendable>(item: U)"
-        let context = try self.context(source)
+        let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "item")
 
-        switch context.classify(type) {
+        switch function.classify(type) {
         case .directGeneric(let info):
             #expect(info.storageType == "any Sendable")
         default:
@@ -284,10 +277,10 @@ struct GenericContextTests {
 
 // MARK: - Equatable conformance for ParameterClassification
 
-extension GenericContext.ParameterClassification: Equatable {
+extension MockableFunction.ParameterClassification: Equatable {
     public static func == (
-        lhs: GenericContext.ParameterClassification,
-        rhs: GenericContext.ParameterClassification
+        lhs: MockableFunction.ParameterClassification,
+        rhs: MockableFunction.ParameterClassification
     ) -> Bool {
         switch (lhs, rhs) {
         case (.concrete, .concrete), (.wrappedGeneric, .wrappedGeneric):
@@ -300,7 +293,7 @@ extension GenericContext.ParameterClassification: Equatable {
     }
 }
 
-extension GenericContext {
+extension MockableFunction {
     /// Convenience for testing — classify a type by its source string.
     fileprivate func classify(_ source: String) -> ParameterClassification {
         let type = TypeSyntax(stringLiteral: source)

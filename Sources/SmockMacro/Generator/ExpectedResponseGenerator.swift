@@ -30,21 +30,21 @@ enum ExpectedResponseGenerator {
     static func expectedResponseEnumDeclaration(
         typePrefix: String = "",
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax,
         accessLevel: AccessLevel,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> EnumDeclSyntax {
-        try EnumDeclSyntax(
+        let signature = function.declaration.signature
+        return try EnumDeclSyntax(
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {
                 try EnumCaseDeclSyntax(
                     """
-                    case closure(@Sendable \(ClosureGenerator.closureElements(functionSignature: functionSignature, genericContext: genericContext)))
+                    case closure(@Sendable \(ClosureGenerator.closureElements(function: function)))
                     """
                 )
 
-                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                if let throwsClause = signature.effectSpecifiers?.throwsClause {
                     let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try EnumCaseDeclSyntax(
                         """
@@ -53,9 +53,9 @@ enum ExpectedResponseGenerator {
                     )
                 }
 
-                if let returnType = functionSignature.returnClause?.type {
+                if let returnType = signature.returnClause?.type {
                     // Substitute generic return types with their existential or Any.
-                    let valueType = Self.erasedReturnType(returnType, genericContext: genericContext)
+                    let valueType = Self.erasedReturnType(returnType, function: function)
                     try EnumCaseDeclSyntax(
                         """
                         case value(\(raw: valueType))
@@ -80,9 +80,9 @@ enum ExpectedResponseGenerator {
     /// in their constraints (the macro emits a diagnostic otherwise — see issue).
     static func erasedReturnType(
         _ returnType: TypeSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> String {
-        switch genericContext.classify(returnType) {
+        switch function.classify(returnType) {
         case .directGeneric(let info):
             return info.storageType
         case .wrappedGeneric:

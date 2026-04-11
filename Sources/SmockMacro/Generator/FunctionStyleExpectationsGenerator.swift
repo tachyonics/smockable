@@ -21,22 +21,21 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum FunctionStyleExpectationsGenerator {
-    /// Generate function-style expectation methods for a given function declaration
+    /// Generate function-style expectation methods for a given function.
     static func generateExpectationMethods(
-        for functionDeclaration: FunctionDeclSyntax,
+        for function: MockableFunction,
         typePrefix: String,
-        accessLevel: AccessLevel,
-        typeConformanceProvider: (String) -> TypeConformance
+        accessLevel: AccessLevel
     ) throws -> [FunctionDeclSyntax] {
-        let parameterList = functionDeclaration.signature.parameterClause.parameters
-        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+        let parameterList = function.declaration.signature.parameterClause.parameters
+        let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
         let expectationClassName = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_FieldOptions"
 
         // If function has no parameters, generate a simple method
         if parameterList.isEmpty {
             return [
                 try generateNoParameterMethod(
-                    functionName: functionDeclaration.name.text,
+                    functionName: function.declaration.name.text,
                     expectationClassName: expectationClassName,
                     variablePrefix: variablePrefix,
                     accessLevel: accessLevel
@@ -44,21 +43,15 @@ enum FunctionStyleExpectationsGenerator {
             ]
         }
 
-        let genericContext = GenericContext(
-            functionDeclaration: functionDeclaration,
-            typeConformanceProvider: typeConformanceProvider
-        )
-
         // Generate all overload combinations for functions with parameters
         return try generateOverloadCombinations(
-            functionDeclaration: functionDeclaration,
+            functionDeclaration: function.declaration,
             parameterList: parameterList,
             expectationClassName: expectationClassName,
             typePrefix: typePrefix,
             variablePrefix: variablePrefix,
             accessLevel: accessLevel,
-            typeConformanceProvider: typeConformanceProvider,
-            genericContext: genericContext
+            function: function
         )
     }
 
@@ -90,14 +83,12 @@ enum FunctionStyleExpectationsGenerator {
         typePrefix: String,
         variablePrefix: String,
         accessLevel: AccessLevel,
-        typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> [FunctionDeclSyntax] {
         let parameters = Array(parameterList)
         let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
             parameters: parameters[...],
-            typeConformanceProvider: typeConformanceProvider,
-            genericContext: genericContext
+            function: function
         )
 
         var methods: [FunctionDeclSyntax] = []
@@ -111,7 +102,7 @@ enum FunctionStyleExpectationsGenerator {
                 typePrefix: typePrefix,
                 variablePrefix: variablePrefix,
                 accessLevel: accessLevel,
-                genericContext: genericContext
+                function: function
             )
             methods.append(method)
         }
@@ -127,7 +118,7 @@ enum FunctionStyleExpectationsGenerator {
         parameter: FunctionParameterSyntax,
         parameterType: TypeConformance,
         form: AllParameterSequenceGenerator.ParameterForm,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> (paramDecl: String, matcherInit: String) {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
         let paramNameForSignature: String
@@ -141,7 +132,7 @@ enum FunctionStyleExpectationsGenerator {
 
         // Generic parameter handling — uses NonComparableValueMatcher<existential>
         // for case 1 and ErasedValueMatcher for case 2.
-        switch genericContext.classify(parameter.type) {
+        switch function.classify(parameter.type) {
         case .directGeneric(let info):
             return (
                 "\(paramNameForSignature): NonComparableValueMatcher<\(info.storageType)>",
@@ -202,7 +193,7 @@ enum FunctionStyleExpectationsGenerator {
         typePrefix: String,
         variablePrefix: String,
         accessLevel: AccessLevel,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> FunctionDeclSyntax {
         var methodParameters: [String] = []
         var matcherInitializers: [String] = []
@@ -212,7 +203,7 @@ enum FunctionStyleExpectationsGenerator {
                 parameter: parameter,
                 parameterType: parameterType,
                 form: form,
-                genericContext: genericContext
+                function: function
             )
             methodParameters.append(fragments.paramDecl)
             matcherInitializers.append(fragments.matcherInit)

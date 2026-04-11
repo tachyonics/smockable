@@ -29,13 +29,12 @@ enum AllParameterSequenceGenerator {
 
     static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
-        typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> [[(FunctionParameterSyntax, TypeConformance, ParameterForm)]] {
         if let firstParameter = parameters.first {
             // Determine the conformance for this parameter, taking generics into account.
             let firstTypeConformance: TypeConformance
-            switch genericContext.classify(firstParameter.type) {
+            switch function.classify(firstParameter.type) {
             case .directGeneric(let info):
                 // Direct generic: only .matching/.any are supported in the existential
                 // matcher. If the constraint includes Equatable, the .exact overload is
@@ -50,7 +49,7 @@ enum AllParameterSequenceGenerator {
                 let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
                 let firstIsOptional = firstParamType.hasSuffix("?")
                 let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType)
-                firstTypeConformance = typeConformanceProvider(firstBaseType)
+                firstTypeConformance = function.typeConformanceProvider(firstBaseType)
             }
 
             if parameters.count == 1 {
@@ -75,8 +74,7 @@ enum AllParameterSequenceGenerator {
             // otherwise get the combinations for the parameters array minus the first element
             let dropFirstParameterSequences = getAllParameterSequences(
                 parameters: parameters.dropFirst(),
-                typeConformanceProvider: typeConformanceProvider,
-                genericContext: genericContext
+                function: function
             )
 
             // iterate through the remaining cases

@@ -63,11 +63,11 @@ enum ReceivedInvocationsGenerator {
     static func variableDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> VariableDeclSyntax {
         let elementType = self.arrayElementType(
             parameterList: parameterList,
-            genericContext: genericContext
+            function: function
         )
 
         return try VariableDeclSyntax(
@@ -79,7 +79,7 @@ enum ReceivedInvocationsGenerator {
 
     static func arrayElementType(
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> TypeSyntaxProtocol {
         let tupleElements = TupleTypeElementListSyntax {
             TupleTypeElementSyntax(
@@ -102,7 +102,7 @@ enum ReceivedInvocationsGenerator {
                         // Generic-aware: use existential or `any Sendable` for generic params.
                         // `any Sendable` is required (instead of `Any`) because invocation
                         // storage lives behind a Mutex and must be Sendable-conforming.
-                        switch genericContext.classify(parameter.type) {
+                        switch function.classify(parameter.type) {
                         case .directGeneric(let info):
                             return TypeSyntax(
                                 IdentifierTypeSyntax(name: .identifier(info.storageType))

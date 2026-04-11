@@ -22,6 +22,7 @@ import SwiftSyntaxBuilder
 
 struct PropertyFunction {
     let function: FunctionDeclSyntax
+    let mockableFunction: MockableFunction
     let variablePrefix: String
     let parameterList: FunctionParameterListSyntax
     let effectSpecifiers: AccessorEffectSpecifiersSyntax?
@@ -70,15 +71,12 @@ enum PropertyImplementationGenerator {
                 AccessorDeclSyntax(
                     accessorSpecifier: .keyword(.get),
                     effectSpecifiers: get.effectSpecifiers,
-                    // Property accessors can't have generic parameters of their own,
-                    // so the generic context is always empty.
                     body: try FunctionImplementationGenerator.getFunctionBody(
                         variablePrefix: get.variablePrefix,
                         typePrefix: propertyDeclaration.typePrefix,
                         storagePrefix: propertyDeclaration.storagePrefix,
-                        functionDeclaration: get.function,
                         parameterList: get.parameterList,
-                        genericContext: .empty
+                        function: get.mockableFunction
                     )
                 )
             )
@@ -92,9 +90,8 @@ enum PropertyImplementationGenerator {
                         variablePrefix: set.variablePrefix,
                         typePrefix: propertyDeclaration.typePrefix,
                         storagePrefix: propertyDeclaration.storagePrefix,
-                        functionDeclaration: set.function,
                         parameterList: set.parameterList,
-                        genericContext: .empty
+                        function: set.mockableFunction
                     )
                 )
             )

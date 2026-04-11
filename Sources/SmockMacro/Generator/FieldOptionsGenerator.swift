@@ -23,18 +23,18 @@ import SwiftSyntaxBuilder
 enum FieldOptionsGenerator {
     static func fieldOptionsClassDeclaration(
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax,
         typePrefix: String = "",
         accessLevel: AccessLevel,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> ClassDeclSyntax {
+        let signature = function.declaration.signature
 
         var genericParameterClauseElements: [String] = []
-        if functionSignature.effectSpecifiers?.throwsClause != nil {
+        if signature.effectSpecifiers?.throwsClause != nil {
             genericParameterClauseElements.append("ErrorableFieldOptionsProtocol")
         }
 
-        if functionSignature.returnClause?.type != nil {
+        if signature.returnClause?.type != nil {
             genericParameterClauseElements.append("ReturnableFieldOptionsProtocol")
         } else {
             genericParameterClauseElements.append("VoidReturnableFieldOptionsProtocol")
@@ -60,13 +60,13 @@ enum FieldOptionsGenerator {
 
                 try FunctionDeclSyntax(
                     """
-                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature, genericContext: genericContext))) {
+                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(function: function))) {
                       self.expectedResponse = .closure(closure)
                     }
                     """
                 )
 
-                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                if let throwsClause = signature.effectSpecifiers?.throwsClause {
                     let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try FunctionDeclSyntax(
                         """
@@ -77,11 +77,11 @@ enum FieldOptionsGenerator {
                     )
                 }
 
-                if let returnType = functionSignature.returnClause?.type {
+                if let returnType = signature.returnClause?.type {
                     // Substitute generic return types with their existential or Any.
                     let valueType = ExpectedResponseGenerator.erasedReturnType(
                         returnType,
-                        genericContext: genericContext
+                        function: function
                     )
                     try FunctionDeclSyntax(
                         """

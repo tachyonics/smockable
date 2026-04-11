@@ -22,28 +22,28 @@ import SwiftSyntaxBuilder
 
 enum ClosureGenerator {
     static func closureElements(
-        functionSignature: FunctionSignatureSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     )
         -> TupleTypeElementListSyntax
     {
-        TupleTypeElementListSyntax {
+        let signature = function.declaration.signature
+        return TupleTypeElementListSyntax {
             TupleTypeElementSyntax(
                 type: FunctionTypeSyntax(
                     parameters: TupleTypeElementListSyntax {
-                        for parameter in functionSignature.parameterClause.parameters {
+                        for parameter in signature.parameterClause.parameters {
                             TupleTypeElementSyntax(
-                                type: erasedType(of: parameter.type, genericContext: genericContext)
+                                type: erasedType(of: parameter.type, function: function)
                             )
                         }
                     },
                     effectSpecifiers: TypeEffectSpecifiersSyntax(
-                        asyncSpecifier: functionSignature.effectSpecifiers?.asyncSpecifier,
-                        throwsClause: functionSignature.effectSpecifiers?.throwsClause
+                        asyncSpecifier: signature.effectSpecifiers?.asyncSpecifier,
+                        throwsClause: signature.effectSpecifiers?.throwsClause
                     ),
-                    returnClause: functionSignature.returnClause.map { clause in
+                    returnClause: signature.returnClause.map { clause in
                         ReturnClauseSyntax(
-                            type: erasedType(of: clause.type, genericContext: genericContext)
+                            type: erasedType(of: clause.type, function: function)
                         )
                     }
                         ?? ReturnClauseSyntax(
@@ -62,9 +62,9 @@ enum ClosureGenerator {
     /// be `@Sendable` and `Any` doesn't conform to `Sendable`.
     private static func erasedType(
         of type: TypeSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> TypeSyntax {
-        switch genericContext.classify(type) {
+        switch function.classify(type) {
         case .directGeneric(let info):
             return TypeSyntax(IdentifierTypeSyntax(name: .identifier(info.storageType)))
         case .wrappedGeneric:
@@ -79,8 +79,9 @@ enum ClosureGenerator {
         baseName: String,
         variablePrefix _: String,
         needsLabels: Bool,
-        functionSignature: FunctionSignatureSyntax
+        function: MockableFunction
     ) -> ExprSyntaxProtocol {
+        let signature = function.declaration.signature
         let calledExpression = DeclReferenceExprSyntax(
             baseName: "\(raw: baseName)"
         )
@@ -89,7 +90,7 @@ enum ClosureGenerator {
             calledExpression: calledExpression,
             leftParen: .leftParenToken(),
             arguments: LabeledExprListSyntax {
-                for parameter in functionSignature.parameterClause.parameters {
+                for parameter in signature.parameterClause.parameters {
                     LabeledExprSyntax(
                         label: needsLabels ? parameter.firstName : nil,
                         colon: needsLabels ? .colonToken() : nil,
@@ -102,11 +103,11 @@ enum ClosureGenerator {
             rightParen: .rightParenToken()
         )
 
-        if functionSignature.effectSpecifiers?.asyncSpecifier != nil {
+        if signature.effectSpecifiers?.asyncSpecifier != nil {
             expression = AwaitExprSyntax(expression: expression)
         }
 
-        if functionSignature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
+        if signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
             expression = TryExprSyntax(expression: expression)
         }
 

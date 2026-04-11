@@ -22,11 +22,10 @@ import SwiftSyntaxBuilder
 
 enum VerifierGenerator {
     static func verifierStructDeclaration(
-        functionDeclarations: [FunctionDeclSyntax],
+        mockableFunctions: [MockableFunction],
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = "",
         storagePrefix: String = "",
-        typeConformanceProvider: (String) -> TypeConformance,
         accessLevel: AccessLevel
     ) throws -> StructDeclSyntax {
         try StructDeclSyntax(
@@ -81,10 +80,9 @@ enum VerifierGenerator {
                 }
 
                 try verifierFunctions(
-                    functionDeclarations: functionDeclarations,
+                    mockableFunctions: mockableFunctions,
                     typePrefix: typePrefix,
                     storagePrefix: storagePrefix,
-                    typeConformanceProvider: typeConformanceProvider,
                     accessLevel: accessLevel
                 )
             }
@@ -93,24 +91,19 @@ enum VerifierGenerator {
 
     @MemberBlockItemListBuilder
     private static func verifierFunctions(
-        functionDeclarations: [FunctionDeclSyntax],
+        mockableFunctions: [MockableFunction],
         typePrefix: String,
         storagePrefix: String,
-        typeConformanceProvider: (String) -> TypeConformance,
         accessLevel: AccessLevel
     ) throws -> MemberBlockItemListSyntax {
         // Generate verifier methods for each function
-        for functionDeclaration in functionDeclarations {
+        for function in mockableFunctions {
+            let functionDeclaration = function.declaration
             let parameterList = functionDeclaration.signature.parameterClause.parameters
             let parameters = Array(parameterList)
-            let genericContext = GenericContext(
-                functionDeclaration: functionDeclaration,
-                typeConformanceProvider: typeConformanceProvider
-            )
             let allParameterSequences = AllParameterSequenceGenerator.getAllParameterSequences(
                 parameters: parameters[...],
-                typeConformanceProvider: typeConformanceProvider,
-                genericContext: genericContext
+                function: function
             )
 
             if parameters.isEmpty {
@@ -154,7 +147,7 @@ enum VerifierGenerator {
                         typePrefix: typePrefix,
                         storagePrefix: storagePrefix,
                         accessLevel: accessLevel,
-                        genericContext: genericContext
+                        function: function
                     )
                 }
             }
@@ -166,7 +159,7 @@ enum VerifierGenerator {
             FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
         )],
         allParametersAreMatchers: Bool,
-        genericContext: GenericContext
+        function: MockableFunction
     )
         -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
     {
@@ -180,7 +173,7 @@ enum VerifierGenerator {
                 parameterType: parameterType,
                 form: form,
                 allParametersAreMatchers: allParametersAreMatchers,
-                genericContext: genericContext
+                function: function
             )
             methodParameters.append(fragments.paramDecl)
             methodInterpolationParameters.append(fragments.interpolation)
@@ -236,7 +229,7 @@ enum VerifierGenerator {
         typePrefix: String,
         storagePrefix: String,
         accessLevel: AccessLevel,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> FunctionDeclSyntax {
         let allParametersAreMatchers: Bool = parameterSequence.reduce(into: true) { partialResult, entry in
             if case .explicitMatcher = entry.2 {
@@ -249,7 +242,7 @@ enum VerifierGenerator {
         let (methodParameters, methodInterpolationParameters, matcherInitializers) = getParameters(
             parameterSequence: parameterSequence,
             allParametersAreMatchers: allParametersAreMatchers,
-            genericContext: genericContext
+            function: function
         )
 
         let methodSignature = methodParameters.joined(separator: ", ")
@@ -268,7 +261,7 @@ enum VerifierGenerator {
         let functionName = functionDeclaration.name.text
         let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
-        let returnTypeString = captureReturnType(parameters: parameters, genericContext: genericContext)!
+        let returnTypeString = captureReturnType(parameters: parameters, function: function)!
         let mapExpression = captureMapExpression(parameters: parameters)!
 
         // if this is not a varient with all matcher inputs
@@ -360,13 +353,13 @@ extension VerifierGenerator {
         parameterType: TypeConformance,
         form: AllParameterSequenceGenerator.ParameterForm,
         allParametersAreMatchers: Bool,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
         let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
 
         // Generic parameter handling — uses NonComparableValueMatcher<existential>
         // for case 1 and ErasedValueMatcher for case 2.
-        switch genericContext.classify(parameter.type) {
+        switch function.classify(parameter.type) {
         case .directGeneric(let info):
             return (
                 "\(names.signature): NonComparableValueMatcher<\(info.storageType)>",
@@ -478,18 +471,18 @@ extension VerifierGenerator {
 
     fileprivate static func captureReturnType(
         parameters: [FunctionParameterSyntax],
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> String? {
         guard !parameters.isEmpty else { return nil }
 
         if parameters.count == 1 {
             let param = parameters[0]
-            let type = strippedParameterType(param, genericContext: genericContext)
+            let type = strippedParameterType(param, function: function)
             return "[\(type)]"
         } else {
             let tupleElements = parameters.map { param in
                 let name = (param.secondName ?? param.firstName).text
-                let type = strippedParameterType(param, genericContext: genericContext)
+                let type = strippedParameterType(param, function: function)
                 return "\(name): \(type)"
             }
             return "[(\(tupleElements.joined(separator: ", ")))]"
@@ -514,10 +507,10 @@ extension VerifierGenerator {
 
     fileprivate static func strippedParameterType(
         _ parameter: FunctionParameterSyntax,
-        genericContext: GenericContext
+        function: MockableFunction
     ) -> String {
         // Generic-aware: substitute existential or `any Sendable` for generic params.
-        switch genericContext.classify(parameter.type) {
+        switch function.classify(parameter.type) {
         case .directGeneric(let info):
             return info.storageType
         case .wrappedGeneric:

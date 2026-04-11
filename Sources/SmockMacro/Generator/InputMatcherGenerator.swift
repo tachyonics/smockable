@@ -25,16 +25,14 @@ enum InputMatcherGenerator {
     ///
     /// The generated `_InputMatcher` struct is intentionally `internal` regardless of
     /// the protocol's access level. It's an implementation detail used to compose the
-    /// public matcher API; users should never reference it directly. Keeping it
-    /// internal preserves freedom to refactor matcher storage in the future
-    /// (e.g. to use parameter packs).
+    /// public matcher API; users should never reference it directly. 
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
         typePrefix: String = "",
         accessLevel: AccessLevel,
         typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
@@ -53,12 +51,12 @@ enum InputMatcherGenerator {
                     try generateMatcherProperty(
                         for: parameter,
                         typeConformanceProvider: typeConformanceProvider,
-                        genericContext: genericContext
+                        function: function
                     )
                 }
 
                 // Generate matches method
-                try generateMatchesMethod(parameters: parameters, genericContext: genericContext)
+                try generateMatchesMethod(parameters: parameters, function: function)
             }
         )
     }
@@ -67,12 +65,12 @@ enum InputMatcherGenerator {
     private static func generateMatcherProperty(
         for parameter: FunctionParameterSyntax,
         typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
 
         // Generic-aware handling
-        switch genericContext.classify(parameter.type) {
+        switch function.classify(parameter.type) {
         case .directGeneric(let info):
             // Use the existential storage type (e.g. `any Encodable & Sendable`).
             // For Equatable constraints, allow exact matching via OnlyEquatableValueMatcher
@@ -126,7 +124,7 @@ enum InputMatcherGenerator {
     /// Generate the matches method that checks if all parameters match
     private static func generateMatchesMethod(
         parameters: [FunctionParameterSyntax],
-        genericContext: GenericContext
+        function: MockableFunction
     ) throws -> FunctionDeclSyntax {
         // Build parameter list for matches method
         var methodParameters: [String] = []
@@ -141,7 +139,7 @@ enum InputMatcherGenerator {
             // upcasts before calling. `any Sendable` is required (instead of `Any`)
             // because the mock state lives behind a Mutex and must be Sendable.
             let paramTypeForSignature: String
-            switch genericContext.classify(parameter.type) {
+            switch function.classify(parameter.type) {
             case .directGeneric(let info):
                 paramTypeForSignature = info.storageType
             case .wrappedGeneric:
