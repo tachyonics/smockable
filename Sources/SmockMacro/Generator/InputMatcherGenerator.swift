@@ -87,7 +87,7 @@ enum InputMatcherGenerator {
         case .wrappedGeneric:
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): AnyValueMatcher
+                let \(raw: paramName): ErasedValueMatcher
                 """
             )
         case .concrete:

@@ -75,7 +75,7 @@ When the parameter type *contains* a generic parameter inside a wrapper (e.g. `F
 `[T]`, `Optional<T>`), Smockable cannot express the wrapped existential as a storage type
 — Swift doesn't allow types like `Foo<some Encodable & Sendable>` in storage positions.
 
-In this case Smockable falls back to ``AnyValueMatcher``, which stores values as
+In this case Smockable falls back to ``ErasedValueMatcher``, which stores values as
 `any Sendable`. The matching closure receives `any Sendable`; the test author will again
 need to cast to the expected concrete specialization.
 

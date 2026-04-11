@@ -365,7 +365,7 @@ extension VerifierGenerator {
         let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
 
         // Generic parameter handling — uses NonComparableValueMatcher<existential>
-        // for case 1 and AnyValueMatcher for case 2.
+        // for case 1 and ErasedValueMatcher for case 2.
         switch genericContext.classify(parameter.type) {
         case .directGeneric(let info):
             return (
@@ -375,7 +375,7 @@ extension VerifierGenerator {
             )
         case .wrappedGeneric:
             return (
-                "\(names.signature): AnyValueMatcher",
+                "\(names.signature): ErasedValueMatcher",
                 "\(names.signature): \\(\(names.local).description)",
                 "\(names.matcherPrefix)\(names.local)"
             )

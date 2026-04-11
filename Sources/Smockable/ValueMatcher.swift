@@ -45,7 +45,7 @@ public struct AlwaysMatcher: Sendable {
 ///     return typed.tableName == "foo"
 /// }), complete: .withSuccess)
 /// ```
-public enum AnyValueMatcher: Sendable, CustomStringConvertible {
+public enum ErasedValueMatcher: Sendable, CustomStringConvertible {
     /// Matches any value.
     case any
     /// Uses a closure for custom matching logic. The closure receives the value

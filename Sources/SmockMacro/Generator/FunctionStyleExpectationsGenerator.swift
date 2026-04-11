@@ -121,7 +121,7 @@ enum FunctionStyleExpectationsGenerator {
 
     /// Generate the (parameter declaration, matcher initializer) for a single parameter
     /// in an expectation setter, given its conformance and parameter form. Generic
-    /// parameters take precedence and are handled with the existential / `AnyValueMatcher`
+    /// parameters take precedence and are handled with the existential / `ErasedValueMatcher`
     /// substitution.
     private static func parameterFragments(
         parameter: FunctionParameterSyntax,
@@ -140,7 +140,7 @@ enum FunctionStyleExpectationsGenerator {
         let isOptional = paramType.hasSuffix("?")
 
         // Generic parameter handling — uses NonComparableValueMatcher<existential>
-        // for case 1 and AnyValueMatcher for case 2.
+        // for case 1 and ErasedValueMatcher for case 2.
         switch genericContext.classify(parameter.type) {
         case .directGeneric(let info):
             return (
@@ -149,7 +149,7 @@ enum FunctionStyleExpectationsGenerator {
             )
         case .wrappedGeneric:
             return (
-                "\(paramNameForSignature): AnyValueMatcher",
+                "\(paramNameForSignature): ErasedValueMatcher",
                 "\(paramName): \(paramName)"
             )
         case .concrete:

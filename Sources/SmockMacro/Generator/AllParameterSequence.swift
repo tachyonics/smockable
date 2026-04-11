@@ -44,7 +44,7 @@ enum AllParameterSequenceGenerator {
                 firstTypeConformance = .neitherComparableNorEquatable
                 _ = info  // .exact handling is added separately
             case .wrappedGeneric:
-                // Wrapped generic: only .any/.matching via AnyValueMatcher.
+                // Wrapped generic: only .any/.matching via ErasedValueMatcher.
                 firstTypeConformance = .neitherComparableNorEquatable
             case .concrete:
                 let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
