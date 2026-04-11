@@ -273,6 +273,84 @@ struct MockableFunctionTests {
             Issue.record("Expected directGeneric for U")
         }
     }
+
+    // MARK: - Type erasure helpers
+
+    @Test
+    func erasedTypeStringForDirectGenericReturnsConstraintExistential() throws {
+        let source = "func foo<T: Encodable & Sendable>(item: T)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.erasedTypeString(for: type) == "any Encodable & Sendable")
+    }
+
+    @Test
+    func erasedTypeStringForWrappedGenericReturnsAnySendable() throws {
+        let source = "func foo<T: Sendable>(input: PutItemInput<T>)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "input")
+
+        #expect(function.erasedTypeString(for: type) == "any Sendable")
+    }
+
+    @Test
+    func erasedTypeStringForConcreteTypeReturnsTypeUnchanged() throws {
+        let source = "func foo<T: Sendable>(item: T, name: String)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "name")
+
+        #expect(function.erasedTypeString(for: type) == "String")
+    }
+
+    @Test
+    func erasedTypeStringForUnconstrainedGenericReturnsAny() throws {
+        let source = "func foo<T>(item: T)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.erasedTypeString(for: type) == "Any")
+    }
+
+    @Test
+    func erasedTypeForDirectGenericReturnsExistentialIdentifier() throws {
+        let source = "func foo<T: Encodable & Sendable>(item: T)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        let erased = function.erasedType(for: type)
+        #expect(
+            erased.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                == "any Encodable & Sendable"
+        )
+    }
+
+    @Test
+    func erasedTypeForWrappedGenericReturnsAnySendable() throws {
+        let source = "func foo<T: Sendable>(input: PutItemInput<T>)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "input")
+
+        let erased = function.erasedType(for: type)
+        #expect(
+            erased.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                == "any Sendable"
+        )
+    }
+
+    @Test
+    func erasedTypeForConcreteTypeReturnsOriginalSyntaxNode() throws {
+        let source = "func foo<T: Sendable>(item: T, name: String)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "name")
+
+        // Concrete types are returned as-is, not transformed.
+        let erased = function.erasedType(for: type)
+        #expect(
+            erased.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                == type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
 }
 
 // MARK: - Equatable conformance for ParameterClassification
