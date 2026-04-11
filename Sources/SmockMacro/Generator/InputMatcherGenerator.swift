@@ -25,7 +25,7 @@ enum InputMatcherGenerator {
     ///
     /// The generated `_InputMatcher` struct is intentionally `internal` regardless of
     /// the protocol's access level. It's an implementation detail used to compose the
-    /// public matcher API; users should never reference it directly. 
+    /// public matcher API; users should never reference it directly.
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
