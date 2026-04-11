@@ -174,13 +174,14 @@ when(
 )
 ```
 
-> Tip: ``NonComparableValueMatcher/matchingAs(_:_:)`` /
-> ``OnlyEquatableValueMatcher/matchingAs(_:_:)`` and the corresponding
-> ``NonComparableValueMatcher/exactAs(_:)`` /
-> ``OnlyEquatableValueMatcher/exactAs(_:)`` exist on every matcher used by the
+> Tip: ``NonComparableValueMatcher/matchingAs(_:_:)`` and
+> ``OnlyEquatableValueMatcher/matchingAs(_:_:)`` (along with the corresponding
+> ``NonComparableValueMatcher/exactAs(_:)``) exist on every matcher used by the
 > generic-method codepaths, so the same pattern works whether the parameter is a
 > direct generic, a wrapped generic, or a non-generic existential parameter
-> (like `any Encodable & Sendable`).
+> (like `any Encodable & Sendable`). ``OnlyEquatableValueMatcher`` doesn't need
+> an `exactAs` because its existing ``OnlyEquatableValueMatcher/exact(_:)`` case
+> already does the right thing via existential equality.
 
 ## Generic Return Types
 

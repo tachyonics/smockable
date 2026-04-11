@@ -253,8 +253,7 @@ features are unavailable for parameters whose type references a generic paramete
 - **`.exact()` matchers.** Even when the generic constraint includes `Equatable`, exact-value
   matching is not generated because the existential storage type isn't itself `Equatable`.
   Use ``ErasedValueMatcher/exactAs(_:)`` /
-  ``NonComparableValueMatcher/exactAs(_:)`` /
-  ``OnlyEquatableValueMatcher/exactAs(_:)`` to compare against a typed concrete
+  ``NonComparableValueMatcher/exactAs(_:)`` to compare against a typed concrete
   value, or `.matching` with a manual equality check.
 - **Range matchers (`ClosedRange`).**
 - **`additionalEquatableTypes` allowlisting** for generic parameters or their wrapper types.

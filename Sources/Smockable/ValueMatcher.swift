@@ -309,19 +309,6 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
         }
     }
 
-    /// Type-safe variant that casts `T` to a more specific type `U` and
-    /// compares it for equality with `value`.
-    ///
-    /// Useful when `T` is a protocol composition existential and the test
-    /// wants to assert exact equality against a concrete sub-type. Returns
-    /// `false` from the matcher if the cast fails.
-    public static func exactAs<U: Equatable & Sendable>(_ value: U) -> OnlyEquatableValueMatcher<T> {
-        .matching { (storedValue: T) in
-            guard let typed = storedValue as? U else { return false }
-            return typed == value
-        }
-    }
-
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
     /// - Returns: `true` if the value matches, `false` otherwise
