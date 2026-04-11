@@ -23,11 +23,6 @@ import SwiftSyntax
 /// A protocol method requirement together with the parsed metadata that all generators
 /// need: the function declaration itself plus the analysis of its generic parameters
 /// and constraints.
-///
-/// `MockGenerator` builds one `MockableFunction` per protocol method at the top of
-/// generation, and threads the resulting array through to every generator that needs
-/// to know about generic parameters. This guarantees that the generic analysis for a
-/// given function declaration runs exactly once.
 package struct MockableFunction {
     /// Information about a single generic parameter on a function.
     package struct GenericParameter {
