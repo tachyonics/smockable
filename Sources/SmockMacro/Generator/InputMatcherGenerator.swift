@@ -133,20 +133,9 @@ enum InputMatcherGenerator {
         for parameter in parameters {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
 
-            // Determine the type used in the matches() method signature.
-            // For generic params, the matches() method receives the existential
-            // (case 1) or `any Sendable` (case 2) — the mock implementation
-            // upcasts before calling. `any Sendable` is required (instead of `Any`)
-            // because the mock state lives behind a Mutex and must be Sendable.
-            let paramTypeForSignature: String
-            switch function.classify(parameter.type) {
-            case .directGeneric(let info):
-                paramTypeForSignature = info.storageType
-            case .wrappedGeneric:
-                paramTypeForSignature = "any Sendable"
-            case .concrete:
-                paramTypeForSignature = parameter.type.description
-            }
+            // The matches() method receives the erased form of the parameter type,
+            // so the mock implementation upcasts before calling.
+            let paramTypeForSignature = function.erasedTypeString(for: parameter.type)
 
             // Add parameter to method signature
             let firstName = parameter.firstName.text

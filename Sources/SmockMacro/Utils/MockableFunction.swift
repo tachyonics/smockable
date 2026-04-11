@@ -173,6 +173,44 @@ package struct MockableFunction {
         return .concrete
     }
 
+    // MARK: - Type erasure for generic substitution
+
+    /// Substitute a type with its erased storage form, returning a `TypeSyntax`.
+    ///
+    /// - Direct generic parameter (e.g. `T`) → the constraint existential
+    ///   (e.g. `any Encodable & Sendable`).
+    /// - Wrapped generic (e.g. `Foo<T>`, `[T]`) → `any Sendable`. Wrapped types
+    ///   collapse to `any Sendable` because Swift can't express the wrapped
+    ///   existential as a storage type.
+    /// - Concrete type → returned unchanged.
+    ///
+    /// `any Sendable` is required (instead of plain `Any`) because the storage
+    /// it goes into lives behind a `Mutex` and must be `Sendable`-conforming.
+    package func erasedType(for type: TypeSyntax) -> TypeSyntax {
+        switch classify(type) {
+        case .directGeneric(let info):
+            return TypeSyntax(IdentifierTypeSyntax(name: .identifier(info.storageType)))
+        case .wrappedGeneric:
+            return TypeSyntax(IdentifierTypeSyntax(name: .identifier("any Sendable")))
+        case .concrete:
+            return type
+        }
+    }
+
+    /// String form of ``erasedType(for:)``. Convenient when the result is going
+    /// to be interpolated into generated source as a raw string rather than
+    /// embedded as a `TypeSyntax`.
+    package func erasedTypeString(for type: TypeSyntax) -> String {
+        switch classify(type) {
+        case .directGeneric(let info):
+            return info.storageType
+        case .wrappedGeneric:
+            return "any Sendable"
+        case .concrete:
+            return type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
     /// Check whether `token` appears in `text` as a complete identifier (not as a
     /// substring of a longer identifier).
     private static func containsToken(_ token: String, in text: String) -> Bool {

@@ -33,7 +33,7 @@ enum ClosureGenerator {
                     parameters: TupleTypeElementListSyntax {
                         for parameter in signature.parameterClause.parameters {
                             TupleTypeElementSyntax(
-                                type: erasedType(of: parameter.type, function: function)
+                                type: function.erasedType(for: parameter.type)
                             )
                         }
                     },
@@ -43,7 +43,7 @@ enum ClosureGenerator {
                     ),
                     returnClause: signature.returnClause.map { clause in
                         ReturnClauseSyntax(
-                            type: erasedType(of: clause.type, function: function)
+                            type: function.erasedType(for: clause.type)
                         )
                     }
                         ?? ReturnClauseSyntax(
@@ -53,27 +53,6 @@ enum ClosureGenerator {
             )
         }
     }
-
-    /// Substitute generic parameter references in `type` with their existential
-    /// storage type (case 1) or `any Sendable` (case 2). Concrete types are
-    /// returned unchanged.
-    ///
-    /// `any Sendable` is used for wrapped generic types because the closure must
-    /// be `@Sendable` and `Any` doesn't conform to `Sendable`.
-    private static func erasedType(
-        of type: TypeSyntax,
-        function: MockableFunction
-    ) -> TypeSyntax {
-        switch function.classify(type) {
-        case .directGeneric(let info):
-            return TypeSyntax(IdentifierTypeSyntax(name: .identifier(info.storageType)))
-        case .wrappedGeneric:
-            return TypeSyntax(IdentifierTypeSyntax(name: .identifier("any Sendable")))
-        case .concrete:
-            return type
-        }
-    }
-
 
     static func callExpression(
         baseName: String,

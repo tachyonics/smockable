@@ -509,18 +509,14 @@ extension VerifierGenerator {
         _ parameter: FunctionParameterSyntax,
         function: MockableFunction
     ) -> String {
-        // Generic-aware: substitute existential or `any Sendable` for generic params.
-        switch function.classify(parameter.type) {
-        case .directGeneric(let info):
-            return info.storageType
-        case .wrappedGeneric:
-            return "any Sendable"
-        case .concrete:
-            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                return attributedType.baseType.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            return parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Strip attribute decorations (e.g. `inout`) before erasure.
+        let baseType: TypeSyntax
+        if let attributed = parameter.type.as(AttributedTypeSyntax.self) {
+            baseType = attributed.baseType
+        } else {
+            baseType = parameter.type
         }
+        return function.erasedTypeString(for: baseType)
     }
 }
 

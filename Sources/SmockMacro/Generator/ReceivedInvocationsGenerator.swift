@@ -98,31 +98,20 @@ enum ReceivedInvocationsGenerator {
                 TupleTypeElementSyntax(
                     firstName: parameter.secondName ?? parameter.firstName,
                     colon: .colonToken(),
-                    type: {
-                        // Generic-aware: use existential or `any Sendable` for generic params.
-                        // `any Sendable` is required (instead of `Any`) because invocation
-                        // storage lives behind a Mutex and must be Sendable-conforming.
-                        switch function.classify(parameter.type) {
-                        case .directGeneric(let info):
-                            return TypeSyntax(
-                                IdentifierTypeSyntax(name: .identifier(info.storageType))
-                            )
-                        case .wrappedGeneric:
-                            return TypeSyntax(
-                                IdentifierTypeSyntax(name: .identifier("any Sendable"))
-                            )
-                        case .concrete:
-                            if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                                return attributedType.baseType
-                            } else {
-                                return parameter.type
-                            }
-                        }
-                    }()
+                    type: function.erasedType(for: strippedAttributedType(parameter.type))
                 )
             }
         }
         return TupleTypeSyntax(elements: tupleElements)
+    }
+
+    /// Strip attribute decorations (e.g. `inout`) so the underlying type can be
+    /// stored in a tuple element.
+    private static func strippedAttributedType(_ type: TypeSyntax) -> TypeSyntax {
+        if let attributed = type.as(AttributedTypeSyntax.self) {
+            return attributed.baseType
+        }
+        return type
     }
 
     static func appendValueToVariableExpression(

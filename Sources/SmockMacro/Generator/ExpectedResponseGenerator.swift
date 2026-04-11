@@ -54,8 +54,7 @@ enum ExpectedResponseGenerator {
                 }
 
                 if let returnType = signature.returnClause?.type {
-                    // Substitute generic return types with their existential or Any.
-                    let valueType = Self.erasedReturnType(returnType, function: function)
+                    let valueType = function.erasedTypeString(for: returnType)
                     try EnumCaseDeclSyntax(
                         """
                         case value(\(raw: valueType))
@@ -70,26 +69,6 @@ enum ExpectedResponseGenerator {
                 }
             }
         )
-    }
-
-    /// Substitute a generic return type with its existential or `any Sendable`.
-    /// Concrete types are returned unchanged.
-    ///
-    /// `any Sendable` is used for wrapped generic return types so the storage
-    /// remains `Sendable`-conforming. Generic parameters must include `Sendable`
-    /// in their constraints (the macro emits a diagnostic otherwise — see issue).
-    static func erasedReturnType(
-        _ returnType: TypeSyntax,
-        function: MockableFunction
-    ) -> String {
-        switch function.classify(returnType) {
-        case .directGeneric(let info):
-            return info.storageType
-        case .wrappedGeneric:
-            return "any Sendable"
-        case .concrete:
-            return returnType.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
     }
 
     static func expectedResponseVariableDeclaration(

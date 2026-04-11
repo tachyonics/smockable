@@ -78,11 +78,7 @@ enum FieldOptionsGenerator {
                 }
 
                 if let returnType = signature.returnClause?.type {
-                    // Substitute generic return types with their existential or Any.
-                    let valueType = ExpectedResponseGenerator.erasedReturnType(
-                        returnType,
-                        function: function
-                    )
+                    let valueType = function.erasedTypeString(for: returnType)
                     try FunctionDeclSyntax(
                         """
                         \(raw: accessLevel.rawValue) func update(value: \(raw: valueType)) {
