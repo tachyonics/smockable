@@ -43,21 +43,23 @@ protocol Storage {
 }
 ```
 
-The `.matching` matcher receives the constraint existential, so the closure parameter is
-typed as `any Encodable & Sendable`. This requires that the test author cast to the actual concrete
-type they expect in order to inspect properties or compare it to a concrete value:
+The raw `.matching` matcher receives the constraint existential, so its closure
+parameter is typed as `any Encodable & Sendable` and the test author would need to
+cast it manually. Smockable provides ``NonComparableValueMatcher/matchingAs(_:_:)``
+and ``NonComparableValueMatcher/exactAs(_:)`` to do that cast for you, so the
+test closure / expected value is fully typed:
 
 ```swift
-struct UserPayload: Encodable, Sendable {
+struct UserPayload: Equatable, Encodable, Sendable {
     let id: String
     let email: String
 }
 
-@Test func storeMatching() async {
+@Test func storeMatchingAs() async {
     var expectations = MockStorage.Expectations()
     when(
-        expectations.store(item: .matching { (item: any Encodable & Sendable) in
-            (item as? UserPayload)?.email == "test@example.com"
+        expectations.store(item: .matchingAs(UserPayload.self) { payload in
+            payload.email == "test@example.com"
         }),
         complete: .withSuccess
     )
@@ -67,6 +69,35 @@ struct UserPayload: Encodable, Sendable {
 
     verify(mock, times: 1).store(item: .any)
 }
+
+@Test func storeExactAs() async {
+    var expectations = MockStorage.Expectations()
+    let expected = UserPayload(id: "u1", email: "test@example.com")
+    when(
+        expectations.store(item: .exactAs(expected)),
+        complete: .withSuccess
+    )
+
+    let mock = MockStorage(expectations: expectations)
+    await mock.store(item: expected)
+
+    verify(mock, times: 1).store(item: .any)
+}
+```
+
+If the production code calls the method with a value that isn't a `UserPayload`,
+the cast inside `matchingAs` / `exactAs` returns `false` and the matcher simply
+doesn't match — it never crashes.
+
+If you'd rather write the cast inline, the unwrapped form is still available:
+
+```swift
+when(
+    expectations.store(item: .matching { (item: any Encodable & Sendable) in
+        (item as? UserPayload)?.email == "test@example.com"
+    }),
+    complete: .withSuccess
+)
 ```
 
 ## Wrapped Generic Parameters
@@ -76,11 +107,13 @@ When the parameter type *contains* a generic parameter inside a wrapper (e.g. `F
 — Swift doesn't allow types like `Foo<some Encodable & Sendable>` in storage positions.
 
 In this case Smockable falls back to ``ErasedValueMatcher``, which stores values as
-`any Sendable`. The matching closure receives `any Sendable`; the test author will again
-need to cast to the expected concrete specialization.
+`any Sendable`. As with direct generics, you can either let
+``ErasedValueMatcher/matchingAs(_:_:)`` and ``ErasedValueMatcher/exactAs(_:)``
+do the cast for you, or write it manually inside `.matching`.
 
 ```swift
-struct PutItemInput<ItemType: Encodable & Sendable>: Sendable {
+struct PutItemInput<ItemType: Encodable & Sendable>: Equatable, Sendable
+where ItemType: Equatable {
     let tableName: String
     let item: ItemType
 }
@@ -101,20 +134,53 @@ protocol Database {
     verify(mock, times: 2).putItem(input: .any)
 }
 
-@Test func putItemMatching() async {
+@Test func putItemMatchingAs() async {
     var expectations = MockDatabase.Expectations()
     when(
-        expectations.putItem(input: .matching { (anyInput: any Sendable) in
-            guard let typed = anyInput as? PutItemInput<String> else { return false }
-            return typed.tableName == "users"
-        }),
+        expectations.putItem(
+            input: .matchingAs(PutItemInput<String>.self) { input in
+                input.tableName == "users" && input.item == "hello"
+            }
+        ),
         complete: .withSuccess
     )
 
     let mock = MockDatabase(expectations: expectations)
     await mock.putItem(input: PutItemInput(tableName: "users", item: "hello"))
 }
+
+@Test func putItemExactAs() async {
+    var expectations = MockDatabase.Expectations()
+    let expected = PutItemInput(tableName: "users", item: "hello")
+    when(
+        expectations.putItem(input: .exactAs(expected)),
+        complete: .withSuccess
+    )
+
+    let mock = MockDatabase(expectations: expectations)
+    await mock.putItem(input: expected)
+}
 ```
+
+The manual-cast equivalent of `matchingAs` is still available if you prefer it:
+
+```swift
+when(
+    expectations.putItem(input: .matching { (anyInput: any Sendable) in
+        guard let typed = anyInput as? PutItemInput<String> else { return false }
+        return typed.tableName == "users"
+    }),
+    complete: .withSuccess
+)
+```
+
+> Tip: ``NonComparableValueMatcher/matchingAs(_:_:)`` /
+> ``OnlyEquatableValueMatcher/matchingAs(_:_:)`` and the corresponding
+> ``NonComparableValueMatcher/exactAs(_:)`` /
+> ``OnlyEquatableValueMatcher/exactAs(_:)`` exist on every matcher used by the
+> generic-method codepaths, so the same pattern works whether the parameter is a
+> direct generic, a wrapped generic, or a non-generic existential parameter
+> (like `any Encodable & Sendable`).
 
 ## Generic Return Types
 
