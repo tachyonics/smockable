@@ -35,23 +35,75 @@ public struct AlwaysMatcher: Sendable {
 /// references a generic parameter inside a wrapper (e.g. `Foo<T>`).
 ///
 /// Because the wrapper's specialization isn't known until invocation time, the
-/// stored matcher operates on `any Sendable`. The test author is expected to
-/// cast inside `.matching` closures.
+/// stored matcher operates on `any Sendable`. Prefer ``matchingAs(_:_:)`` to
+/// have the cast performed for you instead of writing it inside a `.matching`
+/// closure.
 ///
 /// ## Example
 /// ```swift
-/// when(expectations.putItem(input: .matching { (anyInput: any Sendable) in
-///     guard let typed = anyInput as? PutItemInput<MyItem> else { return false }
-///     return typed.tableName == "foo"
-/// }), complete: .withSuccess)
+/// when(
+///     expectations.putItem(input: .matchingAs(PutItemInput<MyItem>.self) { input in
+///         input.tableName == "foo"
+///     }),
+///     complete: .withSuccess
+/// )
 /// ```
 public enum ErasedValueMatcher: Sendable, CustomStringConvertible {
     /// Matches any value.
     case any
     /// Uses a closure for custom matching logic. The closure receives the value
     /// as `any Sendable`; the test author is responsible for casting to the
-    /// expected type.
+    /// expected type. Prefer ``matchingAs(_:_:)`` for the type-safe variant.
     case matching(_ matcher: @Sendable (any Sendable) -> Bool)
+
+    /// Type-safe variant of ``matching(_:)`` that casts the erased value to
+    /// `T` before invoking the closure.
+    ///
+    /// Use this when the production code passes a known concrete type and the
+    /// test wants to inspect its properties directly. The cast happens inside
+    /// the matcher; if the production code passes a different type, the
+    /// matcher returns `false` (the expectation simply doesn't match).
+    ///
+    /// ## Example
+    /// ```swift
+    /// when(
+    ///     expectations.putItem(input: .matchingAs(PutItemInput<MyItem>.self) { input in
+    ///         input.tableName == "foo" && input.item.name == "bar"
+    ///     }),
+    ///     complete: .withSuccess
+    /// )
+    /// ```
+    public static func matchingAs<T>(
+        _ type: T.Type,
+        _ check: @escaping @Sendable (T) -> Bool
+    ) -> ErasedValueMatcher {
+        .matching { (anyValue: any Sendable) in
+            guard let typed = anyValue as? T else { return false }
+            return check(typed)
+        }
+    }
+
+    /// Type-safe variant of ``matching(_:)`` that casts the erased value to
+    /// `T` and compares it for equality with `value`.
+    ///
+    /// Use this when the production code passes a known concrete type and the
+    /// test wants to assert that it equals a specific value. The cast happens
+    /// inside the matcher; if the production code passes a different type, the
+    /// matcher returns `false`.
+    ///
+    /// ## Example
+    /// ```swift
+    /// when(
+    ///     expectations.putItem(input: .exactAs(expectedInput)),
+    ///     complete: .withSuccess
+    /// )
+    /// ```
+    public static func exactAs<T: Equatable & Sendable>(_ value: T) -> ErasedValueMatcher {
+        .matching { (anyValue: any Sendable) in
+            guard let typed = anyValue as? T else { return false }
+            return typed == value
+        }
+    }
 
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
@@ -159,6 +211,47 @@ public enum NonComparableValueMatcher<T: Sendable>: Sendable, CustomStringConver
     /// Uses a closure for custom matching logic
     case matching(_ matcher: @Sendable (T) -> Bool)
 
+    /// Type-safe variant of ``matching(_:)`` that casts `T` to a more specific
+    /// type `U` before invoking the closure.
+    ///
+    /// Useful when `T` is an existential (e.g. `any Encodable & Sendable`) but
+    /// the test knows the concrete type the production code will pass. Returns
+    /// `false` from the matcher if the cast fails.
+    ///
+    /// ## Example
+    /// ```swift
+    /// // For func process<T: Encodable & Sendable>(item: T)
+    /// when(
+    ///     expectations.process(item: .matchingAs(MyPayload.self) { payload in
+    ///         payload.id == "abc"
+    ///     }),
+    ///     complete: .withSuccess
+    /// )
+    /// ```
+    public static func matchingAs<U>(
+        _ type: U.Type,
+        _ check: @escaping @Sendable (U) -> Bool
+    ) -> NonComparableValueMatcher<T> {
+        .matching { (value: T) in
+            guard let typed = value as? U else { return false }
+            return check(typed)
+        }
+    }
+
+    /// Type-safe variant that casts `T` to a more specific type `U` and
+    /// compares it for equality with `value`.
+    ///
+    /// Useful when `T` is an existential (e.g. `any Encodable & Sendable`) but
+    /// the test knows the concrete type the production code will pass and
+    /// wants to assert exact equality. Returns `false` from the matcher if
+    /// the cast fails.
+    public static func exactAs<U: Equatable & Sendable>(_ value: U) -> NonComparableValueMatcher<T> {
+        .matching { (storedValue: T) in
+            guard let typed = storedValue as? U else { return false }
+            return typed == value
+        }
+    }
+
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
     /// - Returns: Always `true` since this matcher only supports `.any`
@@ -200,6 +293,22 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
     /// Uses a closure for custom matching logic
     case matching(_ matcher: @Sendable (T) -> Bool)
 
+    /// Type-safe variant of ``matching(_:)`` that casts `T` to a more specific
+    /// type `U` before invoking the closure.
+    ///
+    /// Useful when `T` is an existential and the test knows the concrete type
+    /// the production code will pass. Returns `false` from the matcher if the
+    /// cast fails.
+    public static func matchingAs<U>(
+        _ type: U.Type,
+        _ check: @escaping @Sendable (U) -> Bool
+    ) -> OnlyEquatableValueMatcher<T> {
+        .matching { (value: T) in
+            guard let typed = value as? U else { return false }
+            return check(typed)
+        }
+    }
+
     /// Check if the given value matches this matcher.
     /// - Parameter value: The value to test against this matcher
     /// - Returns: `true` if the value matches, `false` otherwise
@@ -219,10 +328,10 @@ public enum OnlyEquatableValueMatcher<T: Equatable & Sendable>: Sendable, Custom
         switch self {
         case .any:
             return "any"
-        case .exact(let match):
-            return "\(match)"
         case .matching:
             return "custom"
+        case .exact(let match):
+            return "\(match)"
         }
     }
 }
