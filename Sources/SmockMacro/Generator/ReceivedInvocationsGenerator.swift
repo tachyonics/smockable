@@ -62,9 +62,13 @@ import SwiftSyntaxBuilder
 enum ReceivedInvocationsGenerator {
     static func variableDeclaration(
         variablePrefix: String,
-        parameterList: FunctionParameterListSyntax
+        parameterList: FunctionParameterListSyntax,
+        function: MockableFunction
     ) throws -> VariableDeclSyntax {
-        let elementType = self.arrayElementType(parameterList: parameterList)
+        let elementType = self.arrayElementType(
+            parameterList: parameterList,
+            function: function
+        )
 
         return try VariableDeclSyntax(
             """
@@ -73,7 +77,10 @@ enum ReceivedInvocationsGenerator {
         )
     }
 
-    static func arrayElementType(parameterList: FunctionParameterListSyntax) -> TypeSyntaxProtocol {
+    static func arrayElementType(
+        parameterList: FunctionParameterListSyntax,
+        function: MockableFunction
+    ) -> TypeSyntaxProtocol {
         let tupleElements = TupleTypeElementListSyntax {
             TupleTypeElementSyntax(
                 firstName: TokenSyntax.identifier("__localCallIndex"),
@@ -91,17 +98,20 @@ enum ReceivedInvocationsGenerator {
                 TupleTypeElementSyntax(
                     firstName: parameter.secondName ?? parameter.firstName,
                     colon: .colonToken(),
-                    type: {
-                        if let attributedType = parameter.type.as(AttributedTypeSyntax.self) {
-                            attributedType.baseType
-                        } else {
-                            parameter.type
-                        }
-                    }()
+                    type: function.erasedType(for: strippedAttributedType(parameter.type))
                 )
             }
         }
         return TupleTypeSyntax(elements: tupleElements)
+    }
+
+    /// Strip attribute decorations (e.g. `inout`) so the underlying type can be
+    /// stored in a tuple element.
+    private static func strippedAttributedType(_ type: TypeSyntax) -> TypeSyntax {
+        if let attributed = type.as(AttributedTypeSyntax.self) {
+            return attributed.baseType
+        }
+        return type
     }
 
     static func appendValueToVariableExpression(

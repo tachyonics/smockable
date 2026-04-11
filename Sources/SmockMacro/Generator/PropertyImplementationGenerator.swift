@@ -22,6 +22,7 @@ import SwiftSyntaxBuilder
 
 struct PropertyFunction {
     let function: FunctionDeclSyntax
+    let mockableFunction: MockableFunction
     let variablePrefix: String
     let parameterList: FunctionParameterListSyntax
     let effectSpecifiers: AccessorEffectSpecifiersSyntax?
@@ -74,8 +75,8 @@ enum PropertyImplementationGenerator {
                         variablePrefix: get.variablePrefix,
                         typePrefix: propertyDeclaration.typePrefix,
                         storagePrefix: propertyDeclaration.storagePrefix,
-                        functionDeclaration: get.function,
-                        parameterList: get.parameterList
+                        parameterList: get.parameterList,
+                        function: get.mockableFunction
                     )
                 )
             )
@@ -89,8 +90,8 @@ enum PropertyImplementationGenerator {
                         variablePrefix: set.variablePrefix,
                         typePrefix: propertyDeclaration.typePrefix,
                         storagePrefix: propertyDeclaration.storagePrefix,
-                        functionDeclaration: set.function,
-                        parameterList: set.parameterList
+                        parameterList: set.parameterList,
+                        function: set.mockableFunction
                     )
                 )
             )

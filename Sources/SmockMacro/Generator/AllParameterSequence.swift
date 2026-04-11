@@ -29,13 +29,28 @@ enum AllParameterSequenceGenerator {
 
     static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
-        typeConformanceProvider: (String) -> TypeConformance
+        function: MockableFunction
     ) -> [[(FunctionParameterSyntax, TypeConformance, ParameterForm)]] {
         if let firstParameter = parameters.first {
-            let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            let firstIsOptional = firstParamType.hasSuffix("?")
-            let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType)
-            let firstTypeConformance = typeConformanceProvider(firstBaseType)
+            // Determine the conformance for this parameter, taking generics into account.
+            let firstTypeConformance: TypeConformance
+            switch function.classify(firstParameter.type) {
+            case .directGeneric(let info):
+                // Direct generic: only .matching/.any are supported in the existential
+                // matcher. If the constraint includes Equatable, the .exact overload is
+                // generated separately as a typed wrapper, not via the parameter form
+                // pipeline (because the existential isn't itself Equatable).
+                firstTypeConformance = .neitherComparableNorEquatable
+                _ = info  // .exact handling is added separately
+            case .wrappedGeneric:
+                // Wrapped generic: only .any/.matching via ErasedValueMatcher.
+                firstTypeConformance = .neitherComparableNorEquatable
+            case .concrete:
+                let firstParamType = firstParameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                let firstIsOptional = firstParamType.hasSuffix("?")
+                let firstBaseType = (firstIsOptional ? String(firstParamType.dropLast()) : firstParamType)
+                firstTypeConformance = function.typeConformanceProvider(firstBaseType)
+            }
 
             if parameters.count == 1 {
                 switch firstTypeConformance {
@@ -59,7 +74,7 @@ enum AllParameterSequenceGenerator {
             // otherwise get the combinations for the parameters array minus the first element
             let dropFirstParameterSequences = getAllParameterSequences(
                 parameters: parameters.dropFirst(),
-                typeConformanceProvider: typeConformanceProvider
+                function: function
             )
 
             // iterate through the remaining cases

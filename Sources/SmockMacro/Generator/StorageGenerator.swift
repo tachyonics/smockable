@@ -22,10 +22,9 @@ import SwiftSyntaxBuilder
 
 enum StorageGenerator {
     static func expectationsDeclaration(
-        functionDeclarations: [FunctionDeclSyntax],
+        mockableFunctions: [MockableFunction],
         typePrefix: String = "",
         propertyDeclarations: [PropertyDeclaration] = [],
-        typeConformanceProvider: (String) -> TypeConformance,
         accessLevel: AccessLevel
     ) throws
         -> StructDeclSyntax
@@ -46,9 +45,9 @@ enum StorageGenerator {
                     )
                 }
 
-                for functionDeclaration in functionDeclarations {
-                    let parameterList = functionDeclaration.signature.parameterClause.parameters
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                for function in mockableFunctions {
+                    let parameterList = function.declaration.signature.parameterClause.parameters
+                    let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
                     let inputMatcherType =
                         parameterList.count > 0
                         ? "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
@@ -61,12 +60,11 @@ enum StorageGenerator {
                     )
                 }
 
-                for functionDeclaration in functionDeclarations {
+                for function in mockableFunctions {
                     let methods = try FunctionStyleExpectationsGenerator.generateExpectationMethods(
-                        for: functionDeclaration,
+                        for: function,
                         typePrefix: typePrefix,
-                        accessLevel: accessLevel,
-                        typeConformanceProvider: typeConformanceProvider
+                        accessLevel: accessLevel
                     )
                     for method in methods {
                         method
@@ -77,7 +75,7 @@ enum StorageGenerator {
     }
 
     static func expectedResponsesDeclaration(
-        functionDeclarations: [FunctionDeclSyntax],
+        mockableFunctions: [MockableFunction],
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = ""
     ) throws
@@ -94,13 +92,13 @@ enum StorageGenerator {
                     )
                 }
 
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                for function in mockableFunctions {
+                    let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
 
                     try ExpectedResponseGenerator.expectedResponseVariableDeclaration(
                         typePrefix: typePrefix,
                         variablePrefix: variablePrefix,
-                        functionDeclaration: functionDeclaration,
+                        functionDeclaration: function.declaration,
                         accessModifier: "",
                         staticName: false
                     )
@@ -114,17 +112,17 @@ enum StorageGenerator {
                             """
                         )
                     }
-                    for functionDeclaration in functionDeclarations {
-                        let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
+                    for function in mockableFunctions {
+                        let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
 
                         ExprSyntax(
                             """
-                            self.\(raw: variablePrefix) = expectations._\(raw: variablePrefix).map { 
+                            self.\(raw: variablePrefix) = expectations._\(raw: variablePrefix).map {
                               guard let expectedResponse = $0.expectedResponse else {
                                 fatalError("Expectation was added but not set correctly")
                               }
 
-                              return ($0.times, expectedResponse, $1) 
+                              return ($0.times, expectedResponse, $1)
                             }
                             """
                         )
@@ -135,7 +133,7 @@ enum StorageGenerator {
     }
 
     static func receivedInvocationsDeclaration(
-        functionDeclarations: [FunctionDeclSyntax],
+        mockableFunctions: [MockableFunction],
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = ""
     ) throws
@@ -152,20 +150,21 @@ enum StorageGenerator {
                     )
                 }
 
-                for functionDeclaration in functionDeclarations {
-                    let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-                    let parameterList = functionDeclaration.signature.parameterClause.parameters
+                for function in mockableFunctions {
+                    let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
+                    let parameterList = function.declaration.signature.parameterClause.parameters
 
                     try ReceivedInvocationsGenerator.variableDeclaration(
                         variablePrefix: variablePrefix,
-                        parameterList: parameterList
+                        parameterList: parameterList,
+                        function: function
                     )
                 }
             }
         )
     }
 
-    static func storageDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> StructDeclSyntax {
+    static func storageDeclaration() throws -> StructDeclSyntax {
         try StructDeclSyntax(
             name: "Storage",
             memberBlockBuilder: {
@@ -198,7 +197,7 @@ enum StorageGenerator {
         )
     }
 
-    static func stateDeclaration(functionDeclarations: [FunctionDeclSyntax]) throws -> ClassDeclSyntax {
+    static func stateDeclaration() throws -> ClassDeclSyntax {
         try ClassDeclSyntax(
             name: "State",
             inheritanceClause: InheritanceClauseSyntax {

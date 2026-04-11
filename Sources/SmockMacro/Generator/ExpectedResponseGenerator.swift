@@ -21,24 +21,30 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum ExpectedResponseGenerator {
+    /// Generate an expected response enum for a specific function.
+    ///
+    /// The generated `_ExpectedResponse` enum is intentionally `internal` regardless of
+    /// the protocol's access level. It's an implementation detail held inside
+    /// `_FieldOptions` and the storage tuples; users never reference it directly.
+    /// Keeping it internal preserves freedom to refactor the response storage shape.
     static func expectedResponseEnumDeclaration(
         typePrefix: String = "",
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax,
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        function: MockableFunction
     ) throws -> EnumDeclSyntax {
-        try EnumDeclSyntax(
-            modifiers: [accessLevel.declModifier],
+        let signature = function.declaration.signature
+        return try EnumDeclSyntax(
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",
             genericParameterClause: ": Sendable",
             memberBlockBuilder: {
                 try EnumCaseDeclSyntax(
                     """
-                    case closure(@Sendable \(ClosureGenerator.closureElements(functionSignature: functionSignature)))
+                    case closure(@Sendable \(ClosureGenerator.closureElements(function: function)))
                     """
                 )
 
-                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                if let throwsClause = signature.effectSpecifiers?.throwsClause {
                     let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try EnumCaseDeclSyntax(
                         """
@@ -47,10 +53,11 @@ enum ExpectedResponseGenerator {
                     )
                 }
 
-                if let returnType = functionSignature.returnClause?.type {
+                if let returnType = signature.returnClause?.type {
+                    let valueType = function.erasedTypeString(for: returnType)
                     try EnumCaseDeclSyntax(
                         """
-                        case value(\(returnType))
+                        case value(\(raw: valueType))
                         """
                     )
                 } else {

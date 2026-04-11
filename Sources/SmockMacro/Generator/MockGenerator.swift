@@ -50,7 +50,10 @@ enum MockGenerator {
     }
 
     // swiftlint:disable function_body_length
-    static func createGetterSetterPropertyDeclaration(for variable: VariableDeclSyntax) throws -> PropertyDeclaration {
+    static func createGetterSetterPropertyDeclaration(
+        for variable: VariableDeclSyntax,
+        typeConformanceProvider: @escaping (String) -> TypeConformance
+    ) throws -> PropertyDeclaration {
         guard let binding = variable.bindings.first,
             let identifier = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier,
             let type = binding.typeAnnotation?.type
@@ -121,6 +124,10 @@ enum MockGenerator {
             let getterVariablePrefix = VariablePrefixGenerator.text(for: getter)
             get = PropertyFunction(
                 function: getter,
+                mockableFunction: MockableFunction(
+                    declaration: getter,
+                    typeConformanceProvider: typeConformanceProvider
+                ),
                 variablePrefix: getterVariablePrefix,
                 parameterList: [],
                 effectSpecifiers: effectSpecifiers
@@ -136,6 +143,10 @@ enum MockGenerator {
 
             set = PropertyFunction(
                 function: setter,
+                mockableFunction: MockableFunction(
+                    declaration: setter,
+                    typeConformanceProvider: typeConformanceProvider
+                ),
                 variablePrefix: setterVariablePrefix,
                 parameterList: setterParameterList,
                 effectSpecifiers: nil
@@ -177,10 +188,6 @@ enum MockGenerator {
             )
         }
 
-        let propertyDeclarations = try protocolDeclaration.memberBlock.members
-            .compactMap { $0.decl.as(VariableDeclSyntax.self) }
-            .map(createGetterSetterPropertyDeclaration)
-
         let functionDeclarations = protocolDeclaration.memberBlock.members
             .compactMap { $0.decl.as(FunctionDeclSyntax.self) }
 
@@ -199,6 +206,23 @@ enum MockGenerator {
             additionalComparableTypes: parameters.additionalComparableTypes,
             additionalEquatableTypes: parameters.additionalEquatableTypes
         )
+
+        let propertyDeclarations = try protocolDeclaration.memberBlock.members
+            .compactMap { $0.decl.as(VariableDeclSyntax.self) }
+            .map { variable in
+                try createGetterSetterPropertyDeclaration(
+                    for: variable,
+                    typeConformanceProvider: typeConformanceProvider
+                )
+            }
+
+        // Build the MockableFunction wrapper for each protocol method exactly once.
+        // Every generator that needs generic context information receives it via this
+        // array (or a single element from it), guaranteeing that the generic analysis
+        // for a given function declaration runs only once.
+        let mockableFunctions = functionDeclarations.map {
+            MockableFunction(declaration: $0, typeConformanceProvider: typeConformanceProvider)
+        }
 
         let nonisolatedPrefix = isActor ? "nonisolated " : ""
 
@@ -245,64 +269,63 @@ enum MockGenerator {
             }
 
             for propertyDeclaration in propertyDeclarations {
-                let propertyFunctionDeclarations = [
-                    propertyDeclaration.get?.function, propertyDeclaration.set?.function,
+                let propertyMockableFunctions = [
+                    propertyDeclaration.get?.mockableFunction,
+                    propertyDeclaration.set?.mockableFunction,
                 ].compactMap { $0 }
 
                 try StorageGenerator.expectationsDeclaration(
-                    functionDeclarations: propertyFunctionDeclarations,
+                    mockableFunctions: propertyMockableFunctions,
                     typePrefix: propertyDeclaration.typePrefix,
-                    typeConformanceProvider: typeConformanceProvider,
                     accessLevel: parameters.accessLevel
                 )
 
                 try StorageGenerator.expectedResponsesDeclaration(
-                    functionDeclarations: propertyFunctionDeclarations,
+                    mockableFunctions: propertyMockableFunctions,
                     typePrefix: propertyDeclaration.typePrefix
                 )
 
                 try StorageGenerator.receivedInvocationsDeclaration(
-                    functionDeclarations: propertyFunctionDeclarations,
+                    mockableFunctions: propertyMockableFunctions,
                     typePrefix: propertyDeclaration.typePrefix
                 )
 
                 try VerifierGenerator.verifierStructDeclaration(
-                    functionDeclarations: propertyFunctionDeclarations,
+                    mockableFunctions: propertyMockableFunctions,
                     typePrefix: propertyDeclaration.typePrefix,
                     storagePrefix: propertyDeclaration.storagePrefix,
-                    typeConformanceProvider: typeConformanceProvider,
                     accessLevel: parameters.accessLevel
                 )
 
                 if let get = propertyDeclaration.get {
                     try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                         variablePrefix: get.variablePrefix,
-                        functionSignature: get.function.signature,
                         typePrefix: propertyDeclaration.typePrefix,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        function: get.mockableFunction
                     )
 
                     try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                         typePrefix: propertyDeclaration.typePrefix,
                         variablePrefix: get.variablePrefix,
-                        functionSignature: get.function.signature,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        function: get.mockableFunction
                     )
                 }
 
                 if let set = propertyDeclaration.set {
                     try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                         variablePrefix: set.variablePrefix,
-                        functionSignature: set.function.signature,
                         typePrefix: propertyDeclaration.typePrefix,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        function: set.mockableFunction
                     )
 
                     try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                         typePrefix: propertyDeclaration.typePrefix,
                         variablePrefix: set.variablePrefix,
-                        functionSignature: set.function.signature,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        function: set.mockableFunction
                     )
 
                     if let setterInputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
@@ -310,7 +333,8 @@ enum MockGenerator {
                         parameterList: set.parameterList,
                         typePrefix: propertyDeclaration.typePrefix,
                         accessLevel: parameters.accessLevel,
-                        typeConformanceProvider: typeConformanceProvider
+                        typeConformanceProvider: typeConformanceProvider,
+                        function: set.mockableFunction
                     ) {
                         setterInputMatcherStruct
                     }
@@ -323,43 +347,41 @@ enum MockGenerator {
             }
 
             try StorageGenerator.expectationsDeclaration(
-                functionDeclarations: functionDeclarations,
+                mockableFunctions: mockableFunctions,
                 propertyDeclarations: propertyDeclarations,
-                typeConformanceProvider: typeConformanceProvider,
                 accessLevel: parameters.accessLevel
             )
             try StorageGenerator.expectedResponsesDeclaration(
-                functionDeclarations: functionDeclarations,
+                mockableFunctions: mockableFunctions,
                 propertyDeclarations: propertyDeclarations
             )
             try StorageGenerator.receivedInvocationsDeclaration(
-                functionDeclarations: functionDeclarations,
+                mockableFunctions: mockableFunctions,
                 propertyDeclarations: propertyDeclarations
             )
-            try StorageGenerator.storageDeclaration(functionDeclarations: functionDeclarations)
-            try StorageGenerator.stateDeclaration(functionDeclarations: functionDeclarations)
+            try StorageGenerator.storageDeclaration()
+            try StorageGenerator.stateDeclaration()
             try StorageGenerator.variableDeclaration(isActor: isActor)
 
             try VerifierGenerator.verifierStructDeclaration(
-                functionDeclarations: functionDeclarations,
+                mockableFunctions: mockableFunctions,
                 propertyDeclarations: propertyDeclarations,
-                typeConformanceProvider: typeConformanceProvider,
                 accessLevel: parameters.accessLevel
             )
 
-            for functionDeclaration in functionDeclarations {
-                let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
-                let parameterList = functionDeclaration.signature.parameterClause.parameters
+            for function in mockableFunctions {
+                let variablePrefix = VariablePrefixGenerator.text(for: function.declaration)
+                let parameterList = function.declaration.signature.parameterClause.parameters
 
                 try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                     variablePrefix: variablePrefix,
-                    functionSignature: functionDeclaration.signature,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    function: function
                 )
                 try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                     variablePrefix: variablePrefix,
-                    functionSignature: functionDeclaration.signature,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    function: function
                 )
 
                 // Generate input matcher struct for functions with parameters
@@ -367,15 +389,16 @@ enum MockGenerator {
                     variablePrefix: variablePrefix,
                     parameterList: parameterList,
                     accessLevel: parameters.accessLevel,
-                    typeConformanceProvider: typeConformanceProvider
+                    typeConformanceProvider: typeConformanceProvider,
+                    function: function
                 ) {
                     inputMatcherStruct
                 }
 
                 try FunctionImplementationGenerator.functionDeclaration(
                     variablePrefix: variablePrefix,
-                    functionDeclaration: functionDeclaration,
-                    accessLevel: parameters.accessLevel
+                    accessLevel: parameters.accessLevel,
+                    function: function
                 )
             }
 

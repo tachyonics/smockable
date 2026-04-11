@@ -21,13 +21,18 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 
 enum InputMatcherGenerator {
-    /// Generate an input matcher struct for a specific function
+    /// Generate an input matcher struct for a specific function.
+    ///
+    /// The generated `_InputMatcher` struct is intentionally `internal` regardless of
+    /// the protocol's access level. It's an implementation detail used to compose the
+    /// public matcher API; users should never reference it directly.
     static func inputMatcherStructDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
         typePrefix: String = "",
         accessLevel: AccessLevel,
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        function: MockableFunction
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }
@@ -36,7 +41,6 @@ enum InputMatcherGenerator {
         let parameters = Array(parameterList)
 
         return try StructDeclSyntax(
-            modifiers: [accessLevel.declModifier],
             name: TokenSyntax.identifier(structName),
             inheritanceClause: InheritanceClauseSyntax {
                 InheritedTypeSyntax(type: IdentifierTypeSyntax(name: "Sendable"))
@@ -44,11 +48,15 @@ enum InputMatcherGenerator {
             memberBlockBuilder: {
                 // Generate properties for each parameter
                 for parameter in parameters {
-                    try generateMatcherProperty(for: parameter, typeConformanceProvider: typeConformanceProvider)
+                    try generateMatcherProperty(
+                        for: parameter,
+                        typeConformanceProvider: typeConformanceProvider,
+                        function: function
+                    )
                 }
 
                 // Generate matches method
-                try generateMatchesMethod(parameters: parameters)
+                try generateMatchesMethod(parameters: parameters, function: function)
             }
         )
     }
@@ -56,9 +64,34 @@ enum InputMatcherGenerator {
     /// Generate a matcher property for a function parameter
     private static func generateMatcherProperty(
         for parameter: FunctionParameterSyntax,
-        typeConformanceProvider: (String) -> TypeConformance
+        typeConformanceProvider: (String) -> TypeConformance,
+        function: MockableFunction
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
+
+        // Generic-aware handling
+        switch function.classify(parameter.type) {
+        case .directGeneric(let info):
+            // Use the existential storage type (e.g. `any Encodable & Sendable`).
+            // For Equatable constraints, allow exact matching via OnlyEquatableValueMatcher
+            // — but matchers store the existential, not the original generic param.
+            // The exact-match overload at the expectations layer captures the concrete
+            // type and converts it to a `.matching` closure.
+            return try VariableDeclSyntax(
+                """
+                let \(raw: paramName): NonComparableValueMatcher<\(raw: info.storageType)>
+                """
+            )
+        case .wrappedGeneric:
+            return try VariableDeclSyntax(
+                """
+                let \(raw: paramName): ErasedValueMatcher
+                """
+            )
+        case .concrete:
+            break
+        }
+
         let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let isOptional = paramType.hasSuffix("?")
         let baseType = (isOptional ? String(paramType.dropLast()) : paramType)
@@ -90,7 +123,8 @@ enum InputMatcherGenerator {
 
     /// Generate the matches method that checks if all parameters match
     private static func generateMatchesMethod(
-        parameters: [FunctionParameterSyntax]
+        parameters: [FunctionParameterSyntax],
+        function: MockableFunction
     ) throws -> FunctionDeclSyntax {
         // Build parameter list for matches method
         var methodParameters: [String] = []
@@ -98,14 +132,17 @@ enum InputMatcherGenerator {
 
         for parameter in parameters {
             let paramName = parameter.secondName?.text ?? parameter.firstName.text
-            let paramType = parameter.type.description
+
+            // The matches() method receives the erased form of the parameter type,
+            // so the mock implementation upcasts before calling.
+            let paramTypeForSignature = function.erasedTypeString(for: parameter.type)
 
             // Add parameter to method signature
             let firstName = parameter.firstName.text
             if firstName != paramName {
-                methodParameters.append("\(firstName) \(paramName): \(paramType)")
+                methodParameters.append("\(firstName) \(paramName): \(paramTypeForSignature)")
             } else {
-                methodParameters.append("\(paramName): \(paramType)")
+                methodParameters.append("\(paramName): \(paramTypeForSignature)")
             }
 
             // Add match check

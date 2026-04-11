@@ -23,17 +23,18 @@ import SwiftSyntaxBuilder
 enum FieldOptionsGenerator {
     static func fieldOptionsClassDeclaration(
         variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax,
         typePrefix: String = "",
-        accessLevel: AccessLevel
+        accessLevel: AccessLevel,
+        function: MockableFunction
     ) throws -> ClassDeclSyntax {
+        let signature = function.declaration.signature
 
         var genericParameterClauseElements: [String] = []
-        if functionSignature.effectSpecifiers?.throwsClause != nil {
+        if signature.effectSpecifiers?.throwsClause != nil {
             genericParameterClauseElements.append("ErrorableFieldOptionsProtocol")
         }
 
-        if functionSignature.returnClause?.type != nil {
+        if signature.returnClause?.type != nil {
             genericParameterClauseElements.append("ReturnableFieldOptionsProtocol")
         } else {
             genericParameterClauseElements.append("VoidReturnableFieldOptionsProtocol")
@@ -59,13 +60,13 @@ enum FieldOptionsGenerator {
 
                 try FunctionDeclSyntax(
                     """
-                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(functionSignature: functionSignature))) {
+                    \(raw: accessLevel.rawValue) func update(using closure: @Sendable @escaping \(ClosureGenerator.closureElements(function: function))) {
                       self.expectedResponse = .closure(closure)
                     }
                     """
                 )
 
-                if let throwsClause = functionSignature.effectSpecifiers?.throwsClause {
+                if let throwsClause = signature.effectSpecifiers?.throwsClause {
                     let errorType = throwsClause.type.map { "\($0.trimmed)" } ?? "any Error"
                     try FunctionDeclSyntax(
                         """
@@ -76,10 +77,11 @@ enum FieldOptionsGenerator {
                     )
                 }
 
-                if let returnType = functionSignature.returnClause?.type {
+                if let returnType = signature.returnClause?.type {
+                    let valueType = function.erasedTypeString(for: returnType)
                     try FunctionDeclSyntax(
                         """
-                        \(raw: accessLevel.rawValue) func update(value: \(returnType)) {
+                        \(raw: accessLevel.rawValue) func update(value: \(raw: valueType)) {
                           self.expectedResponse = .value(value)
                         }
                         """
