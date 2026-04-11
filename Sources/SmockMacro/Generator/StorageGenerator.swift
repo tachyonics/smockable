@@ -138,7 +138,7 @@ enum StorageGenerator {
         functionDeclarations: [FunctionDeclSyntax],
         propertyDeclarations: [PropertyDeclaration] = [],
         typePrefix: String = "",
-        typeConformanceProvider: (String) -> TypeConformance = { _ in .neitherComparableNorEquatable }
+        typeConformanceProvider: (String) -> TypeConformance
     ) throws
         -> StructDeclSyntax
     {

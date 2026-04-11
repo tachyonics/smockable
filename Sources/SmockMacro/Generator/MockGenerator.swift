@@ -263,7 +263,8 @@ enum MockGenerator {
 
                 try StorageGenerator.receivedInvocationsDeclaration(
                     functionDeclarations: propertyFunctionDeclarations,
-                    typePrefix: propertyDeclaration.typePrefix
+                    typePrefix: propertyDeclaration.typePrefix,
+                    typeConformanceProvider: typeConformanceProvider
                 )
 
                 try VerifierGenerator.verifierStructDeclaration(
@@ -274,19 +275,23 @@ enum MockGenerator {
                     accessLevel: parameters.accessLevel
                 )
 
+                // Property accessors can't have generic parameters of their own,
+                // so the generic context is always empty for property-related generation.
                 if let get = propertyDeclaration.get {
                     try FieldOptionsGenerator.fieldOptionsClassDeclaration(
                         variablePrefix: get.variablePrefix,
                         functionSignature: get.function.signature,
                         typePrefix: propertyDeclaration.typePrefix,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        genericContext: .empty
                     )
 
                     try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                         typePrefix: propertyDeclaration.typePrefix,
                         variablePrefix: get.variablePrefix,
                         functionSignature: get.function.signature,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        genericContext: .empty
                     )
                 }
 
@@ -295,14 +300,16 @@ enum MockGenerator {
                         variablePrefix: set.variablePrefix,
                         functionSignature: set.function.signature,
                         typePrefix: propertyDeclaration.typePrefix,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        genericContext: .empty
                     )
 
                     try ExpectedResponseGenerator.expectedResponseEnumDeclaration(
                         typePrefix: propertyDeclaration.typePrefix,
                         variablePrefix: set.variablePrefix,
                         functionSignature: set.function.signature,
-                        accessLevel: parameters.accessLevel
+                        accessLevel: parameters.accessLevel,
+                        genericContext: .empty
                     )
 
                     if let setterInputMatcherStruct = try InputMatcherGenerator.inputMatcherStructDeclaration(
@@ -310,7 +317,8 @@ enum MockGenerator {
                         parameterList: set.parameterList,
                         typePrefix: propertyDeclaration.typePrefix,
                         accessLevel: parameters.accessLevel,
-                        typeConformanceProvider: typeConformanceProvider
+                        typeConformanceProvider: typeConformanceProvider,
+                        genericContext: .empty
                     ) {
                         setterInputMatcherStruct
                     }

@@ -34,7 +34,7 @@ enum InputMatcherGenerator {
         typePrefix: String = "",
         accessLevel: AccessLevel,
         typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> StructDeclSyntax? {
         // Only generate matcher if function has parameters
         guard !parameterList.isEmpty else { return nil }

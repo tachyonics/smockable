@@ -25,7 +25,7 @@ enum FunctionImplementationGenerator {
         variablePrefix: String,
         functionDeclaration: FunctionDeclSyntax,
         accessLevel: AccessLevel,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> FunctionDeclSyntax {
         var mockFunctionDeclaration = functionDeclaration
 
@@ -52,7 +52,7 @@ enum FunctionImplementationGenerator {
         storagePrefix: String = "",
         functionDeclaration: FunctionDeclSyntax,
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> CodeBlockSyntax {
         var methodInterpolationParameters: [String] = []
         for parameter in parameterList {
@@ -289,7 +289,7 @@ enum FunctionImplementationGenerator {
         variablePrefix: String,
         functionInterpolationSignature: String,
         functionDeclaration: FunctionDeclSyntax,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) -> SwitchExprSyntax {
         let returnCast = ReturnCastInfo.compute(
             functionDeclaration: functionDeclaration,

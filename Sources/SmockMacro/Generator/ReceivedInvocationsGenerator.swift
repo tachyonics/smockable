@@ -63,7 +63,7 @@ enum ReceivedInvocationsGenerator {
     static func variableDeclaration(
         variablePrefix: String,
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> VariableDeclSyntax {
         let elementType = self.arrayElementType(
             parameterList: parameterList,
@@ -79,7 +79,7 @@ enum ReceivedInvocationsGenerator {
 
     static func arrayElementType(
         parameterList: FunctionParameterListSyntax,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) -> TypeSyntaxProtocol {
         let tupleElements = TupleTypeElementListSyntax {
             TupleTypeElementSyntax(

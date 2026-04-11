@@ -23,7 +23,7 @@ import SwiftSyntaxBuilder
 enum ClosureGenerator {
     static func closureElements(
         functionSignature: FunctionSignatureSyntax,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     )
         -> TupleTypeElementListSyntax
     {
@@ -74,18 +74,6 @@ enum ClosureGenerator {
         }
     }
 
-    static func variableDeclaration(
-        variablePrefix: String,
-        functionSignature: FunctionSignatureSyntax
-    ) throws -> VariableDeclSyntax {
-        let elements = self.closureElements(functionSignature: functionSignature)
-
-        return try VariableDeclSyntax(
-            """
-            var \(self.variableIdentifier(variablePrefix: variablePrefix)): (\(elements))?
-            """
-        )
-    }
 
     static func callExpression(
         baseName: String,
@@ -123,9 +111,5 @@ enum ClosureGenerator {
         }
 
         return expression
-    }
-
-    private static func variableIdentifier(variablePrefix: String) -> TokenSyntax {
-        TokenSyntax.identifier(variablePrefix + "Closure")
     }
 }

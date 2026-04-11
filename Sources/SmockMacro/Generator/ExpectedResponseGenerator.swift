@@ -32,7 +32,7 @@ enum ExpectedResponseGenerator {
         variablePrefix: String,
         functionSignature: FunctionSignatureSyntax,
         accessLevel: AccessLevel,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> EnumDeclSyntax {
         try EnumDeclSyntax(
             name: "\(raw: typePrefix)\(raw: variablePrefix.capitalizingComponentsFirstLetter())_ExpectedResponse",

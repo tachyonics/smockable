@@ -30,7 +30,7 @@ enum AllParameterSequenceGenerator {
     static func getAllParameterSequences(
         parameters: ArraySlice<FunctionParameterSyntax>,
         typeConformanceProvider: (String) -> TypeConformance,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) -> [[(FunctionParameterSyntax, TypeConformance, ParameterForm)]] {
         if let firstParameter = parameters.first {
             // Determine the conformance for this parameter, taking generics into account.

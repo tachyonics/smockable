@@ -26,7 +26,7 @@ enum FieldOptionsGenerator {
         functionSignature: FunctionSignatureSyntax,
         typePrefix: String = "",
         accessLevel: AccessLevel,
-        genericContext: GenericContext = .empty
+        genericContext: GenericContext
     ) throws -> ClassDeclSyntax {
 
         var genericParameterClauseElements: [String] = []
