@@ -65,6 +65,20 @@ protocol DirectGenericReturnService {
 }
 
 @Smock
+protocol DirectOpaqueGenericService {
+    /// Direct opaque generic: parameter is `some Constraint`. Equivalent to
+    /// `func process<T: Encodable & Sendable>(item: T)`.
+    func process(item: some Encodable & Sendable) async
+}
+
+@Smock
+protocol WrappedOpaqueGenericService {
+    /// Wrapped opaque generic: parameter wraps `some Constraint`. Equivalent
+    /// to `func process<T: Sendable>(wrapper: GenericWrapper<T>)`.
+    func process(wrapper: GenericWrapper<some Sendable>) async
+}
+
+@Smock
 protocol WrappedGenericReturnService {
     /// Wrapped generic return type: returns a wrapper containing the generic param.
     func produce<T: Sendable>(label: String) async -> GenericWrapper<T>
@@ -248,5 +262,103 @@ struct GenericMethodsTests {
         let mock = MockWrappedGenericReturnService(expectations: expectations)
         let result: GenericWrapper<Int> = await mock.produce(label: "x")
         #expect(result.value == 99)
+    }
+
+    // MARK: - Opaque `some` parameters
+    //
+    // These prove that `some Constraint` in parameter position generates the
+    // same mock surface as the explicit-generic form. The opaque-aware
+    // classification synthesizes an implicit generic parameter from each
+    // `some` occurrence and routes it through the same case 1 / case 2
+    // machinery as explicit generics.
+
+    @Test
+    func directOpaqueGenericWithAnyMatcher() async {
+        var expectations = MockDirectOpaqueGenericService.Expectations()
+        when(expectations.process(item: .any), times: 2, complete: .withSuccess)
+
+        let mock = MockDirectOpaqueGenericService(expectations: expectations)
+        await mock.process(item: "hello")
+        await mock.process(item: 42)
+
+        verify(mock, times: 2).process(item: .any)
+    }
+
+    @Test
+    func directOpaqueGenericWithMatchingAs() async {
+        var expectations = MockDirectOpaqueGenericService.Expectations()
+        when(
+            expectations.process(
+                item: .matchingAs(EquatablePayload.self) { payload in
+                    payload.id == "abc" && payload.count == 3
+                }
+            ),
+            complete: .withSuccess
+        )
+
+        let mock = MockDirectOpaqueGenericService(expectations: expectations)
+        await mock.process(item: EquatablePayload(id: "abc", count: 3))
+
+        verify(mock, times: 1).process(item: .any)
+    }
+
+    @Test
+    func directOpaqueGenericWithExactAs() async {
+        var expectations = MockDirectOpaqueGenericService.Expectations()
+        let expected = EquatablePayload(id: "abc", count: 3)
+        when(
+            expectations.process(item: .exactAs(expected)),
+            complete: .withSuccess
+        )
+
+        let mock = MockDirectOpaqueGenericService(expectations: expectations)
+        await mock.process(item: EquatablePayload(id: "abc", count: 3))
+
+        verify(mock, times: 1).process(item: .any)
+    }
+
+    @Test
+    func wrappedOpaqueGenericWithAnyMatcher() async {
+        var expectations = MockWrappedOpaqueGenericService.Expectations()
+        when(expectations.process(wrapper: .any), times: 2, complete: .withSuccess)
+
+        let mock = MockWrappedOpaqueGenericService(expectations: expectations)
+        await mock.process(wrapper: GenericWrapper(value: 1))
+        await mock.process(wrapper: GenericWrapper(value: "hello"))
+
+        verify(mock, times: 2).process(wrapper: .any)
+    }
+
+    @Test
+    func wrappedOpaqueGenericWithMatchingAs() async {
+        var expectations = MockWrappedOpaqueGenericService.Expectations()
+        when(
+            expectations.process(
+                wrapper: .matchingAs(GenericWrapper<Int>.self) { wrapper in
+                    wrapper.value == 42
+                }
+            ),
+            complete: .withSuccess
+        )
+
+        let mock = MockWrappedOpaqueGenericService(expectations: expectations)
+        await mock.process(wrapper: GenericWrapper(value: 42))
+
+        verify(mock, times: 1).process(wrapper: .any)
+    }
+
+    @Test
+    func wrappedOpaqueGenericWithExactAs() async {
+        var expectations = MockWrappedOpaqueGenericService.Expectations()
+        let expected = GenericWrapper(value: 42)
+        when(
+            expectations.process(wrapper: .exactAs(expected)),
+            complete: .withSuccess
+        )
+
+        let mock = MockWrappedOpaqueGenericService(expectations: expectations)
+        await mock.process(wrapper: GenericWrapper(value: 42))
+
+        verify(mock, times: 1).process(wrapper: .any)
     }
 }

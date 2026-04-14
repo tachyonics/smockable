@@ -42,6 +42,12 @@ package struct MockableFunction {
     /// All generic parameters declared on the function, keyed by name.
     package let genericParameters: [String: GenericParameter]
 
+    /// Precomputed classifications, keyed by the trimmed description of each
+    /// parameter (after attribute stripping) and return type seen on the
+    /// declaration. ``classify(_:)`` is a lookup against this map, so each
+    /// type's syntax tree is walked exactly once during ``init``.
+    private let classifications: [String: ParameterClassification]
+
     /// The type conformance provider used to look up `additionalEquatableTypes`
     /// allowlist entries for non-generic parameters.
     ///
@@ -138,6 +144,46 @@ package struct MockableFunction {
         }
 
         self.genericParameters = genericParameters
+        self.classifications = Self.precomputeClassifications(
+            declaration: declaration,
+            genericParameters: genericParameters,
+            typeConformanceProvider: typeConformanceProvider
+        )
+    }
+
+    /// Walk every parameter type (after attribute stripping) and the return
+    /// type once, producing a lookup table that ``classify(_:)`` can consult.
+    ///
+    /// Multiple parameters can share the same stripped type (e.g.
+    /// `func foo(a: Int, b: Int)` or `func bar(x: T, y: T)`). The
+    /// classification depends only on the type, so the second computation
+    /// would be identical to the first and the duplicate is silently skipped.
+    private static func precomputeClassifications(
+        declaration: FunctionDeclSyntax,
+        genericParameters: [String: GenericParameter],
+        typeConformanceProvider: (String) -> TypeConformance
+    ) -> [String: ParameterClassification] {
+        var classifications: [String: ParameterClassification] = [:]
+        let genericNames = Set(genericParameters.keys)
+        let parameterTypes = declaration.signature.parameterClause.parameters.map {
+            Self.strippingAttributes($0.type)
+        }
+        for type in parameterTypes + [declaration.signature.returnClause?.type].compactMap({ $0 }) {
+            let key = type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Multiple parameters can share the same stripped type (e.g.
+            // `func foo(a: Int, b: Int)` or `func bar(x: T, y: T)`). The
+            // classification depends only on the type, so the second computation
+            // would be identical to the first.
+            if classifications[key] == nil {
+                classifications[key] = computeClassification(
+                    for: type,
+                    genericParameters: genericParameters,
+                    genericNames: genericNames,
+                    typeConformanceProvider: typeConformanceProvider
+                )
+            }
+        }
+        return classifications
     }
 
     // MARK: - Parameter classification
@@ -155,22 +201,25 @@ package struct MockableFunction {
     }
 
     /// Classify a parameter type relative to this function's generic parameters.
+    ///
+    /// Looks the type up in the precomputed ``classifications`` map. Strips
+    /// `inout`/attribute decorations first, since callers may pass either the
+    /// raw `parameter.type` or an already-stripped form. Falls back to an
+    /// on-demand computation if the type wasn't seen at init time so the API
+    /// stays total, but every current caller passes a type from the function
+    /// declaration and hits the cache.
     package func classify(_ parameterType: TypeSyntax) -> ParameterClassification {
-        let typeString = parameterType.description.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Direct match: parameter type is exactly a generic parameter name.
-        if let parameter = genericParameters[typeString] {
-            return .directGeneric(parameter)
+        let stripped = Self.strippingAttributes(parameterType)
+        let key = stripped.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cached = classifications[key] {
+            return cached
         }
-
-        // Wrapped match: type description contains a generic parameter name as a token.
-        for genericName in genericParameters.keys {
-            if Self.containsToken(genericName, in: typeString) {
-                return .wrappedGeneric
-            }
-        }
-
-        return .concrete
+        return Self.computeClassification(
+            for: stripped,
+            genericParameters: genericParameters,
+            genericNames: Set(genericParameters.keys),
+            typeConformanceProvider: typeConformanceProvider
+        )
     }
 
     // MARK: - Type erasure for generic substitution
@@ -211,31 +260,148 @@ package struct MockableFunction {
         }
     }
 
-    /// Check whether `token` appears in `text` as a complete identifier (not as a
-    /// substring of a longer identifier).
-    private static func containsToken(_ token: String, in text: String) -> Bool {
-        guard !token.isEmpty else { return false }
-        var searchStart = text.startIndex
-        while let range = text.range(of: token, range: searchStart..<text.endIndex) {
-            let beforeOK: Bool
-            if range.lowerBound == text.startIndex {
-                beforeOK = true
-            } else {
-                let prev = text[text.index(before: range.lowerBound)]
-                beforeOK = !prev.isLetter && !prev.isNumber && prev != "_"
+    /// Build a `GenericParameter` from a `some Constraint` type's constraint
+    /// expression. The constraint may be a single identifier (`some Encodable`)
+    /// or a protocol composition (`some Encodable & Sendable`).
+    private static func opaqueGenericParameter(
+        constraint: TypeSyntax,
+        typeConformanceProvider: (String) -> TypeConformance
+    ) -> GenericParameter {
+        // Extract the protocol name list from the constraint.
+        let protocols: [String]
+        if let composition = constraint.as(CompositionTypeSyntax.self) {
+            protocols = composition.elements.map { element in
+                element.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             }
-            let afterOK: Bool
-            if range.upperBound == text.endIndex {
-                afterOK = true
-            } else {
-                let next = text[range.upperBound]
-                afterOK = !next.isLetter && !next.isNumber && next != "_"
-            }
-            if beforeOK && afterOK {
-                return true
-            }
-            searchStart = range.upperBound
+        } else {
+            protocols = [
+                constraint.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            ]
         }
-        return false
+
+        let storageType: String
+        if protocols.isEmpty {
+            storageType = "Any"
+        } else {
+            storageType = "any " + protocols.joined(separator: " & ")
+        }
+
+        let isEquatable =
+            protocols.contains("Equatable")
+            || protocols.contains("Hashable")
+            || protocols.contains { proto in
+                typeConformanceProvider(proto) != .neitherComparableNorEquatable
+            }
+
+        return GenericParameter(storageType: storageType, isEquatable: isEquatable)
+    }
+
+    /// Strip `inout` (and any other `AttributedTypeSyntax`) decoration from a
+    /// parameter type so the underlying type can be classified and used as a
+    /// dictionary key.
+    private static func strippingAttributes(_ type: TypeSyntax) -> TypeSyntax {
+        if let attributed = type.as(AttributedTypeSyntax.self) {
+            return attributed.baseType
+        }
+        return type
+    }
+
+    /// Compute the classification for a single type. Called once per unique
+    /// parameter/return type during ``init`` to populate the cache, and as a
+    /// fallback from ``classify(_:)`` for types not seen at init time.
+    ///
+    /// Uses a single combined visitor pass to detect both `some` opaque types
+    /// nested inside the type and references to known generic parameter names.
+    private static func computeClassification(
+        for type: TypeSyntax,
+        genericParameters: [String: GenericParameter],
+        genericNames: Set<String>,
+        typeConformanceProvider: (String) -> TypeConformance
+    ) -> ParameterClassification {
+        // Top-level `some Constraint` is a direct opaque generic.
+        //
+        // `func foo(item: some Encodable & Sendable)` uses opaque type sugar
+        // that the Swift compiler implicitly desugars to an explicit generic
+        // parameter — but that desugaring happens *after* the macro runs, so
+        // the function declaration the macro sees has no
+        // `genericParameterClause` entry for it. We surface it here as a
+        // synthetic generic parameter.
+        if let opaque = type.as(SomeOrAnyTypeSyntax.self),
+            opaque.someOrAnySpecifier.tokenKind == .keyword(.some)
+        {
+            return .directGeneric(
+                opaqueGenericParameter(
+                    constraint: opaque.constraint,
+                    typeConformanceProvider: typeConformanceProvider
+                )
+            )
+        }
+
+        // Single walk that records both nested `some` opaques and any
+        // references to declared generic parameter names.
+        let analyzer = TypeAnalyzer(names: genericNames, viewMode: .sourceAccurate)
+        analyzer.walk(Syntax(type))
+
+        // Wrapped opaque, e.g. `Wrapper<some Constraint>` or `[some Constraint]`.
+        if analyzer.foundOpaque {
+            return .wrappedGeneric
+        }
+
+        // Direct match: parameter type is exactly a generic parameter name.
+        let typeString = type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let parameter = genericParameters[typeString] {
+            return .directGeneric(parameter)
+        }
+
+        // Wrapped match: the type tree references a generic parameter name.
+        if analyzer.foundGenericNameReference {
+            return .wrappedGeneric
+        }
+
+        return .concrete
+    }
+}
+
+// MARK: - SyntaxVisitor
+
+/// Single-pass type-tree analyzer that records both:
+/// - whether the tree contains a `some Constraint` opaque type, and
+/// - whether the tree references any `IdentifierTypeSyntax` whose name is in
+///   the supplied generic-parameter-name set.
+///
+/// Skips the trailing `name` of `MemberTypeSyntax` so qualified member
+/// references like `MyModule.T` or `Optional<Foo.T>` are not treated as
+/// references to a generic parameter `T` declared on the function — only the
+/// `baseType` chain (and any generic argument clauses) is descended.
+private final class TypeAnalyzer: SyntaxVisitor {
+    let names: Set<String>
+    var foundOpaque = false
+    var foundGenericNameReference = false
+
+    init(names: Set<String>, viewMode: SyntaxTreeViewMode) {
+        self.names = names
+        super.init(viewMode: viewMode)
+    }
+
+    override func visit(_ node: SomeOrAnyTypeSyntax) -> SyntaxVisitorContinueKind {
+        if node.someOrAnySpecifier.tokenKind == .keyword(.some) {
+            self.foundOpaque = true
+        }
+        return .visitChildren
+    }
+
+    override func visit(_ node: IdentifierTypeSyntax) -> SyntaxVisitorContinueKind {
+        if self.names.contains(node.name.text) {
+            self.foundGenericNameReference = true
+        }
+        return .visitChildren
+    }
+
+    override func visit(_ node: MemberTypeSyntax) -> SyntaxVisitorContinueKind {
+        self.walk(node.baseType)
+        if let genericArgumentClause = node.genericArgumentClause {
+            self.walk(genericArgumentClause)
+        }
+        return .skipChildren
     }
 }

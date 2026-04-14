@@ -98,20 +98,11 @@ enum ReceivedInvocationsGenerator {
                 TupleTypeElementSyntax(
                     firstName: parameter.secondName ?? parameter.firstName,
                     colon: .colonToken(),
-                    type: function.erasedType(for: strippedAttributedType(parameter.type))
+                    type: function.erasedType(for: parameter.type)
                 )
             }
         }
         return TupleTypeSyntax(elements: tupleElements)
-    }
-
-    /// Strip attribute decorations (e.g. `inout`) so the underlying type can be
-    /// stored in a tuple element.
-    private static func strippedAttributedType(_ type: TypeSyntax) -> TypeSyntax {
-        if let attributed = type.as(AttributedTypeSyntax.self) {
-            return attributed.baseType
-        }
-        return type
     }
 
     static func appendValueToVariableExpression(

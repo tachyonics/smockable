@@ -196,11 +196,12 @@ struct MockableFunctionTests {
         let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "item")
 
-        switch function.classify(type) {
+        let classification = function.classify(type)
+        switch classification {
         case .directGeneric(let info):
             #expect(info.storageType == "any Encodable & Sendable")
         default:
-            Issue.record("Expected directGeneric, got \(function.classify(type))")
+            Issue.record("Expected directGeneric, got \(classification)")
         }
     }
 
@@ -266,11 +267,12 @@ struct MockableFunctionTests {
         let function = try mockableFunction(source)
         let type = try parameterType(in: source, label: "item")
 
-        switch function.classify(type) {
+        let classification = function.classify(type)
+        switch classification {
         case .directGeneric(let info):
             #expect(info.storageType == "any Sendable")
         default:
-            Issue.record("Expected directGeneric for U")
+            Issue.record("Expected directGeneric, got \(classification)")
         }
     }
 
@@ -350,6 +352,199 @@ struct MockableFunctionTests {
             erased.description.trimmingCharacters(in: .whitespacesAndNewlines)
                 == type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+    }
+
+    // MARK: - Member-type qualified-name false positives (item 2)
+
+    @Test
+    func classifyDoesNotMatchGenericNameAsMemberOfQualifiedType() throws {
+        // `Outer.T` mentions a top-level type named `T` only as a *member*
+        // of `Outer`. The function's generic parameter `T` should not be
+        // treated as referenced here — the parameter is concrete.
+        let source = "func foo<T: Sendable>(item: T, holder: Outer.T)"
+        let function = try mockableFunction(source)
+        let holderType = try parameterType(in: source, label: "holder")
+
+        #expect(function.classify(holderType) == .concrete)
+    }
+
+    @Test
+    func classifyDoesNotMatchGenericNameAsGenericMemberOfQualifiedType() throws {
+        // `Outer.T<Int>` is a member type lookup with a generic argument; it
+        // should not match the function's generic parameter `T`.
+        let source = "func foo<T: Sendable>(item: T, holder: Outer.T<Int>)"
+        let function = try mockableFunction(source)
+        let holderType = try parameterType(in: source, label: "holder")
+
+        #expect(function.classify(holderType) == .concrete)
+    }
+
+    @Test
+    func classifyDoesNotMatchGenericNameInsideOptionalQualifiedType() throws {
+        // `Optional<Foo.T>` should not match `T` either.
+        let source = "func foo<T: Sendable>(item: T, holder: Optional<Foo.T>)"
+        let function = try mockableFunction(source)
+        let holderType = try parameterType(in: source, label: "holder")
+
+        #expect(function.classify(holderType) == .concrete)
+    }
+
+    @Test
+    func classifyMatchesGenericReferenceInBaseTypeOfMemberAccess() throws {
+        // `T.AssociatedType` references the function's generic parameter
+        // `T` as the base of a member access — this *should* still classify
+        // as wrappedGeneric.
+        let source = "func foo<T: Sendable>(item: T.AssociatedType)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.classify(type) == .wrappedGeneric)
+    }
+
+    // MARK: - Opaque `some` parameters (item 3)
+
+    @Test
+    func classifyDirectOpaqueParameterIsDirectGeneric() throws {
+        let source = "func foo(item: some Encodable & Sendable)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        let classification = function.classify(type)
+        switch classification {
+        case .directGeneric(let info):
+            #expect(info.storageType == "any Encodable & Sendable")
+            #expect(info.isEquatable == false)
+        default:
+            Issue.record("Expected directGeneric, got \(classification)")
+        }
+    }
+
+    @Test
+    func classifyDirectOpaqueWithSingleConstraintIsDirectGeneric() throws {
+        let source = "func foo(item: some Encodable)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        let classification = function.classify(type)
+        switch classification {
+        case .directGeneric(let info):
+            #expect(info.storageType == "any Encodable")
+        default:
+            Issue.record("Expected directGeneric, got \(classification)")
+        }
+    }
+
+    @Test
+    func classifyWrappedOpaqueParameterIsWrappedGeneric() throws {
+        let source = "func foo(input: PutItemInput<some Encodable & Sendable>)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "input")
+
+        #expect(function.classify(type) == .wrappedGeneric)
+    }
+
+    @Test
+    func classifyOptionalOpaqueIsWrapped() throws {
+        let source = "func foo(item: (some Sendable)?)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.classify(type) == .wrappedGeneric)
+    }
+
+    @Test
+    func classifyArrayOfOpaqueIsWrapped() throws {
+        let source = "func foo(items: [some Sendable])"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "items")
+
+        #expect(function.classify(type) == .wrappedGeneric)
+    }
+
+    @Test
+    func classifyMixedExplicitAndOpaqueGenerics() throws {
+        let source = "func foo<T: Sendable>(named: T, item: some Encodable & Sendable)"
+        let function = try mockableFunction(source)
+
+        let namedType = try parameterType(in: source, label: "named")
+        let namedClassification = function.classify(namedType)
+        switch namedClassification {
+        case .directGeneric(let info):
+            #expect(info.storageType == "any Sendable")
+        default:
+            Issue.record("Expected directGeneric, got \(namedClassification)")
+        }
+
+        let itemType = try parameterType(in: source, label: "item")
+        let itemClassification = function.classify(itemType)
+        switch itemClassification {
+        case .directGeneric(let info):
+            #expect(info.storageType == "any Encodable & Sendable")
+        default:
+            Issue.record("Expected directGeneric, got \(itemClassification)")
+        }
+    }
+
+    @Test
+    func classifyOpaqueIsEquatableForEquatableConstraint() throws {
+        let source = "func foo(item: some Equatable & Sendable)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        let classification = function.classify(type)
+        switch classification {
+        case .directGeneric(let info):
+            #expect(info.isEquatable == true)
+        default:
+            Issue.record("Expected directGeneric, got \(classification)")
+        }
+    }
+
+    @Test
+    func classifyOpaqueRespectsAdditionalEquatableTypesAllowlist() throws {
+        let source = "func foo(item: some MyAllowlistedProtocol & Sendable)"
+        let function = try mockableFunction(
+            source,
+            equatableTypes: ["MyAllowlistedProtocol"]
+        )
+        let type = try parameterType(in: source, label: "item")
+
+        let classification = function.classify(type)
+        switch classification {
+        case .directGeneric(let info):
+            #expect(info.isEquatable == true)
+        default:
+            Issue.record("Expected directGeneric, got \(classification)")
+        }
+    }
+
+    @Test
+    func classifyAnyExistentialIsConcrete() throws {
+        // `any Encodable` is an existential, not a reference to a generic
+        // parameter, so it should classify as .concrete.
+        let source = "func foo(item: any Encodable)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.classify(type) == .concrete)
+    }
+
+    @Test
+    func erasedTypeStringForDirectOpaqueReturnsConstraintExistential() throws {
+        let source = "func foo(item: some Encodable & Sendable)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "item")
+
+        #expect(function.erasedTypeString(for: type) == "any Encodable & Sendable")
+    }
+
+    @Test
+    func erasedTypeStringForWrappedOpaqueReturnsAnySendable() throws {
+        let source = "func foo(input: GenericWrapper<some Sendable>)"
+        let function = try mockableFunction(source)
+        let type = try parameterType(in: source, label: "input")
+
+        #expect(function.erasedTypeString(for: type) == "any Sendable")
     }
 }
 
