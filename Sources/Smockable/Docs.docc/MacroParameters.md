@@ -58,38 +58,47 @@ public struct MockMyService: MyService, Sendable, VerifiableSmock {
 - `"UNIT_TESTS"`: Custom flag for unit test environments
 - Any custom preprocessor flag your project defines
 
-### additionalComparableTypes
+### additionalComparableTypes / additionalEquatableTypes
 
-Specifies additional types that should be treated as both Comparable and Equatable in the generated mock. By default, built-in and standard library types that conform to Comparable
-will be automatically recognized but this allows you to use custom types with comparison-based matchers and exact value matching.
+These parameters control which **convenience overloads** the macro generates
+for expectation and verifier methods. They do not affect matcher correctness
+— `ValueMatcher<T>` always has `.exact()` when `T: Equatable` and `.range()`
+when `T: Comparable`, regardless of these parameters.
+
+By default, the macro recognizes built-in stdlib types (`String`, `Int`,
+`Double`, `Bool`, `UUID`, `Date`, etc.) and generates shorthand overloads
+for them. For example, a `String` parameter gets overloads that accept a
+raw `String` (rather than wrapped in `.exact()`) and a `ClosedRange<String>` 
+(rather than wrapped in `.range()`), so you can write:
 
 ```swift
-@Smock(additionalComparableTypes: [CustomID.self, Priority.self, Timestamp.self])
+when(expectations.getUser(name: "Alice"), return: user)
+when(expectations.getUsers(name: "A"..."M"), return: users)
+```
+
+For custom types the macro doesn't recognize, it generates only the
+explicit `ValueMatcher<T>` overload. You can still use `.exact()` and
+`.range()` directly:
+
+```swift
+when(expectations.createTask(id: .exact(specificID)), return: task)
+when(expectations.getTasksWithPriority(.range(low...high)), return: tasks)
+```
+
+If you prefer the shorthand form for custom types, add them to the
+appropriate allowlist:
+
+```swift
+@Smock(additionalComparableTypes: [CustomID.self, Priority.self])
 protocol TaskService {
-    func createTask(id: CustomID, priority: Priority, createdAt: Timestamp) async throws -> Task
-    func getTasksWithPriority(_ priority: Priority) async throws -> [Task]
+    func createTask(id: CustomID, priority: Priority) async throws -> Task
 }
 
-// Generated mock will treat CustomID, Priority, and Timestamp as comparable
-// This enables:
-// - Exact value matching: when(mock.createTask(id: .value(specificID), ...))
-// - Range matching: when(mock.getTasksWithPriority(.range(minPriority...maxPriority)))
-```
-
-### additionalEquatableTypes
-
-Specifies additional types that should be treated as Equatable only in the generated mock. By default, built-in and standard library types that conform to Comparable
-will be automatically recognized but this allows you to use custom types with exact value matching but not comparison-based operations.
+Now you can write:
 
 ```swift
-@Smock(additionalEquatableTypes: [UserProfile.self, Settings.self, Configuration.self])
-protocol UserService {
-    func updateProfile(_ profile: UserProfile) async throws
-    func saveSettings(_ settings: Settings) async throws
-    func configure(with config: Configuration) async throws
-}
-
-// Generated mock will treat UserProfile, Settings, and Configuration as equatable
-// This enables:
-// - Exact value matching: when(mock.updateProfile(.value(specificProfile)))
+when(expectations.createTask(id: specificID, priority: low...high), return: task)
 ```
+
+`additionalEquatableTypes` works the same way but only enables the exact-value
+shorthand (not ranges).
