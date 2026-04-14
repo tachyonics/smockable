@@ -477,12 +477,12 @@ extension VerifierGenerator {
 
         if parameters.count == 1 {
             let param = parameters[0]
-            let type = strippedParameterType(param, function: function)
+            let type = function.erasedTypeString(for: param.type)
             return "[\(type)]"
         } else {
             let tupleElements = parameters.map { param in
                 let name = (param.secondName ?? param.firstName).text
-                let type = strippedParameterType(param, function: function)
+                let type = function.erasedTypeString(for: param.type)
                 return "\(name): \(type)"
             }
             return "[(\(tupleElements.joined(separator: ", ")))]"
@@ -505,19 +505,6 @@ extension VerifierGenerator {
         }
     }
 
-    fileprivate static func strippedParameterType(
-        _ parameter: FunctionParameterSyntax,
-        function: MockableFunction
-    ) -> String {
-        // Strip attribute decorations (e.g. `inout`) before erasure.
-        let baseType: TypeSyntax
-        if let attributed = parameter.type.as(AttributedTypeSyntax.self) {
-            baseType = attributed.baseType
-        } else {
-            baseType = parameter.type
-        }
-        return function.erasedTypeString(for: baseType)
-    }
 }
 
 extension String {

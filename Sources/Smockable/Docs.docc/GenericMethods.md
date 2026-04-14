@@ -236,6 +236,37 @@ protocol Factory {
 > returns a value whose runtime type matches what the production code expects. A
 > mismatch produces a runtime force-cast failure inside the mock.
 
+## Opaque `some` Parameters
+
+Smockable also supports `some Constraint` opaque types in parameter position. They
+are semantically equivalent to the explicit-generic form and produce the same mock
+surface, so you can pick whichever reads more clearly in the protocol you are
+mirroring.
+
+```swift
+// Direct opaque — equivalent to `func process<T: Encodable & Sendable>(item: T)`
+@Smock
+protocol DirectOpaqueService {
+    func process(item: some Encodable & Sendable) async
+}
+
+// Wrapped opaque — equivalent to `func process<T: Sendable>(wrapper: GenericWrapper<T>)`
+@Smock
+protocol WrappedOpaqueService {
+    func process(wrapper: GenericWrapper<some Sendable>) async
+}
+```
+
+The matcher API and the choice of `matchingAs` / `exactAs` work the same way as for
+explicit generics — see the **Direct Generic Parameters** and **Wrapped Generic
+Parameters** sections above.
+
+> Note: This applies to parameter position only. Swift forbids `some` in the
+> return position of a protocol requirement (`func produce() -> some Encodable`
+> fails to compile with *"'some' type cannot be the return type of a protocol
+> requirement; did you mean to add an associated type?"*), so the case never
+> arises for `@Smock`-annotated protocols.
+
 ## Constraints
 
 > Note: Generic constraints **must** include `Sendable`. Mock state lives behind a `Mutex`
