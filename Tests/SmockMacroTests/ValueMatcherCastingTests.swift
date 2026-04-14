@@ -22,8 +22,8 @@ import Testing
 
 @testable import Smockable
 
-/// Direct unit tests for the `matchingAs` / `exactAs` casting helpers on the
-/// type-erased matcher types. These exercise the helpers (and especially the
+/// Direct unit tests for the `matchingAs` / `exactAs` casting helpers on
+/// `ExistentialValueMatcher`. These exercise the helpers (and especially the
 /// cast-failure branches) without going through `@Smock` macro plumbing.
 struct ValueMatcherCastingTests {
 
@@ -31,9 +31,8 @@ struct ValueMatcherCastingTests {
         let id: String
     }
 
-    // Class hierarchy used to exercise `OnlyEquatableValueMatcher.matchingAs`,
-    // since `T` must be `Equatable & Sendable` and we need a single storage
-    // type that can hold runtime-distinguishable sub-values.
+    // Class hierarchy used to exercise `ExistentialValueMatcher.matchingAs`
+    // with a storage type that can hold runtime-distinguishable sub-values.
     private class Animal: @unchecked Sendable, Equatable {
         let name: String
         init(name: String) { self.name = name }
@@ -42,11 +41,11 @@ struct ValueMatcherCastingTests {
     private final class Dog: Animal {}
     private final class Cat: Animal {}
 
-    // MARK: - ErasedValueMatcher
+    // MARK: - ExistentialValueMatcher with any Sendable (case 2 / wrapped generic)
 
     @Test
-    func erasedMatchingAsHits() {
-        let matcher = ErasedValueMatcher.matchingAs(Payload.self) { payload in
+    func wrappedGenericMatchingAsHits() {
+        let matcher = ExistentialValueMatcher<any Sendable>.matchingAs(Payload.self) { payload in
             payload.id == "abc"
         }
         #expect(matcher.matches(Payload(id: "abc")))
@@ -54,31 +53,30 @@ struct ValueMatcherCastingTests {
     }
 
     @Test
-    func erasedMatchingAsCastFailureReturnsFalse() {
-        let matcher = ErasedValueMatcher.matchingAs(Payload.self) { _ in true }
-        // Wrong concrete type — cast guard returns false without calling the closure.
+    func wrappedGenericMatchingAsCastFailureReturnsFalse() {
+        let matcher = ExistentialValueMatcher<any Sendable>.matchingAs(Payload.self) { _ in true }
         #expect(!matcher.matches("not a payload"))
     }
 
     @Test
-    func erasedExactAsHits() {
+    func wrappedGenericExactAsHits() {
         let expected = Payload(id: "abc")
-        let matcher = ErasedValueMatcher.exactAs(expected)
+        let matcher = ExistentialValueMatcher<any Sendable>.exactAs(expected)
         #expect(matcher.matches(Payload(id: "abc")))
         #expect(!matcher.matches(Payload(id: "xyz")))
     }
 
     @Test
-    func erasedExactAsCastFailureReturnsFalse() {
-        let matcher = ErasedValueMatcher.exactAs(Payload(id: "abc"))
+    func wrappedGenericExactAsCastFailureReturnsFalse() {
+        let matcher = ExistentialValueMatcher<any Sendable>.exactAs(Payload(id: "abc"))
         #expect(!matcher.matches("not a payload"))
     }
 
-    // MARK: - NonComparableValueMatcher
+    // MARK: - ExistentialValueMatcher with constraint existential (case 1 / direct generic)
 
     @Test
-    func nonComparableMatchingAsHits() {
-        let matcher = NonComparableValueMatcher<any Encodable & Sendable>.matchingAs(Payload.self) { payload in
+    func directGenericMatchingAsHits() {
+        let matcher = ExistentialValueMatcher<any Encodable & Sendable>.matchingAs(Payload.self) { payload in
             payload.id == "abc"
         }
         #expect(matcher.matches(Payload(id: "abc")))
@@ -86,35 +84,30 @@ struct ValueMatcherCastingTests {
     }
 
     @Test
-    func nonComparableMatchingAsCastFailureReturnsFalse() {
-        let matcher = NonComparableValueMatcher<any Encodable & Sendable>.matchingAs(Payload.self) { _ in true }
+    func directGenericMatchingAsCastFailureReturnsFalse() {
+        let matcher = ExistentialValueMatcher<any Encodable & Sendable>.matchingAs(Payload.self) { _ in true }
         #expect(!matcher.matches("not a payload"))
     }
 
     @Test
-    func nonComparableExactAsHits() {
+    func directGenericExactAsHits() {
         let expected = Payload(id: "abc")
-        let matcher = NonComparableValueMatcher<any Encodable & Sendable>.exactAs(expected)
+        let matcher = ExistentialValueMatcher<any Encodable & Sendable>.exactAs(expected)
         #expect(matcher.matches(Payload(id: "abc")))
         #expect(!matcher.matches(Payload(id: "xyz")))
     }
 
     @Test
-    func nonComparableExactAsCastFailureReturnsFalse() {
-        let matcher = NonComparableValueMatcher<any Encodable & Sendable>.exactAs(Payload(id: "abc"))
+    func directGenericExactAsCastFailureReturnsFalse() {
+        let matcher = ExistentialValueMatcher<any Encodable & Sendable>.exactAs(Payload(id: "abc"))
         #expect(!matcher.matches("not a payload"))
     }
 
-    // MARK: - OnlyEquatableValueMatcher
+    // MARK: - ExistentialValueMatcher with concrete base type (class hierarchy)
 
-    // `any Equatable` isn't a usable storage type because Equatable's Self
-    // requirements mean the existential doesn't itself conform to Equatable,
-    // and `AnyHashable` is explicitly non-Sendable. A small class hierarchy
-    // gives us a single `Equatable & Sendable` storage type whose values can
-    // be downcast to multiple distinct sub-types at runtime.
     @Test
-    func onlyEquatableMatchingAsHits() {
-        let matcher = OnlyEquatableValueMatcher<Animal>.matchingAs(Dog.self) { dog in
+    func classHierarchyMatchingAsHits() {
+        let matcher = ExistentialValueMatcher<Animal>.matchingAs(Dog.self) { dog in
             dog.name == "rex"
         }
         #expect(matcher.matches(Dog(name: "rex")))
@@ -122,8 +115,8 @@ struct ValueMatcherCastingTests {
     }
 
     @Test
-    func onlyEquatableMatchingAsCastFailureReturnsFalse() {
-        let matcher = OnlyEquatableValueMatcher<Animal>.matchingAs(Dog.self) { _ in true }
+    func classHierarchyMatchingAsCastFailureReturnsFalse() {
+        let matcher = ExistentialValueMatcher<Animal>.matchingAs(Dog.self) { _ in true }
         #expect(!matcher.matches(Cat(name: "whiskers")))
     }
 }

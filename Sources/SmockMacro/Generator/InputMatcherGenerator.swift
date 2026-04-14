@@ -69,53 +69,24 @@ enum InputMatcherGenerator {
     ) throws -> VariableDeclSyntax {
         let paramName = parameter.secondName?.text ?? parameter.firstName.text
 
-        // Generic-aware handling
         switch function.classify(parameter.type) {
         case .directGeneric(let info):
-            // Use the existential storage type (e.g. `any Encodable & Sendable`).
-            // For Equatable constraints, allow exact matching via OnlyEquatableValueMatcher
-            // — but matchers store the existential, not the original generic param.
-            // The exact-match overload at the expectations layer captures the concrete
-            // type and converts it to a `.matching` closure.
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): NonComparableValueMatcher<\(raw: info.storageType)>
+                let \(raw: paramName): ExistentialValueMatcher<\(raw: info.storageType)>
                 """
             )
         case .wrappedGeneric:
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): ErasedValueMatcher
+                let \(raw: paramName): ExistentialValueMatcher<any Sendable>
                 """
             )
         case .concrete:
-            break
-        }
-
-        let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isOptional = paramType.hasSuffix("?")
-        let baseType = (isOptional ? String(paramType.dropLast()) : paramType)
-        let typePrefix: String
-
-        switch typeConformanceProvider(baseType) {
-        case .comparableAndEquatable:
-            typePrefix = ""
-        case .onlyEquatable:
-            typePrefix = "OnlyEquatable"
-        case .neitherComparableNorEquatable:
-            typePrefix = "NonComparable"
-        }
-
-        if isOptional {
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             return try VariableDeclSyntax(
                 """
-                let \(raw: paramName): Optional\(raw: typePrefix)ValueMatcher<\(raw: paramType.dropLast())>
-                """
-            )
-        } else {
-            return try VariableDeclSyntax(
-                """
-                let \(raw: paramName): \(raw: typePrefix)ValueMatcher<\(raw: paramType)>
+                let \(raw: paramName): ValueMatcher<\(raw: paramType)>
                 """
             )
         }
