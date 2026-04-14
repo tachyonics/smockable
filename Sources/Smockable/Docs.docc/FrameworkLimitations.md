@@ -252,19 +252,18 @@ features are unavailable for parameters whose type references a generic paramete
 
 - **`.exact()` matchers.** Even when the generic constraint includes `Equatable`, exact-value
   matching is not generated because the existential storage type isn't itself `Equatable`.
-  Use ``ErasedValueMatcher/exactAs(_:)`` /
-  ``NonComparableValueMatcher/exactAs(_:)`` to compare against a typed concrete
+  Use ``ExistentialValueMatcher/exactAs(_:)`` to compare against a typed concrete
   value, or `.matching` with a manual equality check.
 - **Range matchers (`ClosedRange`).**
-- **`additionalEquatableTypes` allowlisting** for generic parameters or their wrapper types.
+- **Convenience overloads.** The `additionalEquatableTypes` / `additionalComparableTypes`
+  allowlists only affect convenience overload generation for concrete parameters, not
+  for generic parameters.
 - **Return values via `update(value:)`** for generic returns. Use closure-based responses
   instead — the macro can't construct an arbitrary `T`.
 
 > Tip: For inspecting parameter properties inside a `.matching` closure, prefer
-> ``ErasedValueMatcher/matchingAs(_:_:)`` /
-> ``NonComparableValueMatcher/matchingAs(_:_:)`` /
-> ``OnlyEquatableValueMatcher/matchingAs(_:_:)`` over a manual cast — they cast
-> the erased value for you and pass a typed parameter to the closure. See
+> ``ExistentialValueMatcher/matchingAs(_:_:)`` over a manual cast — it casts
+> the erased value for you and passes a typed parameter to the closure. See
 > <doc:GenericMethods> for examples.
 
 Generic constraints **must** include `Sendable` because mock state lives behind a `Mutex`

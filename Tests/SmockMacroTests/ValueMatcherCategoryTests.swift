@@ -729,8 +729,8 @@ struct ValueMatcherCategoryTests {
         // Test that custom matchers have appropriate descriptions
         let intMatcher: ValueMatcher<Int> = .matching { $0 > 0 }
         let stringMatcher: ValueMatcher<String> = .matching { $0.contains("test") }
-        let dataMatcher: NonComparableValueMatcher<Data> = .matching { $0.count > 0 }
-        let optionalMatcher: OptionalValueMatcher<Int> = .matching { $0 != nil }
+        let dataMatcher: ValueMatcher<Data> = .matching { $0.count > 0 }
+        let optionalMatcher: ValueMatcher<Int?> = .matching { $0 != nil }
 
         #expect(intMatcher.description == "custom")
         #expect(stringMatcher.description == "custom")

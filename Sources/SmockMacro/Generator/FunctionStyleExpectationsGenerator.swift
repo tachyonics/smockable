@@ -130,17 +130,15 @@ enum FunctionStyleExpectationsGenerator {
         let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let isOptional = paramType.hasSuffix("?")
 
-        // Generic parameter handling — uses NonComparableValueMatcher<existential>
-        // for case 1 and ErasedValueMatcher for case 2.
         switch function.classify(parameter.type) {
         case .directGeneric(let info):
             return (
-                "\(paramNameForSignature): NonComparableValueMatcher<\(info.storageType)>",
+                "\(paramNameForSignature): ExistentialValueMatcher<\(info.storageType)>",
                 "\(paramName): \(paramName)"
             )
         case .wrappedGeneric:
             return (
-                "\(paramNameForSignature): ErasedValueMatcher",
+                "\(paramNameForSignature): ExistentialValueMatcher<any Sendable>",
                 "\(paramName): \(paramName)"
             )
         case .concrete:
@@ -155,26 +153,10 @@ enum FunctionStyleExpectationsGenerator {
                 "\(paramName): .range(\(paramName))"
             )
         case .explicitMatcher:
-            let matcherTypePrefix: String
-            switch parameterType {
-            case .comparableAndEquatable:
-                matcherTypePrefix = ""
-            case .neitherComparableNorEquatable:
-                matcherTypePrefix = "NonComparable"
-            case .onlyEquatable:
-                matcherTypePrefix = "OnlyEquatable"
-            }
-            if isOptional {
-                return (
-                    "\(paramNameForSignature): Optional\(matcherTypePrefix)ValueMatcher<\(paramType.dropLast())>",
-                    "\(paramName): \(paramName)"
-                )
-            } else {
-                return (
-                    "\(paramNameForSignature): \(matcherTypePrefix)ValueMatcher<\(paramType)>",
-                    "\(paramName): \(paramName)"
-                )
-            }
+            return (
+                "\(paramNameForSignature): ValueMatcher<\(paramType)>",
+                "\(paramName): \(paramName)"
+            )
         case .exact:
             return (
                 "\(paramNameForSignature): \(paramType)",

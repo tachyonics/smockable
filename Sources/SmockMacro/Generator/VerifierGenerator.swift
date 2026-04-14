@@ -357,18 +357,16 @@ extension VerifierGenerator {
     ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
         let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
 
-        // Generic parameter handling — uses NonComparableValueMatcher<existential>
-        // for case 1 and ErasedValueMatcher for case 2.
         switch function.classify(parameter.type) {
         case .directGeneric(let info):
             return (
-                "\(names.signature): NonComparableValueMatcher<\(info.storageType)>",
+                "\(names.signature): ExistentialValueMatcher<\(info.storageType)>",
                 "\(names.signature): \\(\(names.local).description)",
                 "\(names.matcherPrefix)\(names.local)"
             )
         case .wrappedGeneric:
             return (
-                "\(names.signature): ErasedValueMatcher",
+                "\(names.signature): ExistentialValueMatcher<any Sendable>",
                 "\(names.signature): \\(\(names.local).description)",
                 "\(names.matcherPrefix)\(names.local)"
             )
@@ -438,28 +436,11 @@ extension VerifierGenerator {
                 "\(names.matcherPrefix).range(\(names.local))"
             )
         case .explicitMatcher:
-            let matcherTypePrefix: String
-            switch parameterType {
-            case .comparableAndEquatable:
-                matcherTypePrefix = ""
-            case .neitherComparableNorEquatable:
-                matcherTypePrefix = "NonComparable"
-            case .onlyEquatable:
-                matcherTypePrefix = "OnlyEquatable"
-            }
-            if isOptional {
-                return (
-                    "\(names.signature): Optional\(matcherTypePrefix)ValueMatcher<\(paramType.dropLast())>",
-                    interpolation,
-                    "\(names.matcherPrefix)\(names.local)"
-                )
-            } else {
-                return (
-                    "\(names.signature): \(matcherTypePrefix)ValueMatcher<\(paramType)>",
-                    interpolation,
-                    "\(names.matcherPrefix)\(names.local)"
-                )
-            }
+            return (
+                "\(names.signature): ValueMatcher<\(paramType)>",
+                interpolation,
+                "\(names.matcherPrefix)\(names.local)"
+            )
         case .exact:
             return (
                 "\(names.signature): \(paramType)",

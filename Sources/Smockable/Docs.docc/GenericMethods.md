@@ -45,8 +45,8 @@ protocol Storage {
 
 The raw `.matching` matcher receives the constraint existential, so its closure
 parameter is typed as `any Encodable & Sendable` and the test author would need to
-cast it manually. Smockable provides ``NonComparableValueMatcher/matchingAs(_:_:)``
-and ``NonComparableValueMatcher/exactAs(_:)`` to do that cast for you, so the
+cast it manually. Smockable provides ``ExistentialValueMatcher/matchingAs(_:_:)``
+and ``ExistentialValueMatcher/exactAs(_:)`` to do that cast for you, so the
 test closure / expected value is fully typed:
 
 ```swift
@@ -106,9 +106,9 @@ When the parameter type *contains* a generic parameter inside a wrapper (e.g. `F
 `[T]`, `Optional<T>`), Smockable cannot express the wrapped existential as a storage type
 — Swift doesn't allow types like `Foo<some Encodable & Sendable>` in storage positions.
 
-In this case Smockable falls back to ``ErasedValueMatcher``, which stores values as
-`any Sendable`. As with direct generics, you can either let
-``ErasedValueMatcher/matchingAs(_:_:)`` and ``ErasedValueMatcher/exactAs(_:)``
+In this case Smockable uses ``ExistentialValueMatcher`` with `any Sendable` as the
+storage type. As with direct generics, you can either let
+``ExistentialValueMatcher/matchingAs(_:_:)`` and ``ExistentialValueMatcher/exactAs(_:)``
 do the cast for you, or write it manually inside `.matching`.
 
 ```swift
@@ -174,14 +174,11 @@ when(
 )
 ```
 
-> Tip: ``NonComparableValueMatcher/matchingAs(_:_:)`` and
-> ``OnlyEquatableValueMatcher/matchingAs(_:_:)`` (along with the corresponding
-> ``NonComparableValueMatcher/exactAs(_:)``) exist on every matcher used by the
-> generic-method codepaths, so the same pattern works whether the parameter is a
-> direct generic, a wrapped generic, or a non-generic existential parameter
-> (like `any Encodable & Sendable`). ``OnlyEquatableValueMatcher`` doesn't need
-> an `exactAs` because its existing ``OnlyEquatableValueMatcher/exact(_:)`` case
-> already does the right thing via existential equality.
+> Tip: ``ExistentialValueMatcher/matchingAs(_:_:)`` and
+> ``ExistentialValueMatcher/exactAs(_:)`` are available on every
+> ``ExistentialValueMatcher`` used by the generic-method codepaths, so the same
+> pattern works whether the parameter is a direct generic, a wrapped generic,
+> or a non-generic existential parameter (like `any Encodable & Sendable`).
 
 ## Generic Return Types
 
