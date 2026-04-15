@@ -19,14 +19,8 @@
 
 import SwiftDiagnostics
 
-/// `SmockDiagnostic` is an enumeration defining specific error messages related to the Smock system.
-///
-/// It conforms to the `DiagnosticMessage` and `Error` protocols to provide comprehensive error information
-/// and integrate smoothly with error handling mechanisms.
-///
-/// - Note: The `SmockDiagnostic` enum can be expanded to include more diagnostic cases as
-///         the Smock system grows and needs to handle more error types.
-package enum SmockDiagnostic: String, DiagnosticMessage, Error {
+/// Diagnostic messages emitted by the `@Smock` macro during expansion.
+package enum SmockDiagnostic: DiagnosticMessage, Error {
     case onlyApplicableToProtocol
     case variableDeclInProtocolWithNotSingleBinding
     case variableDeclInProtocolWithNotIdentifierPattern
@@ -34,6 +28,10 @@ package enum SmockDiagnostic: String, DiagnosticMessage, Error {
     case unknownMacroParameter
     case invalidAccessLevel
     case invalidPreprocessorFlag
+    case genericParameterMissingSendable(parameterName: String, functionName: String)
+    case missingArgumentLabel
+    case typeArrayExpected(parameterName: String)
+    case invalidTypeArrayElement(parameterName: String, element: String)
 
     package var message: String {
         switch self {
@@ -51,22 +49,36 @@ package enum SmockDiagnostic: String, DiagnosticMessage, Error {
             "Invalid access level. Valid values are: .public, .package, .internal, .fileprivate, .private"
         case .invalidPreprocessorFlag:
             "Preprocessor flag must be a string literal"
+        case .genericParameterMissingSendable(let parameterName, let functionName):
+            "Generic parameter '\(parameterName)' on '\(functionName)' must include 'Sendable' in its constraints. Mock state lives behind a Mutex and requires all stored types to be Sendable."
+        case .missingArgumentLabel:
+            "All arguments to '@Smock' must use labeled syntax (e.g. accessLevel: .public)"
+        case .typeArrayExpected(let parameterName):
+            "'\(parameterName)' expects an array of types (e.g. [\(parameterName == "additionalComparableTypes" ? "MyType.self, OtherType.self" : "MyType.self")])"
+        case .invalidTypeArrayElement(let parameterName, let element):
+            "Invalid element '\(element)' in '\(parameterName)'. Each element must be a type reference (e.g. MyType.self or Module.MyType.self)"
         }
     }
 
     package var severity: DiagnosticSeverity {
-        switch self {
-        case .onlyApplicableToProtocol: .error
-        case .variableDeclInProtocolWithNotSingleBinding: .error
-        case .variableDeclInProtocolWithNotIdentifierPattern: .error
-        case .invalidMacroArguments: .error
-        case .unknownMacroParameter: .error
-        case .invalidAccessLevel: .error
-        case .invalidPreprocessorFlag: .error
-        }
+        .error
     }
 
     package var diagnosticID: MessageID {
-        MessageID(domain: "SmockMacro", id: rawValue)
+        let id: String
+        switch self {
+        case .onlyApplicableToProtocol: id = "onlyApplicableToProtocol"
+        case .variableDeclInProtocolWithNotSingleBinding: id = "variableDeclInProtocolWithNotSingleBinding"
+        case .variableDeclInProtocolWithNotIdentifierPattern: id = "variableDeclInProtocolWithNotIdentifierPattern"
+        case .invalidMacroArguments: id = "invalidMacroArguments"
+        case .unknownMacroParameter: id = "unknownMacroParameter"
+        case .invalidAccessLevel: id = "invalidAccessLevel"
+        case .invalidPreprocessorFlag: id = "invalidPreprocessorFlag"
+        case .genericParameterMissingSendable: id = "genericParameterMissingSendable"
+        case .missingArgumentLabel: id = "missingArgumentLabel"
+        case .typeArrayExpected: id = "typeArrayExpected"
+        case .invalidTypeArrayElement: id = "invalidTypeArrayElement"
+        }
+        return MessageID(domain: "SmockMacro", id: id)
     }
 }

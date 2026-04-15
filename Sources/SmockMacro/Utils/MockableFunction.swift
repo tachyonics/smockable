@@ -34,6 +34,8 @@ package struct MockableFunction {
         /// Whether the generic parameter's constraint includes `Equatable` (either
         /// inline, in the where clause, or via the `additionalEquatableTypes` allowlist).
         package let isEquatable: Bool
+        /// Whether the generic parameter's constraint includes `Sendable`.
+        package let isSendable: Bool
     }
 
     /// The underlying SwiftSyntax declaration for the protocol method.
@@ -139,7 +141,8 @@ package struct MockableFunction {
 
             genericParameters[name] = GenericParameter(
                 storageType: storageType,
-                isEquatable: isEquatable
+                isEquatable: isEquatable,
+                isSendable: protocols.contains("Sendable")
             )
         }
 
@@ -293,7 +296,11 @@ package struct MockableFunction {
                 typeConformanceProvider(proto) != .neitherComparableNorEquatable
             }
 
-        return GenericParameter(storageType: storageType, isEquatable: isEquatable)
+        return GenericParameter(
+            storageType: storageType,
+            isEquatable: isEquatable,
+            isSendable: protocols.contains("Sendable")
+        )
     }
 
     /// Strip `inout` (and any other `AttributedTypeSyntax`) decoration from a

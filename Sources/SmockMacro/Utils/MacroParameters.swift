@@ -71,7 +71,7 @@ package enum MacroParameterParser {
 
         for argument in argumentList {
             guard let label = argument.label?.text else {
-                throw SmockDiagnostic.invalidMacroArguments
+                throw SmockDiagnostic.missingArgumentLabel
             }
 
             switch label {
@@ -80,9 +80,15 @@ package enum MacroParameterParser {
             case "preprocessorFlag":
                 preprocessorFlag = try parsePreprocessorFlag(from: argument.expression)
             case "additionalComparableTypes":
-                additionalComparableTypes = try parseTypeArray(from: argument.expression)
+                additionalComparableTypes = try parseTypeArray(
+                    from: argument.expression,
+                    parameterName: label
+                )
             case "additionalEquatableTypes":
-                additionalEquatableTypes = try parseTypeArray(from: argument.expression)
+                additionalEquatableTypes = try parseTypeArray(
+                    from: argument.expression,
+                    parameterName: label
+                )
             default:
                 throw SmockDiagnostic.unknownMacroParameter
             }
@@ -129,9 +135,12 @@ package enum MacroParameterParser {
     }
 
     /// Parses array of types from expression syntax
-    private static func parseTypeArray(from expression: ExprSyntax) throws -> [TypeSyntax] {
+    private static func parseTypeArray(
+        from expression: ExprSyntax,
+        parameterName: String
+    ) throws -> [TypeSyntax] {
         guard let arrayExpr = expression.as(ArrayExprSyntax.self) else {
-            throw SmockDiagnostic.invalidMacroArguments
+            throw SmockDiagnostic.typeArrayExpected(parameterName: parameterName)
         }
 
         var types: [TypeSyntax] = []
@@ -191,7 +200,10 @@ package enum MacroParameterParser {
                 )
                 types.append(TypeSyntax(memberType))
             } else {
-                throw SmockDiagnostic.invalidMacroArguments
+                throw SmockDiagnostic.invalidTypeArrayElement(
+                    parameterName: parameterName,
+                    element: element.expression.description.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
             }
         }
 

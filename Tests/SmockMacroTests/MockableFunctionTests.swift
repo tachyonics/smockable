@@ -546,6 +546,35 @@ struct MockableFunctionTests {
 
         #expect(function.erasedTypeString(for: type) == "any Sendable")
     }
+    // MARK: - Sendable diagnostic
+
+    @Test
+    func genericParameterMissingSendableThrowsDiagnostic() throws {
+        let protocolSource = """
+            protocol Service {
+                func process<T: Encodable>(item: T) async
+            }
+            """
+        let protocolDecl = try ProtocolDeclSyntax("\(raw: protocolSource)")
+
+        #expect(throws: SmockDiagnostic.self) {
+            _ = try MockGenerator.declaration(for: protocolDecl)
+        }
+    }
+
+    @Test
+    func genericParameterWithSendableDoesNotThrow() throws {
+        let protocolSource = """
+            protocol Service {
+                func process<T: Encodable & Sendable>(item: T) async
+            }
+            """
+        let protocolDecl = try ProtocolDeclSyntax("\(raw: protocolSource)")
+
+        #expect(throws: Never.self) {
+            _ = try MockGenerator.declaration(for: protocolDecl)
+        }
+    }
 }
 
 // MARK: - Equatable conformance for ParameterClassification

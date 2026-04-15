@@ -118,13 +118,21 @@ package enum TypeConformanceProvider {
             let isEndToken = first == "]"
             let isSeperatorToken = first == ":"
             if first == ">" || isEndToken {
-                handleEndToken(
-                    baseType: baseType,
-                    isEndToken: isEndToken,
-                    stack: &stack,
-                    currentToken: &currentToken,
-                    getConformance: getConformance
-                )
+                do {
+                    try handleEndToken(
+                        baseType: baseType,
+                        isEndToken: isEndToken,
+                        stack: &stack,
+                        currentToken: &currentToken,
+                        getConformance: getConformance
+                    )
+                } catch {
+                    // Type string is malformed — fall back to the most
+                    // conservative conformance so the macro doesn't crash.
+                    // The user loses convenience overloads for this parameter
+                    // but can still use the explicit ValueMatcher<T> overload.
+                    return .neitherComparableNorEquatable
+                }
 
                 remainingInput = remainingInput.dropFirst()
                 currentToken = ""
@@ -132,16 +140,13 @@ package enum TypeConformanceProvider {
                 continue
                 // if the element is a dictionary seperator
             } else if first == "," || first == ":" {
-                // this a part of a dictionary
-                if let secondLastElement = stack.last,
-                    secondLastElement.isDictionaryStartToken(canBeLiteralToken: isSeperatorToken)
-                {
-                    if !currentToken.isEmpty {
-                        let typeConformance = getConformance(currentType: currentToken)
-                        stack.append(.confirmedConformance(typeConformance))
-                    } else {
-                        fatalError("Unable to parse type \(baseType)")
-                    }
+                if !handleSeparator(
+                    isSeperatorToken: isSeperatorToken,
+                    stack: &stack,
+                    currentToken: &currentToken,
+                    getConformance: getConformance
+                ) {
+                    return .neitherComparableNorEquatable
                 }
                 remainingInput = remainingInput.dropFirst()
                 currentToken = ""
@@ -186,7 +191,9 @@ package enum TypeConformanceProvider {
             return conformance
         }
 
-        fatalError("Unable to parse type \(baseType)")
+        // Type string couldn't be parsed — treat as non-comparable so the
+        // user doesn't get convenience overloads, but the macro doesn't crash.
+        return .neitherComparableNorEquatable
     }
 
     private static func handleTokenStart(
@@ -218,59 +225,83 @@ package enum TypeConformanceProvider {
         return false
     }
 
+    /// Handles a comma or colon separator token in the type string. Returns
+    /// `false` if the type string is malformed and parsing should bail out.
+    private static func handleSeparator(
+        isSeperatorToken: Bool,
+        stack: inout [StackElements],
+        currentToken: inout String,
+        getConformance: (String) -> TypeConformance
+    ) -> Bool {
+        if let lastElement = stack.last,
+            lastElement.isDictionaryStartToken(canBeLiteralToken: isSeperatorToken)
+        {
+            if !currentToken.isEmpty {
+                let typeConformance = getConformance(currentToken)
+                stack.append(.confirmedConformance(typeConformance))
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private enum TypeParseError: Error {
+        case malformedTypeString
+    }
+
     private static func handleEndToken(
         baseType: String,
         isEndToken: Bool,
         stack: inout [StackElements],
         currentToken: inout String,
         getConformance: (String) -> TypeConformance
-    ) {
+    ) throws {
         // get the last element on the stack
-        if let lastElement = stack.popLast() {
-            let typeConformance: TypeConformance
-            let adjustedLastElement: StackElements
-            // if the last type of this collection is not itself a collection
-            // this type will come from the cbuilt current token
-            if !currentToken.isEmpty {
-                typeConformance = getConformance(currentToken)
-                adjustedLastElement = lastElement
-                // otherwise if the last type of this collection is a collection itself,
-                // it will be on the stack. Get this conformance and pop another element off
-                // the stack
-            } else if case let .confirmedConformance(lastTypeConformance) = lastElement {
-                typeConformance = lastTypeConformance
-                guard let secondLastElement = stack.popLast() else {
-                    fatalError("Unable to parse type \(baseType)")
-                }
-                adjustedLastElement = secondLastElement
-            } else {
-                fatalError("Unable to parse type \(baseType)")
-            }
+        guard let lastElement = stack.popLast() else {
+            throw TypeParseError.malformedTypeString
+        }
 
-            switch adjustedLastElement {
-            // if the element starting this collection is a set or array
-            case .setStart, .arrayStart, .tokenStart:
-                let collectionConformance = getArrayOrSetConformance(elementConformance: typeConformance)
-                stack.append(.confirmedConformance(collectionConformance))
-            // otherwise if it is another confirmed conformance, potentially the key type for a dictionary
-            case .confirmedConformance(let possibleKeyConformance):
-                if let secondLastElement = stack.last,
-                    secondLastElement.isDictionaryStartToken(canBeLiteralToken: isEndToken)
-                {
-                    _ = stack.popLast()
-                    let collectionConformance = getDictionaryConformance(
-                        keyConformance: possibleKeyConformance,
-                        valueConformance: typeConformance
-                    )
-                    stack.append(.confirmedConformance(collectionConformance))
-                }
-            // a dictionary must have two types (key and value) so is not a valid element here
-            case .dictionaryStart:
-                fatalError("Unable to parse type \(baseType)")
+        let typeConformance: TypeConformance
+        let adjustedLastElement: StackElements
+        // if the last type of this collection is not itself a collection
+        // this type will come from the built current token
+        if !currentToken.isEmpty {
+            typeConformance = getConformance(currentToken)
+            adjustedLastElement = lastElement
+            // otherwise if the last type of this collection is a collection itself,
+            // it will be on the stack. Get this conformance and pop another element off
+            // the stack
+        } else if case let .confirmedConformance(lastTypeConformance) = lastElement {
+            typeConformance = lastTypeConformance
+            guard let secondLastElement = stack.popLast() else {
+                throw TypeParseError.malformedTypeString
             }
-
+            adjustedLastElement = secondLastElement
         } else {
-            fatalError("Unable to parse type \(baseType)")
+            throw TypeParseError.malformedTypeString
+        }
+
+        switch adjustedLastElement {
+        // if the element starting this collection is a set or array
+        case .setStart, .arrayStart, .tokenStart:
+            let collectionConformance = getArrayOrSetConformance(elementConformance: typeConformance)
+            stack.append(.confirmedConformance(collectionConformance))
+        // otherwise if it is another confirmed conformance, potentially the key type for a dictionary
+        case .confirmedConformance(let possibleKeyConformance):
+            if let secondLastElement = stack.last,
+                secondLastElement.isDictionaryStartToken(canBeLiteralToken: isEndToken)
+            {
+                _ = stack.popLast()
+                let collectionConformance = getDictionaryConformance(
+                    keyConformance: possibleKeyConformance,
+                    valueConformance: typeConformance
+                )
+                stack.append(.confirmedConformance(collectionConformance))
+            }
+        // a dictionary must have two types (key and value) so is not a valid element here
+        case .dictionaryStart:
+            throw TypeParseError.malformedTypeString
         }
     }
 
