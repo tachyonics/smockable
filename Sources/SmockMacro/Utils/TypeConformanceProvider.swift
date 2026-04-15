@@ -33,7 +33,8 @@ package enum TypeConformanceProvider {
         comparableAssociatedTypes: [String],
         equatableAssociatedTypes: [String],
         additionalComparableTypes: [TypeSyntax] = [],
-        additionalEquatableTypes: [TypeSyntax] = []
+        additionalEquatableTypes: [TypeSyntax] = [],
+        parseWarningHandler: ((String) -> Void)? = nil
     ) -> (String) -> TypeConformance {
 
         let builtInComparableTypes = [
@@ -63,7 +64,8 @@ package enum TypeConformanceProvider {
             return determineTypeConformance(
                 baseType: baseType,
                 comparableTypes: comparableTypes,
-                equatableTypes: equatableTypes
+                equatableTypes: equatableTypes,
+                parseWarningHandler: parseWarningHandler
             )
         }
     }
@@ -91,7 +93,8 @@ package enum TypeConformanceProvider {
     private static func determineTypeConformance(
         baseType: String,
         comparableTypes: Set<String>,
-        equatableTypes: Set<String>
+        equatableTypes: Set<String>,
+        parseWarningHandler: ((String) -> Void)?
     ) -> TypeConformance {
         func getConformance(currentType: String) -> TypeConformance {
             if comparableTypes.contains(currentType) {
@@ -131,6 +134,7 @@ package enum TypeConformanceProvider {
                     // conservative conformance so the macro doesn't crash.
                     // The user loses convenience overloads for this parameter
                     // but can still use the explicit ValueMatcher<T> overload.
+                    parseWarningHandler?(baseType)
                     return .neitherComparableNorEquatable
                 }
 
@@ -146,6 +150,7 @@ package enum TypeConformanceProvider {
                     currentToken: &currentToken,
                     getConformance: getConformance
                 ) {
+                    parseWarningHandler?(baseType)
                     return .neitherComparableNorEquatable
                 }
                 remainingInput = remainingInput.dropFirst()
@@ -193,6 +198,7 @@ package enum TypeConformanceProvider {
 
         // Type string couldn't be parsed — treat as non-comparable so the
         // user doesn't get convenience overloads, but the macro doesn't crash.
+        parseWarningHandler?(baseType)
         return .neitherComparableNorEquatable
     }
 

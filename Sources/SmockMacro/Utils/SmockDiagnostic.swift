@@ -18,6 +18,7 @@
 //
 
 import SwiftDiagnostics
+import SwiftSyntax
 
 /// Diagnostic messages emitted by the `@Smock` macro during expansion.
 package enum SmockDiagnostic: DiagnosticMessage, Error {
@@ -32,6 +33,7 @@ package enum SmockDiagnostic: DiagnosticMessage, Error {
     case missingArgumentLabel
     case typeArrayExpected(parameterName: String)
     case invalidTypeArrayElement(parameterName: String, element: String)
+    case unparseableTypeString(typeString: String)
 
     package var message: String {
         switch self {
@@ -57,11 +59,18 @@ package enum SmockDiagnostic: DiagnosticMessage, Error {
             "'\(parameterName)' expects an array of types (e.g. [\(parameterName == "additionalComparableTypes" ? "MyType.self, OtherType.self" : "MyType.self")])"
         case .invalidTypeArrayElement(let parameterName, let element):
             "Invalid element '\(element)' in '\(parameterName)'. Each element must be a type reference (e.g. MyType.self or Module.MyType.self)"
+        case .unparseableTypeString(let typeString):
+            "Could not determine conformance for '\(typeString)'. Convenience overloads (shorthand exact and range matching) will not be generated for parameters of this type."
         }
     }
 
     package var severity: DiagnosticSeverity {
-        .error
+        switch self {
+        case .unparseableTypeString:
+            .warning
+        default:
+            .error
+        }
     }
 
     package var diagnosticID: MessageID {
@@ -78,7 +87,15 @@ package enum SmockDiagnostic: DiagnosticMessage, Error {
         case .missingArgumentLabel: id = "missingArgumentLabel"
         case .typeArrayExpected: id = "typeArrayExpected"
         case .invalidTypeArrayElement: id = "invalidTypeArrayElement"
+        case .unparseableTypeString: id = "unparseableTypeString"
         }
         return MessageID(domain: "SmockMacro", id: id)
+    }
+
+    /// Creates a `Diagnostic` suitable for `MacroExpansionContext.diagnose()`.
+    /// Uses an empty syntax node since the warning applies to the macro as a
+    /// whole rather than a specific source location.
+    package var asDiagnostic: Diagnostic {
+        Diagnostic(node: TokenSyntax(.unknown(""), presence: .missing), message: self)
     }
 }

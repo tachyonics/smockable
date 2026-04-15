@@ -25,7 +25,7 @@ public enum SmockMacro: PeerMacro {
     public static func expansion(
         of attribute: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,
-        in _: some MacroExpansionContext
+        in context: some MacroExpansionContext
     ) throws
         -> [DeclSyntax]
     {
@@ -34,7 +34,8 @@ public enum SmockMacro: PeerMacro {
 
         let mockDeclaration = try MockGenerator.declaration(
             for: protocolDeclaration,
-            parameters: parameters
+            parameters: parameters,
+            context: context
         )
 
         // Wrap in conditional compilation if preprocessor flag is provided

@@ -18,8 +18,11 @@
 //
 
 import Foundation
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SwiftSyntaxMacroExpansion
+import SwiftSyntaxMacros
 
 enum MacroError: Error {
     case invalidPropertyDeclaration
@@ -170,6 +173,18 @@ enum MockGenerator {
         for protocolDeclaration: ProtocolDeclSyntax,
         parameters originalParameters: MacroParameters = .default
     ) throws -> DeclSyntax {
+        try declaration(
+            for: protocolDeclaration,
+            parameters: originalParameters,
+            context: nil as BasicMacroExpansionContext?
+        )
+    }
+
+    static func declaration(
+        for protocolDeclaration: ProtocolDeclSyntax,
+        parameters originalParameters: MacroParameters = .default,
+        context: (some MacroExpansionContext)?
+    ) throws -> DeclSyntax {
         let isActor = protocolInheritsFromActor(protocolDeclaration)
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
 
@@ -200,12 +215,19 @@ enum MockGenerator {
                 associatedTypes: associatedTypes
             )
 
+        var typeParseWarnings: [String] = []
         let typeConformanceProvider = TypeConformanceProvider.get(
             comparableAssociatedTypes: comparableAssociatedTypes,
             equatableAssociatedTypes: equatableAssociatedTypes,
             additionalComparableTypes: parameters.additionalComparableTypes,
-            additionalEquatableTypes: parameters.additionalEquatableTypes
+            additionalEquatableTypes: parameters.additionalEquatableTypes,
+            parseWarningHandler: { typeParseWarnings.append($0) }
         )
+        defer {
+            for warning in typeParseWarnings {
+                context?.diagnose(SmockDiagnostic.unparseableTypeString(typeString: warning).asDiagnostic)
+            }
+        }
 
         let propertyDeclarations = try protocolDeclaration.memberBlock.members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
