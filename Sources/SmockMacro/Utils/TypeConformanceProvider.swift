@@ -33,7 +33,8 @@ package enum TypeConformanceProvider {
         comparableAssociatedTypes: [String],
         equatableAssociatedTypes: [String],
         additionalComparableTypes: [TypeSyntax] = [],
-        additionalEquatableTypes: [TypeSyntax] = []
+        additionalEquatableTypes: [TypeSyntax] = [],
+        parseWarningHandler: ((String) -> Void)? = nil
     ) -> (String) -> TypeConformance {
 
         let builtInComparableTypes = [
@@ -63,7 +64,8 @@ package enum TypeConformanceProvider {
             return determineTypeConformance(
                 baseType: baseType,
                 comparableTypes: comparableTypes,
-                equatableTypes: equatableTypes
+                equatableTypes: equatableTypes,
+                parseWarningHandler: parseWarningHandler
             )
         }
     }
@@ -91,7 +93,8 @@ package enum TypeConformanceProvider {
     private static func determineTypeConformance(
         baseType: String,
         comparableTypes: Set<String>,
-        equatableTypes: Set<String>
+        equatableTypes: Set<String>,
+        parseWarningHandler: ((String) -> Void)?
     ) -> TypeConformance {
         func getConformance(currentType: String) -> TypeConformance {
             if comparableTypes.contains(currentType) {
@@ -131,6 +134,7 @@ package enum TypeConformanceProvider {
                     // conservative conformance so the macro doesn't crash.
                     // The user loses convenience overloads for this parameter
                     // but can still use the explicit ValueMatcher<T> overload.
+                    parseWarningHandler?(baseType)
                     return .neitherComparableNorEquatable
                 }
 
@@ -146,6 +150,7 @@ package enum TypeConformanceProvider {
                     currentToken: &currentToken,
                     getConformance: getConformance
                 ) {
+                    parseWarningHandler?(baseType)
                     return .neitherComparableNorEquatable
                 }
                 remainingInput = remainingInput.dropFirst()
@@ -156,20 +161,12 @@ package enum TypeConformanceProvider {
 
             // Generic parameters on non-collection types (e.g. `Foo<Bar>`) are
             // collected as part of the current token so the full specialization
-            // (`Foo<Bar>`) is looked up in the conformance allowlist. Different
-            // specializations of the same base type are treated as distinct.
+            // (`Foo<Bar>`) is looked up in the conformance allowlist.
             if first == "<" {
-                currentToken.append(first)
-                var depth = 1
-                remainingInput = remainingInput.dropFirst()
-                while let ch = remainingInput.first, depth > 0 {
-                    if ch == "<" { depth += 1 }
-                    if ch == ">" { depth -= 1 }
-                    if ch != " " {
-                        currentToken.append(ch)
-                    }
-                    remainingInput = remainingInput.dropFirst()
-                }
+                collectGenericSpecialization(
+                    currentToken: &currentToken,
+                    remainingInput: &remainingInput
+                )
                 startOfToken = false
                 continue
             }
@@ -183,17 +180,50 @@ package enum TypeConformanceProvider {
             remainingInput = remainingInput.dropFirst()
         }
 
-        // if the type is not a top level collection
+        return finalizeConformance(
+            stack: &stack,
+            currentToken: currentToken,
+            baseType: baseType,
+            getConformance: getConformance,
+            parseWarningHandler: parseWarningHandler
+        )
+    }
+
+    /// Resolve the final conformance after the main parse loop completes.
+    private static func finalizeConformance(
+        stack: inout [StackElements],
+        currentToken: String,
+        baseType: String,
+        getConformance: (String) -> TypeConformance,
+        parseWarningHandler: ((String) -> Void)?
+    ) -> TypeConformance {
         if stack.count == 0 && !currentToken.isEmpty {
-            return getConformance(currentType: currentToken)
-            // if the type
+            return getConformance(currentToken)
         } else if case let .confirmedConformance(conformance) = stack.popLast(), stack.isEmpty {
             return conformance
         }
 
-        // Type string couldn't be parsed — treat as non-comparable so the
-        // user doesn't get convenience overloads, but the macro doesn't crash.
+        parseWarningHandler?(baseType)
         return .neitherComparableNorEquatable
+    }
+
+    /// Collects a generic specialization (e.g. `<Bar, Baz>`) into the current
+    /// token, consuming input up to and including the matching `>`.
+    private static func collectGenericSpecialization(
+        currentToken: inout String,
+        remainingInput: inout Substring
+    ) {
+        currentToken.append("<")
+        var depth = 1
+        remainingInput = remainingInput.dropFirst()
+        while let ch = remainingInput.first, depth > 0 {
+            if ch == "<" { depth += 1 }
+            if ch == ">" { depth -= 1 }
+            if ch != " " {
+                currentToken.append(ch)
+            }
+            remainingInput = remainingInput.dropFirst()
+        }
     }
 
     private static func handleTokenStart(

@@ -18,37 +18,17 @@
 //
 
 import Foundation
+import SwiftDiagnostics
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import SwiftSyntaxMacroExpansion
+import SwiftSyntaxMacros
 
 enum MacroError: Error {
     case invalidPropertyDeclaration
 }
 
 enum MockGenerator {
-    static func getGenericParameterClause(
-        associatedTypes: [AssociatedTypeDeclSyntax]
-    )
-        -> GenericParameterClauseSyntax?
-    {
-        let genericParameterClause: GenericParameterClauseSyntax?
-        if !associatedTypes.isEmpty {
-            let rawGenericParameterClause = associatedTypes.map { associatedType in
-                if let inheritanceClause = associatedType.inheritanceClause {
-                    "\(associatedType.name) \(inheritanceClause)"
-                } else {
-                    "\(associatedType.name)"
-                }
-            }.joined(separator: ", ")
-
-            genericParameterClause = GenericParameterClauseSyntax("<\(raw: rawGenericParameterClause)>")
-        } else {
-            genericParameterClause = nil
-        }
-
-        return genericParameterClause
-    }
-
     // swiftlint:disable function_body_length
     static func createGetterSetterPropertyDeclaration(
         for variable: VariableDeclSyntax,
@@ -168,7 +148,8 @@ enum MockGenerator {
     // swiftlint:disable function_body_length
     static func declaration(
         for protocolDeclaration: ProtocolDeclSyntax,
-        parameters originalParameters: MacroParameters = .default
+        parameters originalParameters: MacroParameters = .default,
+        context: (some MacroExpansionContext)?
     ) throws -> DeclSyntax {
         let isActor = protocolInheritsFromActor(protocolDeclaration)
         let identifier = TokenSyntax.identifier("Mock" + protocolDeclaration.name.text)
@@ -204,7 +185,10 @@ enum MockGenerator {
             comparableAssociatedTypes: comparableAssociatedTypes,
             equatableAssociatedTypes: equatableAssociatedTypes,
             additionalComparableTypes: parameters.additionalComparableTypes,
-            additionalEquatableTypes: parameters.additionalEquatableTypes
+            additionalEquatableTypes: parameters.additionalEquatableTypes,
+            parseWarningHandler: { typeString in
+                context?.diagnose(SmockDiagnostic.unparseableTypeString(typeString: typeString).asDiagnostic)
+            }
         )
 
         let propertyDeclarations = try protocolDeclaration.memberBlock.members
@@ -435,6 +419,43 @@ enum MockGenerator {
         }
     }
     // swiftlint:enable function_body_length
+}
+
+extension MockGenerator {
+    /// Convenience overload that omits the `MacroExpansionContext` parameter.
+    static func declaration(
+        for protocolDeclaration: ProtocolDeclSyntax,
+        parameters: MacroParameters = .default
+    ) throws -> DeclSyntax {
+        try declaration(
+            for: protocolDeclaration,
+            parameters: parameters,
+            context: nil as BasicMacroExpansionContext?
+        )
+    }
+}
+
+private func getGenericParameterClause(
+    associatedTypes: [AssociatedTypeDeclSyntax]
+)
+    -> GenericParameterClauseSyntax?
+{
+    let genericParameterClause: GenericParameterClauseSyntax?
+    if !associatedTypes.isEmpty {
+        let rawGenericParameterClause = associatedTypes.map { associatedType in
+            if let inheritanceClause = associatedType.inheritanceClause {
+                "\(associatedType.name) \(inheritanceClause)"
+            } else {
+                "\(associatedType.name)"
+            }
+        }.joined(separator: ", ")
+
+        genericParameterClause = GenericParameterClauseSyntax("<\(raw: rawGenericParameterClause)>")
+    } else {
+        genericParameterClause = nil
+    }
+
+    return genericParameterClause
 }
 
 private func protocolInheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax) -> Bool {

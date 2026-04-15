@@ -17,7 +17,9 @@
 //  SmockMacroTests
 //
 
+import SwiftDiagnostics
 import SwiftSyntax
+import SwiftSyntaxMacroExpansion
 import Testing
 
 @testable import SmockMacro
@@ -574,6 +576,51 @@ struct MockableFunctionTests {
         #expect(throws: Never.self) {
             _ = try MockGenerator.declaration(for: protocolDecl)
         }
+    }
+
+    // MARK: - Missing argument label diagnostic
+
+    @Test
+    func missingArgumentLabelThrowsDiagnostic() throws {
+        // Unlabeled arguments should produce a specific diagnostic
+        let attribute = try AttributeSyntax("@Smock(.public)")
+        #expect(throws: SmockDiagnostic.self) {
+            _ = try MacroParameterParser.parse(from: attribute)
+        }
+    }
+
+    // MARK: - Type parse warning diagnostic
+
+    @Test
+    func unparseableTypeStringEmitsWarning() throws {
+        var warnings: [String] = []
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            parseWarningHandler: { warnings.append($0) }
+        )
+
+        // A malformed collection type that the parser can't close
+        let result = provider("[unclosed")
+        #expect(result == .neitherComparableNorEquatable)
+        #expect(warnings == ["[unclosed"])
+    }
+
+    @Test
+    func validTypesDoNotEmitWarning() throws {
+        var warnings: [String] = []
+        let provider = TypeConformanceProvider.get(
+            comparableAssociatedTypes: [],
+            equatableAssociatedTypes: [],
+            parseWarningHandler: { warnings.append($0) }
+        )
+
+        // Well-formed types should parse without warnings
+        _ = provider("String")
+        _ = provider("[Int]")
+        _ = provider("[String: Int]")
+        _ = provider("Array<Bool>")
+        #expect(warnings.isEmpty)
     }
 }
 
