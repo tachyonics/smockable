@@ -127,6 +127,10 @@ package enum TypeConformanceProvider {
                         getConformance: getConformance
                     )
                 } catch {
+                    // Type string is malformed — fall back to the most
+                    // conservative conformance so the macro doesn't crash.
+                    // The user loses convenience overloads for this parameter
+                    // but can still use the explicit ValueMatcher<T> overload.
                     return .neitherComparableNorEquatable
                 }
 
@@ -242,7 +246,9 @@ package enum TypeConformanceProvider {
         return true
     }
 
-    private struct TypeParseError: Error {}
+    private enum TypeParseError: Error {
+        case malformedTypeString
+    }
 
     private static func handleEndToken(
         baseType: String,
@@ -253,7 +259,7 @@ package enum TypeConformanceProvider {
     ) throws {
         // get the last element on the stack
         guard let lastElement = stack.popLast() else {
-            throw TypeParseError()
+            throw TypeParseError.malformedTypeString
         }
 
         let typeConformance: TypeConformance
@@ -269,11 +275,11 @@ package enum TypeConformanceProvider {
         } else if case let .confirmedConformance(lastTypeConformance) = lastElement {
             typeConformance = lastTypeConformance
             guard let secondLastElement = stack.popLast() else {
-                throw TypeParseError()
+                throw TypeParseError.malformedTypeString
             }
             adjustedLastElement = secondLastElement
         } else {
-            throw TypeParseError()
+            throw TypeParseError.malformedTypeString
         }
 
         switch adjustedLastElement {
@@ -295,7 +301,7 @@ package enum TypeConformanceProvider {
             }
         // a dictionary must have two types (key and value) so is not a valid element here
         case .dictionaryStart:
-            throw TypeParseError()
+            throw TypeParseError.malformedTypeString
         }
     }
 
