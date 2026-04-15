@@ -29,29 +29,6 @@ enum MacroError: Error {
 }
 
 enum MockGenerator {
-    static func getGenericParameterClause(
-        associatedTypes: [AssociatedTypeDeclSyntax]
-    )
-        -> GenericParameterClauseSyntax?
-    {
-        let genericParameterClause: GenericParameterClauseSyntax?
-        if !associatedTypes.isEmpty {
-            let rawGenericParameterClause = associatedTypes.map { associatedType in
-                if let inheritanceClause = associatedType.inheritanceClause {
-                    "\(associatedType.name) \(inheritanceClause)"
-                } else {
-                    "\(associatedType.name)"
-                }
-            }.joined(separator: ", ")
-
-            genericParameterClause = GenericParameterClauseSyntax("<\(raw: rawGenericParameterClause)>")
-        } else {
-            genericParameterClause = nil
-        }
-
-        return genericParameterClause
-    }
-
     // swiftlint:disable function_body_length
     static func createGetterSetterPropertyDeclaration(
         for variable: VariableDeclSyntax,
@@ -169,17 +146,6 @@ enum MockGenerator {
     }
 
     // swiftlint:disable function_body_length
-    static func declaration(
-        for protocolDeclaration: ProtocolDeclSyntax,
-        parameters originalParameters: MacroParameters = .default
-    ) throws -> DeclSyntax {
-        try declaration(
-            for: protocolDeclaration,
-            parameters: originalParameters,
-            context: nil as BasicMacroExpansionContext?
-        )
-    }
-
     static func declaration(
         for protocolDeclaration: ProtocolDeclSyntax,
         parameters originalParameters: MacroParameters = .default,
@@ -457,6 +423,43 @@ enum MockGenerator {
         }
     }
     // swiftlint:enable function_body_length
+}
+
+extension MockGenerator {
+    /// Convenience overload that omits the `MacroExpansionContext` parameter.
+    static func declaration(
+        for protocolDeclaration: ProtocolDeclSyntax,
+        parameters: MacroParameters = .default
+    ) throws -> DeclSyntax {
+        try declaration(
+            for: protocolDeclaration,
+            parameters: parameters,
+            context: nil as BasicMacroExpansionContext?
+        )
+    }
+}
+
+private func getGenericParameterClause(
+    associatedTypes: [AssociatedTypeDeclSyntax]
+)
+    -> GenericParameterClauseSyntax?
+{
+    let genericParameterClause: GenericParameterClauseSyntax?
+    if !associatedTypes.isEmpty {
+        let rawGenericParameterClause = associatedTypes.map { associatedType in
+            if let inheritanceClause = associatedType.inheritanceClause {
+                "\(associatedType.name) \(inheritanceClause)"
+            } else {
+                "\(associatedType.name)"
+            }
+        }.joined(separator: ", ")
+
+        genericParameterClause = GenericParameterClauseSyntax("<\(raw: rawGenericParameterClause)>")
+    } else {
+        genericParameterClause = nil
+    }
+
+    return genericParameterClause
 }
 
 private func protocolInheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax) -> Bool {
