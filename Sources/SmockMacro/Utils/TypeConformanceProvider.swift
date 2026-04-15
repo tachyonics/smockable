@@ -136,16 +136,13 @@ package enum TypeConformanceProvider {
                 continue
                 // if the element is a dictionary seperator
             } else if first == "," || first == ":" {
-                // this a part of a dictionary
-                if let secondLastElement = stack.last,
-                    secondLastElement.isDictionaryStartToken(canBeLiteralToken: isSeperatorToken)
-                {
-                    if !currentToken.isEmpty {
-                        let typeConformance = getConformance(currentType: currentToken)
-                        stack.append(.confirmedConformance(typeConformance))
-                    } else {
-                        return .neitherComparableNorEquatable
-                    }
+                if !handleSeparator(
+                    isSeperatorToken: isSeperatorToken,
+                    stack: &stack,
+                    currentToken: &currentToken,
+                    getConformance: getConformance
+                ) {
+                    return .neitherComparableNorEquatable
                 }
                 remainingInput = remainingInput.dropFirst()
                 currentToken = ""
@@ -222,6 +219,27 @@ package enum TypeConformanceProvider {
         }
 
         return false
+    }
+
+    /// Handles a comma or colon separator token in the type string. Returns
+    /// `false` if the type string is malformed and parsing should bail out.
+    private static func handleSeparator(
+        isSeperatorToken: Bool,
+        stack: inout [StackElements],
+        currentToken: inout String,
+        getConformance: (String) -> TypeConformance
+    ) -> Bool {
+        if let lastElement = stack.last,
+            lastElement.isDictionaryStartToken(canBeLiteralToken: isSeperatorToken)
+        {
+            if !currentToken.isEmpty {
+                let typeConformance = getConformance(currentToken)
+                stack.append(.confirmedConformance(typeConformance))
+            } else {
+                return false
+            }
+        }
+        return true
     }
 
     private struct TypeParseError: Error {}

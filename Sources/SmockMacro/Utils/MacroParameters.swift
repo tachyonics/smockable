@@ -81,11 +81,13 @@ package enum MacroParameterParser {
                 preprocessorFlag = try parsePreprocessorFlag(from: argument.expression)
             case "additionalComparableTypes":
                 additionalComparableTypes = try parseTypeArray(
-                    from: argument.expression, parameterName: label
+                    from: argument.expression,
+                    parameterName: label
                 )
             case "additionalEquatableTypes":
                 additionalEquatableTypes = try parseTypeArray(
-                    from: argument.expression, parameterName: label
+                    from: argument.expression,
+                    parameterName: label
                 )
             default:
                 throw SmockDiagnostic.unknownMacroParameter
