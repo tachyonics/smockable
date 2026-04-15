@@ -181,19 +181,15 @@ enum MockGenerator {
                 associatedTypes: associatedTypes
             )
 
-        var typeParseWarnings: [String] = []
         let typeConformanceProvider = TypeConformanceProvider.get(
             comparableAssociatedTypes: comparableAssociatedTypes,
             equatableAssociatedTypes: equatableAssociatedTypes,
             additionalComparableTypes: parameters.additionalComparableTypes,
             additionalEquatableTypes: parameters.additionalEquatableTypes,
-            parseWarningHandler: { typeParseWarnings.append($0) }
-        )
-        defer {
-            for warning in typeParseWarnings {
-                context?.diagnose(SmockDiagnostic.unparseableTypeString(typeString: warning).asDiagnostic)
+            parseWarningHandler: { typeString in
+                context?.diagnose(SmockDiagnostic.unparseableTypeString(typeString: typeString).asDiagnostic)
             }
-        }
+        )
 
         let propertyDeclarations = try protocolDeclaration.memberBlock.members
             .compactMap { $0.decl.as(VariableDeclSyntax.self) }
