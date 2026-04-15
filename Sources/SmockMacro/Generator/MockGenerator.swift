@@ -224,6 +224,21 @@ enum MockGenerator {
             MockableFunction(declaration: $0, typeConformanceProvider: typeConformanceProvider)
         }
 
+        // Validate that all generic parameters include Sendable. Mock state
+        // lives behind a Mutex so all stored types must be Sendable. Without
+        // this check, the user gets an opaque compiler error deep in the
+        // macro-generated code instead of a clear message at the macro site.
+        for function in mockableFunctions {
+            for (name, param) in function.genericParameters {
+                if !param.storageType.contains("Sendable") && param.storageType != "Any" {
+                    throw SmockDiagnostic.genericParameterMissingSendable(
+                        parameterName: name,
+                        functionName: function.declaration.name.text
+                    )
+                }
+            }
+        }
+
         let nonisolatedPrefix = isActor ? "nonisolated " : ""
 
         let inheritanceClause = InheritanceClauseSyntax {
