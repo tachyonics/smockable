@@ -453,7 +453,7 @@ private func protocolInheritsFromActor(_ protocolDeclaration: ProtocolDeclSyntax
 private func validateGenericParametersSendable(_ functions: [MockableFunction]) throws {
     for function in functions {
         for (name, param) in function.genericParameters {
-            if !param.storageType.contains("Sendable") && param.storageType != "Any" {
+            if !param.isSendable && param.storageType != "Any" {
                 throw SmockDiagnostic.genericParameterMissingSendable(
                     parameterName: name,
                     functionName: function.declaration.name.text
