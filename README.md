@@ -43,6 +43,9 @@ For detailed documentation, examples, and advanced usage patterns, see the [docu
 - Swift 6.1+
 - iOS 18.0+ / macOS 15.0+ / tvOS 18.0+ / watchOS 11.0+
 
+> [!IMPORTANT]
+> Smockable depends on `swift-testing` and only compiles under debug builds. Add it to test targets only — it will not build as part of a release configuration or a non-test target.
+
 ## Installation
 
 ### Swift Package Manager

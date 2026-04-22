@@ -8,6 +8,8 @@ This getting started guide will walk through installing Smockable and creating a
 
 ## Step 1: Install Smockable
 
+> Important: Smockable depends on `swift-testing` and only compiles under debug builds. Add it to test targets only — it will not build as part of a release configuration or a non-test target.
+
 Add Smockable to your project using Swift Package Manager. In Xcode:
 
 1. Go to **File → Add Package Dependencies**
