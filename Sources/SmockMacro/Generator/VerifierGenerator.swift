@@ -271,24 +271,63 @@ enum VerifierGenerator {
             )
         }
 
-        // Interpolation is only consumed by the verification-message path below,
-        // which runs only when every parameter is an explicit matcher. Computing
-        // it here (rather than alongside the paramDecl/matcherInit fragments)
-        // keeps `parameterFragments` honest: callers that don't reach this branch
-        // never see a bogus interpolation field.
-        let methodInterpolation = parameterSequence.map { parameter, _, _ in
+        let context = MethodBuildContext(
+            parameterSequence: parameterSequence,
+            methodSignature: methodSignature,
+            matcherInit: matcherInit,
+            matcherCall: matcherCall,
+            inputMatcherType: inputMatcherType,
+            functionName: functionName,
+            variablePrefix: variablePrefix,
+            storagePrefix: storagePrefix,
+            accessLevel: accessLevel,
+            returnTypeString: returnTypeString,
+            mapExpression: mapExpression
+        )
+        return try fullVerifierBody(context: context, function: function)
+    }
+
+    /// Bundle of values shared between the two verifier-body codepaths,
+    /// introduced so the builders don't accumulate a long parameter list.
+    private struct MethodBuildContext {
+        let parameterSequence: [(
+            FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
+        )]
+        let methodSignature: String
+        let matcherInit: String
+        let matcherCall: String
+        let inputMatcherType: String
+        let functionName: String
+        let variablePrefix: String
+        let storagePrefix: String
+        let accessLevel: AccessLevel
+        let returnTypeString: String
+        let mapExpression: String
+    }
+
+    /// Builds the full (all-matchers) verifier method body that performs the
+    /// invocation filter and calls `performVerification`. Split out of
+    /// ``generateMethodForCombination`` to keep that function under the body
+    /// length limit and to localize the interpolation computation that only
+    /// matters on this path.
+    private static func fullVerifierBody(
+        context: MethodBuildContext,
+        function: MockableFunction
+    ) throws -> FunctionDeclSyntax {
+        let methodInterpolation = context.parameterSequence.map { parameter, _, _ in
             interpolationFragment(
                 parameter: parameter,
-                allParametersAreMatchers: allParametersAreMatchers,
+                allParametersAreMatchers: true,
                 function: function
             )
         }
         .joined(separator: ", ")
-        let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
+        let functionInterpolationSignature = "\(context.functionName)(\(methodInterpolation))"
+        let declaration = "@discardableResult \(context.accessLevel.rawValue)"
+            + " func \(context.functionName)(\(context.methodSignature))"
+            + " -> \(context.returnTypeString)"
 
-        return try FunctionDeclSyntax(
-            "@discardableResult \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: returnTypeString)"
-        ) {
+        return try FunctionDeclSyntax("\(raw: declaration)") {
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
                 bindings: PatternBindingListSyntax([
@@ -297,7 +336,10 @@ enum VerifierGenerator {
                         initializer: InitializerClauseSyntax(
                             equal: .equalToken(),
                             value: ExprSyntax(
-                                getWithLockCall(variablePrefix: variablePrefix, storagePrefix: storagePrefix)
+                                getWithLockCall(
+                                    variablePrefix: context.variablePrefix,
+                                    storagePrefix: context.storagePrefix
+                                )
                             )
                         )
                     )
@@ -306,26 +348,26 @@ enum VerifierGenerator {
 
             DeclSyntax(
                 """
-                let matcher = \(raw: inputMatcherType)(\(raw: matcherInit))
+                let matcher = \(raw: context.inputMatcherType)(\(raw: context.matcherInit))
                 """
             )
 
             DeclSyntax(
                 """
                 let matchingInvocations = invocations.filter { invocation in
-                    matcher.matches(\(raw: matcherCall))
+                    matcher.matches(\(raw: context.matcherCall))
                 }
                 """
             )
 
             getVerificationCall(
-                storagePrefix: storagePrefix,
+                storagePrefix: context.storagePrefix,
                 functionInterpolationSignature: functionInterpolationSignature
             )
 
             ReturnStmtSyntax(
                 returnKeyword: .keyword(.return, leadingTrivia: .newline),
-                expression: ExprSyntax("\(raw: mapExpression)")
+                expression: ExprSyntax("\(raw: context.mapExpression)")
             )
         }
     }
