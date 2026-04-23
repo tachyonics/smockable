@@ -36,12 +36,13 @@ enum AllParameterSequenceGenerator {
             let firstTypeConformance: TypeConformance
             switch function.classify(firstParameter.type) {
             case .directGeneric(let info):
-                // Direct generic: only .matching/.any are supported in the existential
-                // matcher. If the constraint includes Equatable, the .exact overload is
-                // generated separately as a typed wrapper, not via the parameter form
-                // pipeline (because the existential isn't itself Equatable).
-                firstTypeConformance = .neitherComparableNorEquatable
-                _ = info  // .exact handling is added separately
+                // Direct generic: `.any` / `.matching` are always supported via
+                // ExistentialValueMatcher. When the constraint includes Equatable
+                // we also emit a typed `.exact` shim that takes a concrete value
+                // and delegates to `.exactAs` internally — so the parameter form
+                // pipeline treats it like an onlyEquatable concrete parameter.
+                firstTypeConformance =
+                    info.isEquatable ? .onlyEquatable : .neitherComparableNorEquatable
             case .wrappedGeneric:
                 // Wrapped generic: only .any/.matching via ErasedValueMatcher.
                 firstTypeConformance = .neitherComparableNorEquatable

@@ -89,6 +89,30 @@ If the production code calls the method with a value that isn't a `UserPayload`,
 the cast inside `matchingAs` / `exactAs` returns `false` and the matcher simply
 doesn't match — it never crashes.
 
+When the generic constraint itself includes `Equatable` (or `Hashable`, which
+implies `Equatable`), Smockable generates an additional overload that accepts
+the concrete value directly — no `.exactAs(_:)` needed at the call site:
+
+```swift
+@Smock
+protocol Tagger {
+    func tag<T: Equatable & Sendable>(value: T) async
+}
+
+@Test func tagExact() async {
+    var expectations = MockTagger.Expectations()
+    when(expectations.tag(value: "hello"), complete: .withSuccess)
+
+    let mock = MockTagger(expectations: expectations)
+    await mock.tag(value: "hello")
+
+    verify(mock, times: 1).tag(value: "hello")
+}
+```
+
+The overload is a thin shim that calls `.exactAs` internally, so the matching
+semantics — runtime cast, returns `false` on type mismatch — are identical.
+
 If you'd rather write the cast inline, the unwrapped form is still available:
 
 ```swift
@@ -270,9 +294,11 @@ Parameters** sections above.
 > and must be `Sendable`-conforming. The generated code will fail to compile if your
 > generic parameter doesn't include `Sendable`.
 
-Several matchers available for non-generic methods (`.exact()`, range, `update(value:)`)
-are not available for parameters or return types that reference a generic parameter. See
-<doc:FrameworkLimitations> for the full list and rationale.
+Some matchers available for non-generic methods (range, `update(value:)`) are not
+available for parameters or return types that reference a generic parameter.
+The `.exact` form is available for *direct* generic parameters when the constraint
+includes `Equatable` or `Hashable`, as described above; it's not yet available for
+wrapped generics. See <doc:FrameworkLimitations> for the full list and rationale.
 
 ## See Also
 
