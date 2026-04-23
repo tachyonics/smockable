@@ -290,9 +290,10 @@ enum VerifierGenerator {
     /// Bundle of values shared between the two verifier-body codepaths,
     /// introduced so the builders don't accumulate a long parameter list.
     private struct MethodBuildContext {
-        let parameterSequence: [(
-            FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
-        )]
+        let parameterSequence:
+            [(
+                FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
+            )]
         let methodSignature: String
         let matcherInit: String
         let matcherCall: String
@@ -323,7 +324,8 @@ enum VerifierGenerator {
         }
         .joined(separator: ", ")
         let functionInterpolationSignature = "\(context.functionName)(\(methodInterpolation))"
-        let declaration = "@discardableResult \(context.accessLevel.rawValue)"
+        let declaration =
+            "@discardableResult \(context.accessLevel.rawValue)"
             + " func \(context.functionName)(\(context.methodSignature))"
             + " -> \(context.returnTypeString)"
 
