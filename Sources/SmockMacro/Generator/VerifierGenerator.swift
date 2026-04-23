@@ -161,10 +161,9 @@ enum VerifierGenerator {
         allParametersAreMatchers: Bool,
         function: MockableFunction
     )
-        -> (methodParameters: [String], methodInterpolationParameters: [String], matcherInitializers: [String])
+        -> (methodParameters: [String], matcherInitializers: [String])
     {
         var methodParameters: [String] = []
-        var methodInterpolationParameters: [String] = []
         var matcherInitializers: [String] = []
 
         for (parameter, parameterType, form) in parameterSequence {
@@ -176,11 +175,10 @@ enum VerifierGenerator {
                 function: function
             )
             methodParameters.append(fragments.paramDecl)
-            methodInterpolationParameters.append(fragments.interpolation)
             matcherInitializers.append(fragments.matcherInit)
         }
 
-        return (methodParameters, methodInterpolationParameters, matcherInitializers)
+        return (methodParameters, matcherInitializers)
     }
 
     private static func getWithLockCall(variablePrefix: String, storagePrefix: String) -> FunctionCallExprSyntax {
@@ -239,7 +237,7 @@ enum VerifierGenerator {
             partialResult = false
         }
 
-        let (methodParameters, methodInterpolationParameters, matcherInitializers) = getParameters(
+        let (methodParameters, matcherInitializers) = getParameters(
             parameterSequence: parameterSequence,
             allParametersAreMatchers: allParametersAreMatchers,
             function: function
@@ -247,7 +245,6 @@ enum VerifierGenerator {
 
         let methodSignature = methodParameters.joined(separator: ", ")
         let matcherInit = matcherInitializers.joined(separator: ", ")
-        let methodInterpolation = methodInterpolationParameters.joined(separator: ", ")
 
         let parameterList = functionDeclaration.signature.parameterClause.parameters
         let parameters = Array(parameterList)
@@ -259,7 +256,6 @@ enum VerifierGenerator {
         let variablePrefix = VariablePrefixGenerator.text(for: functionDeclaration)
         let inputMatcherType = "\(typePrefix)\(variablePrefix.capitalizingComponentsFirstLetter())_InputMatcher"
         let functionName = functionDeclaration.name.text
-        let functionInterpolationSignature = "\(functionName)(\(methodInterpolation))"
 
         let returnTypeString = captureReturnType(parameters: parameters, function: function)!
         let mapExpression = captureMapExpression(parameters: parameters)!
@@ -275,9 +271,65 @@ enum VerifierGenerator {
             )
         }
 
-        return try FunctionDeclSyntax(
-            "@discardableResult \(raw: accessLevel.rawValue) func \(raw: functionName)(\(raw: methodSignature)) -> \(raw: returnTypeString)"
-        ) {
+        let context = MethodBuildContext(
+            parameterSequence: parameterSequence,
+            methodSignature: methodSignature,
+            matcherInit: matcherInit,
+            matcherCall: matcherCall,
+            inputMatcherType: inputMatcherType,
+            functionName: functionName,
+            variablePrefix: variablePrefix,
+            storagePrefix: storagePrefix,
+            accessLevel: accessLevel,
+            returnTypeString: returnTypeString,
+            mapExpression: mapExpression
+        )
+        return try fullVerifierBody(context: context, function: function)
+    }
+
+    /// Bundle of values shared between the two verifier-body codepaths,
+    /// introduced so the builders don't accumulate a long parameter list.
+    private struct MethodBuildContext {
+        let parameterSequence:
+            [(
+                FunctionParameterSyntax, TypeConformance, AllParameterSequenceGenerator.ParameterForm
+            )]
+        let methodSignature: String
+        let matcherInit: String
+        let matcherCall: String
+        let inputMatcherType: String
+        let functionName: String
+        let variablePrefix: String
+        let storagePrefix: String
+        let accessLevel: AccessLevel
+        let returnTypeString: String
+        let mapExpression: String
+    }
+
+    /// Builds the full (all-matchers) verifier method body that performs the
+    /// invocation filter and calls `performVerification`. Split out of
+    /// ``generateMethodForCombination`` to keep that function under the body
+    /// length limit and to localize the interpolation computation that only
+    /// matters on this path.
+    private static func fullVerifierBody(
+        context: MethodBuildContext,
+        function: MockableFunction
+    ) throws -> FunctionDeclSyntax {
+        let methodInterpolation = context.parameterSequence.map { parameter, _, _ in
+            interpolationFragment(
+                parameter: parameter,
+                allParametersAreMatchers: true,
+                function: function
+            )
+        }
+        .joined(separator: ", ")
+        let functionInterpolationSignature = "\(context.functionName)(\(methodInterpolation))"
+        let declaration =
+            "@discardableResult \(context.accessLevel.rawValue)"
+            + " func \(context.functionName)(\(context.methodSignature))"
+            + " -> \(context.returnTypeString)"
+
+        return try FunctionDeclSyntax("\(raw: declaration)") {
             VariableDeclSyntax(
                 bindingSpecifier: .keyword(.let),
                 bindings: PatternBindingListSyntax([
@@ -286,7 +338,10 @@ enum VerifierGenerator {
                         initializer: InitializerClauseSyntax(
                             equal: .equalToken(),
                             value: ExprSyntax(
-                                getWithLockCall(variablePrefix: variablePrefix, storagePrefix: storagePrefix)
+                                getWithLockCall(
+                                    variablePrefix: context.variablePrefix,
+                                    storagePrefix: context.storagePrefix
+                                )
                             )
                         )
                     )
@@ -295,26 +350,26 @@ enum VerifierGenerator {
 
             DeclSyntax(
                 """
-                let matcher = \(raw: inputMatcherType)(\(raw: matcherInit))
+                let matcher = \(raw: context.inputMatcherType)(\(raw: context.matcherInit))
                 """
             )
 
             DeclSyntax(
                 """
                 let matchingInvocations = invocations.filter { invocation in
-                    matcher.matches(\(raw: matcherCall))
+                    matcher.matches(\(raw: context.matcherCall))
                 }
                 """
             )
 
             getVerificationCall(
-                storagePrefix: storagePrefix,
+                storagePrefix: context.storagePrefix,
                 functionInterpolationSignature: functionInterpolationSignature
             )
 
             ReturnStmtSyntax(
                 returnKeyword: .keyword(.return, leadingTrivia: .newline),
-                expression: ExprSyntax("\(raw: mapExpression)")
+                expression: ExprSyntax("\(raw: context.mapExpression)")
             )
         }
     }
@@ -345,29 +400,44 @@ enum VerifierGenerator {
 }
 
 extension VerifierGenerator {
-    /// Build the (param decl, interpolation, matcher init) fragments for a single
-    /// verifier parameter, taking generic substitution into account. Lives in the
+    /// Build the (param decl, matcher init) fragments for a single verifier
+    /// parameter, taking generic substitution into account. Lives in the
     /// extension to keep the main type body within size limits.
+    ///
+    /// Interpolation is computed separately by ``interpolationFragment(parameter:allParametersAreMatchers:function:)``
+    /// and only on the code path that actually emits a verification-message string
+    /// (the all-matchers body). Keeping it out of this tuple prevents shim-path
+    /// callers from having to invent a placeholder that would never compile against
+    /// their parameter types.
     fileprivate static func parameterFragments(
         parameter: FunctionParameterSyntax,
         parameterType: TypeConformance,
         form: AllParameterSequenceGenerator.ParameterForm,
         allParametersAreMatchers: Bool,
         function: MockableFunction
-    ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
+    ) -> (paramDecl: String, matcherInit: String) {
         let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
 
         switch function.classify(parameter.type) {
         case .directGeneric(let info):
+            if case .exact = form {
+                // Constraint body without the leading `any ` — e.g.
+                // `any Equatable & Sendable` becomes `Equatable & Sendable`.
+                let constraintBody =
+                    info.storageType.hasPrefix("any ")
+                    ? String(info.storageType.dropFirst(4)) : info.storageType
+                return (
+                    "\(names.signature): some \(constraintBody)",
+                    "\(names.matcherPrefix).exactAs(\(names.local))"
+                )
+            }
             return (
                 "\(names.signature): ExistentialValueMatcher<\(info.storageType)>",
-                "\(names.signature): \\(\(names.local).description)",
                 "\(names.matcherPrefix)\(names.local)"
             )
         case .wrappedGeneric:
             return (
                 "\(names.signature): ExistentialValueMatcher<any Sendable>",
-                "\(names.signature): \\(\(names.local).description)",
                 "\(names.matcherPrefix)\(names.local)"
             )
         case .concrete:
@@ -377,6 +447,28 @@ extension VerifierGenerator {
                 form: form,
                 names: names
             )
+        }
+    }
+
+    /// Build the verification-message interpolation fragment for a single
+    /// parameter. Only called on the all-matchers code path, where every
+    /// `names.local` refers to a matcher value whose `.description` /
+    /// `.stringSpecficDescription` is guaranteed to exist.
+    fileprivate static func interpolationFragment(
+        parameter: FunctionParameterSyntax,
+        allParametersAreMatchers: Bool,
+        function: MockableFunction
+    ) -> String {
+        let names = parameterNames(parameter, allParametersAreMatchers: allParametersAreMatchers)
+        switch function.classify(parameter.type) {
+        case .concrete:
+            let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+            if paramType == "String" || paramType == "String?" {
+                return "\(names.signature): \\(\(names.local).stringSpecficDescription)"
+            }
+            return "\(names.signature): \\(\(names.local).description)"
+        case .directGeneric, .wrappedGeneric:
+            return "\(names.signature): \\(\(names.local).description)"
         }
     }
 
@@ -416,35 +508,25 @@ extension VerifierGenerator {
         parameterType: TypeConformance,
         form: AllParameterSequenceGenerator.ParameterForm,
         names: ParameterNames
-    ) -> (paramDecl: String, interpolation: String, matcherInit: String) {
+    ) -> (paramDecl: String, matcherInit: String) {
         let paramType = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let isOptional = paramType.hasSuffix("?")
-
-        let interpolation: String
-        if paramType == "String" || paramType == "String?" {
-            interpolation = "\(names.signature): \\(\(names.local).stringSpecficDescription)"
-        } else {
-            interpolation = "\(names.signature): \\(\(names.local).description)"
-        }
 
         switch form {
         case .range:
             let baseType = isOptional ? String(paramType.dropLast()) : paramType
             return (
                 "\(names.signature): ClosedRange<\(baseType)>",
-                interpolation,
                 "\(names.matcherPrefix).range(\(names.local))"
             )
         case .explicitMatcher:
             return (
                 "\(names.signature): ValueMatcher<\(paramType)>",
-                interpolation,
                 "\(names.matcherPrefix)\(names.local)"
             )
         case .exact:
             return (
                 "\(names.signature): \(paramType)",
-                interpolation,
                 "\(names.matcherPrefix).exact(\(names.local))"
             )
         }

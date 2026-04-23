@@ -84,6 +84,30 @@ protocol WrappedGenericReturnService {
     func produce<T: Sendable>(label: String) async -> GenericWrapper<T>
 }
 
+@Smock
+protocol EquatableDirectGenericService {
+    /// Direct generic with Equatable constraint — enables the typed `.exact` form.
+    func process<T: Equatable & Sendable>(item: T) async
+    /// Direct generic with Hashable constraint — Hashable implies Equatable.
+    func consume<T: Hashable & Sendable>(key: T) async
+}
+
+@Smock
+protocol EquatableDirectOpaqueGenericService {
+    /// Direct opaque generic with Equatable constraint.
+    func process(item: some Equatable & Sendable) async
+}
+
+@Smock
+protocol MixedEquatableDirectGenericService {
+    /// Two direct generics, one Equatable and one not — verifies the exact form
+    /// is emitted per-parameter, independently.
+    func process<T: Equatable & Sendable, U: Encodable & Sendable>(
+        equatable: T,
+        other: U
+    ) async
+}
+
 // MARK: - Tests
 
 struct GenericMethodsTests {
@@ -360,5 +384,92 @@ struct GenericMethodsTests {
         await mock.process(wrapper: GenericWrapper(value: 42))
 
         verify(mock, times: 1).process(wrapper: .any)
+    }
+
+    // MARK: - Direct generic `.exact` form (Equatable constraint)
+    //
+    // When a case-1 direct generic parameter's constraint includes Equatable
+    // (or Hashable), the macro emits an additional overload that accepts a
+    // concrete typed value and delegates to `.exactAs` internally. This lets
+    // users write `when(expectations.process(item: "hello"))` instead of
+    // `.exactAs("hello")`.
+
+    @Test
+    func equatableDirectGenericExactFormWhen() async {
+        var expectations = MockEquatableDirectGenericService.Expectations()
+        when(expectations.process(item: "hello"), complete: .withSuccess)
+
+        let mock = MockEquatableDirectGenericService(expectations: expectations)
+        await mock.process(item: "hello")
+
+        verify(mock, times: 1).process(item: .any)
+    }
+
+    @Test
+    func equatableDirectGenericExactFormVerify() async {
+        var expectations = MockEquatableDirectGenericService.Expectations()
+        when(expectations.process(item: .any), times: 2, complete: .withSuccess)
+
+        let mock = MockEquatableDirectGenericService(expectations: expectations)
+        await mock.process(item: "hello")
+        await mock.process(item: 42)
+
+        verify(mock, times: 1).process(item: "hello")
+        verify(mock, times: 1).process(item: 42)
+    }
+
+    @Test
+    func equatableDirectGenericExactDoesNotMatchDifferentConcreteType() async {
+        // `.exact(item: "hello")` should cast to String at match time; a
+        // non-String call with the same underlying representation shouldn't match.
+        var expectations = MockEquatableDirectGenericService.Expectations()
+        when(expectations.process(item: .any), complete: .withSuccess)
+
+        let mock = MockEquatableDirectGenericService(expectations: expectations)
+        await mock.process(item: 42)
+
+        verify(mock, .never).process(item: "42")
+        verify(mock, times: 1).process(item: 42)
+    }
+
+    @Test
+    func hashableDirectGenericExactForm() async {
+        var expectations = MockEquatableDirectGenericService.Expectations()
+        when(expectations.consume(key: "k"), complete: .withSuccess)
+
+        let mock = MockEquatableDirectGenericService(expectations: expectations)
+        await mock.consume(key: "k")
+
+        verify(mock, times: 1).consume(key: "k")
+    }
+
+    @Test
+    func equatableDirectOpaqueGenericExactForm() async {
+        var expectations = MockEquatableDirectOpaqueGenericService.Expectations()
+        when(expectations.process(item: "hello"), complete: .withSuccess)
+
+        let mock = MockEquatableDirectOpaqueGenericService(expectations: expectations)
+        await mock.process(item: "hello")
+
+        verify(mock, times: 1).process(item: "hello")
+    }
+
+    @Test
+    func mixedEquatableDirectGenericExactFormOnEquatableParam() async {
+        // The Equatable parameter gets an exact overload; the non-Equatable one
+        // still requires an ExistentialValueMatcher. Both are independently
+        // selectable, so we expect overloads covering (exact, matcher),
+        // (matcher, matcher), and (matcher, matcher) combinations — the one
+        // exercised here is (exact, .any).
+        var expectations = MockMixedEquatableDirectGenericService.Expectations()
+        when(
+            expectations.process(equatable: "tag", other: .any),
+            complete: .withSuccess
+        )
+
+        let mock = MockMixedEquatableDirectGenericService(expectations: expectations)
+        await mock.process(equatable: "tag", other: 123)
+
+        verify(mock, times: 1).process(equatable: "tag", other: .any)
     }
 }

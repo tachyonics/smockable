@@ -132,6 +132,17 @@ enum FunctionStyleExpectationsGenerator {
 
         switch function.classify(parameter.type) {
         case .directGeneric(let info):
+            if case .exact = form {
+                // Constraint body without the leading `any ` — e.g.
+                // `any Equatable & Sendable` becomes `Equatable & Sendable`.
+                let constraintBody =
+                    info.storageType.hasPrefix("any ")
+                    ? String(info.storageType.dropFirst(4)) : info.storageType
+                return (
+                    "\(paramNameForSignature): some \(constraintBody)",
+                    "\(paramName): .exactAs(\(paramName))"
+                )
+            }
             return (
                 "\(paramNameForSignature): ExistentialValueMatcher<\(info.storageType)>",
                 "\(paramName): \(paramName)"
