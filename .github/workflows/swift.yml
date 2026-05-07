@@ -40,6 +40,36 @@ jobs:
       - name: SwiftLint unused imports
         if: matrix.os == 'ubuntu-24.04'
         run: swiftlint analyze --strict --quiet --compiler-log-path build.log
+  SwiftSyntaxMatrix:
+    name: swift-syntax ${{ matrix.swift-syntax-major }}.x / Swift ${{ matrix.swift-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        swift-version: ["6.3"]
+        swift-syntax-major: ["602", "603"]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: SwiftyLab/setup-swift@v1
+        with:
+          swift-version: ${{ matrix.swift-version }}
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - name: Pin swift-syntax to ${{ matrix.swift-syntax-major }}.x
+        # Narrow the declared range to a single major so SPM resolves
+        # to the matrix's swift-syntax version. Targets the exact
+        # range string in Package.swift; if that string changes the
+        # sed needs to follow.
+        run: |
+          next=$((${{ matrix.swift-syntax-major }} + 1))
+          sed -i 's|"602.0.0"..<"604.0.0"|"${{ matrix.swift-syntax-major }}.0.0"..<"'${next}'.0.0"|' Package.swift
+          grep swift-syntax Package.swift
+      - name: Resolve dependencies
+        run: swift package update
+      - name: Build
+        run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Run tests
+        run: swift test
   SwiftLint:
     name: SwiftLint version 3.2.1
     runs-on: ubuntu-24.04
