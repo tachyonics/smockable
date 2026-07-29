@@ -46,7 +46,7 @@ enum VerifierGenerator {
 
                 try VariableDeclSyntax(
                     """
-                    private let sourceLocation: SourceLocation
+                    private let sourceLocation: Testing::SourceLocation
                     """
                 )
 
@@ -65,7 +65,7 @@ enum VerifierGenerator {
                 }
 
                 try InitializerDeclSyntax(
-                    "init(state: State, mode: VerificationMode, sourceLocation: SourceLocation, inOrder: InOrder?) {"
+                    "init(state: State, mode: VerificationMode, sourceLocation: Testing::SourceLocation, inOrder: InOrder?) {"
                 ) {
                     ExprSyntax("self.state = state")
                     ExprSyntax("self.mode = mode")
