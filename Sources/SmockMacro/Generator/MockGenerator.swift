@@ -235,7 +235,7 @@ enum MockGenerator {
             let verifierSig =
                 nonisolatedPrefix + parameters.accessLevel.rawValue
                 + " func getVerifier(mode: VerificationMode,"
-                + " sourceLocation: SourceLocation, inOrder: InOrder?) -> Verifier {"
+                + " sourceLocation: Testing::SourceLocation, inOrder: InOrder?) -> Verifier {"
             try FunctionDeclSyntax("\(raw: verifierSig)") {
                 ReturnStmtSyntax(
                     expression: ExprSyntax(
