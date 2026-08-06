@@ -259,7 +259,7 @@ enum StorageGenerator {
         // Function with no parameters
         return try FunctionDeclSyntax(
             """
-            \(raw: nonisolatedPrefix)\(raw: accessLevel.rawValue) func verifyNoInteractions(sourceLocation: Testing::SourceLocation) {
+            \(raw: nonisolatedPrefix)\(raw: accessLevel.rawValue) func verifyNoInteractions(sourceLocation: Smockable::SourceLocation) {
                 let combinedCallCount = self.state.mutex.withLock { storage in
                     return storage.combinedCallCount
                 }
