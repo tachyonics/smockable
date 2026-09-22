@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+# Every version literal here is deliberate. The package is tools-version 6.3 with a swift-syntax floor on
+# the 603 line, so 6.3.3 is the floor and 6.4.0 the current release; both are checked, and the swift-syntax
+# range (603..<605) is built major by major on each. Toolchains come from swift-wire/setup-swift, a
+# composite action over Swiftly, because SwiftyLab/setup-swift's tagged releases cannot install 6.4.0.
 jobs:
   BuildAndTest:
     name: Linux ${{ matrix.os }} / Swift ${{ matrix.swift-version }}
@@ -13,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
-        swift-version: ["6.3.3"]
+        swift-version: ["6.3.3", "6.4.0"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: SwiftyLab/setup-swift@v1
+      - uses: swift-wire/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift-version }}
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev curl unzip
+      - name: Install unzip for SwiftLint
+        run: sudo apt-get update && sudo apt-get install -y unzip
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
       - name: Build tests
@@ -45,16 +49,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        swift-version: ["6.3.3"]
-        swift-syntax-major: ["603"]
+        swift-version: ["6.3.3", "6.4.0"]
+        # Every major the declared range admits (603..<605), on every supported compiler. SPM resolves to
+        # the newest major on its own, so without this the floor major is never actually built; the
+        # aligned pairs (603 on 6.3, 604 on 6.4) are what a real adopter gets, and the crossed pairs are
+        # the promise the range makes.
+        swift-syntax-major: ["603", "604"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: SwiftyLab/setup-swift@v1
+      - uses: swift-wire/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift-version }}
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev
       - name: Pin swift-syntax to ${{ matrix.swift-syntax-major }}.x
         # Narrow the declared range to a single major so SPM resolves
         # to the matrix's swift-syntax version. Targets the exact
@@ -62,31 +68,8 @@ jobs:
         # sed needs to follow.
         run: |
           next=$((${{ matrix.swift-syntax-major }} + 1))
-          sed -i 's|"603.0.0"..<"604.0.0"|"${{ matrix.swift-syntax-major }}.0.0"..<"'${next}'.0.0"|' Package.swift
-          grep swift-syntax Package.swift
-      - name: Resolve dependencies
-        run: swift package update
-      - name: Build
-        run: swift build -c release -Xswiftc -strict-concurrency=complete
-      - name: Run tests
-        run: swift test
-  Swift64Nightly:
-    name: Swift 6.4 nightly / swift-syntax 604-prerelease
-    # Early warning that the macro plugin and generated code build and test on the upcoming
-    # Swift 6.4 toolchain against the swift-syntax 604 line it ships with — the version a real
-    # 6.4 adopter uses. 604 is still pre-release, tracked via its release/6.4.x branch because
-    # SPM version ranges don't resolve pre-release tags. Uses the nightly 6.4 container since
-    # SwiftyLab/setup-swift only installs released toolchains. (swift-syntax 603 on its aligned
-    # release compiler is already covered by the SwiftSyntaxMatrix job above; pairing 603 with
-    # the 6.4 toolchain only exercises an unusual combination — and currently trips a SwiftPM
-    # build-planner crash unrelated to this package.)
-    runs-on: ubuntu-24.04
-    container: swiftlang/swift:nightly-6.4.x-noble
-    steps:
-      - uses: actions/checkout@v7
-      - name: Pin swift-syntax to the 604 (release/6.4.x) line
-        run: |
-          sed -i 's|"603.0.0"..<"604.0.0"|branch: "release/6.4.x"|' Package.swift
+          sed -i 's|"603.0.0"..<"605.0.0"|"${{ matrix.swift-syntax-major }}.0.0"..<"'${next}'.0.0"|' Package.swift
+          grep -q '"${{ matrix.swift-syntax-major }}.0.0"..<"'${next}'.0.0"' Package.swift
           grep swift-syntax Package.swift
       - name: Resolve dependencies
         run: swift package update
@@ -103,13 +86,14 @@ jobs:
         uses: norio-nomura/action-swiftlint@3.2.1
   SwiftFormat:
     name: swift-format / Swift ${{ matrix.swift-version }}
+    # One formatter, not the matrix: two that disagree would leave no formatting that passes.
     strategy:
       matrix:
-        swift-version: ["6.3.3"]
+        swift-version: ["6.4.0"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: SwiftyLab/setup-swift@v1
+      - uses: swift-wire/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift-version }}
       - name: Run swift-format
@@ -120,28 +104,34 @@ jobs:
           git diff --exit-code
   Coverage:
     name: Coverage / Swift ${{ matrix.swift-version }}
+    # One toolchain: coverage is a measurement of the suite, not a compatibility check.
     strategy:
       matrix:
-        swift-version: ["6.3.3"]
+        swift-version: ["6.4.0"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: SwiftyLab/setup-swift@v1
+      - uses: swift-wire/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift-version }}
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y curl libssl-dev
       - name: Run tests with coverage
         run: swift test --enable-code-coverage --xunit-output test-results.xml
       - name: Convert to LCOV
+        # 6.4's build system emits one `<Target>-test-runner` executable and a `<Target>.so` per test
+        # module rather than the single `.xctest` binary earlier toolchains linked. Every one of them
+        # carries instrumented code, so llvm-cov is handed all of them; the `.xctest` glob keeps the
+        # older layout working should this job ever run on one.
         run: |
           BIN_PATH=$(swift build --show-bin-path)
           PROFDATA=$(find .build -name 'default.profdata' -path '*/codecov/*' | head -1)
-          XCTEST=$(find "$BIN_PATH" -name '*.xctest' -type f | head -1)
+          objects=()
+          for f in "$BIN_PATH"/*-test-runner "$BIN_PATH"/*.so "$BIN_PATH"/*.xctest; do
+            [ -f "$f" ] && objects+=(-object "$f")
+          done
           llvm-cov export \
             -format=lcov \
             -instr-profile="$PROFDATA" \
-            "$XCTEST" \
+            "${objects[@]}" \
             -ignore-filename-regex=".build|Tests" \
             > coverage.lcov
       - name: Upload coverage
@@ -164,17 +154,15 @@ jobs:
     name: API Breakage / Swift ${{ matrix.swift-version }}
     strategy:
       matrix:
-        swift-version: ["6.3.3"]
+        swift-version: ["6.4.0"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: SwiftyLab/setup-swift@v1
+      - uses: swift-wire/setup-swift@v1
         with:
           swift-version: ${{ matrix.swift-version }}
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev
       - name: Check for API breaking changes
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
