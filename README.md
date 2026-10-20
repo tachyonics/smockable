@@ -1,20 +1,23 @@
 <p align="center">
-<a href="https://github.com/tachyonics/smockable/actions">
-<img src="https://github.com/tachyonics/smockable/actions/workflows/swift.yml/badge.svg?branch=main" alt="Build - Main Branch">
-</a>
-<a href="http://swift.org">
-<img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dswift-versions" alt="Swift Version compatibility">
-</a>
-<a href="https://swiftpackageindex.com/tachyonics/smockable/documentation">
-<img src="https://img.shields.io/badge/docc-documentation-orange.svg?style=flat" alt="Package documentation">
-</a>
-<a href="https://codecov.io/gh/tachyonics/smockable">
-<img src="https://img.shields.io/codecov/c/github/tachyonics/smockable?logo=codecov&label=codecov" alt="Code Coverage">
-</a>
-<img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dplatforms" alt="Platform Compatibility">
-<img src="https://img.shields.io/badge/license-Apache2-yellow.svg?style=flat" alt="Apache 2">
+  <a href="https://github.com/tachyonics/smockable/actions/workflows/swift.yml">
+    <img src="https://github.com/tachyonics/smockable/actions/workflows/swift.yml/badge.svg" alt="Build">
+  </a>
+  <a href="https://swiftpackageindex.com/tachyonics/smockable">
+    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dswift-versions" alt="Swift versions">
+  </a>
+  <a href="https://codecov.io/gh/tachyonics/smockable">
+    <img src="https://codecov.io/gh/tachyonics/smockable/graph/badge.svg" alt="Code coverage">
+  </a>
+  <a href="https://swiftpackageindex.com/tachyonics/smockable">
+    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftachyonics%2Fsmockable%2Fbadge%3Ftype%3Dplatforms" alt="Platforms">
+  </a>
+  <a href="https://swiftpackageindex.com/tachyonics/smockable/documentation">
+    <img src="https://img.shields.io/badge/docc-documentation-orange.svg?style=flat" alt="Documentation">
+  </a>
+  <a href="https://www.apache.org/licenses/LICENSE-2.0">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License: Apache 2.0">
+  </a>
 </p>
-
 
 # Smockable
 

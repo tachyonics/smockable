@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 # Every version literal here is deliberate. The package is tools-version 6.3 with a swift-syntax floor on
-# the 603 line, so 6.3.3 is the floor and 6.4.0 the current release; both are checked, and the swift-syntax
+# the 603 line, so 6.3.3 is the floor and 6.4.1 the current release; both are checked, and the swift-syntax
 # range (603..<605) is built major by major on each. Toolchains come from swift-wire/setup-swift, a
 # composite action over Swiftly, because SwiftyLab/setup-swift's tagged releases cannot install 6.4.0.
 jobs:
@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
-        swift-version: ["6.3.3", "6.4.0"]
+        swift-version: ["6.3.3", "6.4.1"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        swift-version: ["6.3.3", "6.4.0"]
+        swift-version: ["6.3.3", "6.4.1"]
         # Every major the declared range admits (603..<605), on every supported compiler. SPM resolves to
         # the newest major on its own, so without this the floor major is never actually built; the
         # aligned pairs (603 on 6.3, 604 on 6.4) are what a real adopter gets, and the crossed pairs are
@@ -89,7 +89,7 @@ jobs:
     # One formatter, not the matrix: two that disagree would leave no formatting that passes.
     strategy:
       matrix:
-        swift-version: ["6.4.0"]
+        swift-version: ["6.4.1"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -107,7 +107,7 @@ jobs:
     # One toolchain: coverage is a measurement of the suite, not a compatibility check.
     strategy:
       matrix:
-        swift-version: ["6.4.0"]
+        swift-version: ["6.4.1"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -154,7 +154,7 @@ jobs:
     name: API Breakage / Swift ${{ matrix.swift-version }}
     strategy:
       matrix:
-        swift-version: ["6.4.0"]
+        swift-version: ["6.4.1"]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
